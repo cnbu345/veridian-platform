@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { getServerUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
-export default async function GeneratePage() {
+export default async function DashboardPage() {
   const user = await getServerUser()
   
   if (!user) {
@@ -13,14 +13,13 @@ export default async function GeneratePage() {
   return (
     <div className="section-padding">
       <div className="container-custom">
-        <h1 className="heading-1 mb-8">Generate Your Report</h1>
+        <h1 className="heading-1 mb-8">Dashboard</h1>
         <p className="text-xl text-navy-600 mb-8">
-          Complete the form below to get your custom Web3 strategy report.
+          Welcome back, {user.email}
         </p>
-        <div className="bg-white rounded-card border border-slate-200 p-8">
-          {/* Form will go here */}
-          <p className="text-center text-navy-600">Form coming soon...</p>
-        </div>
+        <Button >
+          <Link href="/generate">Generate New Report</Link>
+        </Button>
       </div>
     </div>
   )

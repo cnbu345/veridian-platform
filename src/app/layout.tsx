@@ -1,44 +1,59 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import Navbar from '@/components/Navbar'
-import { createServer } from '@/lib/supabase'
+import Navbar from '@/components/layout/Navbar'
+import Footer from '@/components/layout/Footer'
+import { getServerUser } from '@/lib/supabase/server'
+import { Analytics } from '@vercel/analytics/react'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ 
+  subsets: ['latin'],
+  variable: '--font-inter',
+})
 
 export const metadata: Metadata = {
-  title: 'Veridian Group - Truth in Digital Transformation',
-  description: 'AI-powered Web3 strategy reports customized for your business location',
+  title: 'Veridian Group - Executive Web3 Strategy & Location Intelligence',
+  description: 'The only location-intelligent Web3 strategy platform trusted by Fortune 500 executives. AI-powered analysis, human-validated strategy, 50-state regulatory mapping.',
+  keywords: 'Web3 strategy, blockchain consulting, crypto regulation, digital transformation, executive strategy',
+  authors: [{ name: 'Veridian Group' }],
+  creator: 'Veridian Group',
+  publisher: 'Veridian Group',
+  robots: 'index, follow',
+  openGraph: {
+    type: 'website',
+    title: 'Veridian Group - Executive Web3 Strategy',
+    description: 'Location-intelligent Web3 strategy for executives',
+    siteName: 'Veridian Group',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Veridian Group - Executive Web3 Strategy',
+    description: 'Location-intelligent Web3 strategy for executives',
+    creator: '@veridiangroup',
+  },
+  viewport: 'width=device-width, initial-scale=1',
+  themeColor: '#0A1A2F',
 }
 
 export default async function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
-  const supabase = await createServer()
-  const { data: { user } } = await supabase.auth.getUser()
+}) {
+  const user = await getServerUser()
 
   return (
-    <html lang="en">
-      <body className={`${inter.className} bg-gray-50`}>
-        <Navbar user={user} />
-        <main className="min-h-screen pt-16">
+    <html lang="en" className="scroll-smooth">
+      <body 
+        className={`${inter.variable} font-sans antialiased`}
+        suppressHydrationWarning={true}
+      >
+        <Navbar initialUser={user} />
+        <main className="min-h-screen pt-20">
           {children}
         </main>
-        <footer className="bg-gray-900 text-white py-12">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="text-center">
-              <h3 className="text-2xl font-bold mb-4">Veridian Group</h3>
-              <p className="text-gray-400">Truth in Digital Transformation</p>
-              <p className="text-sm text-gray-500 mt-8">
-                © {new Date().getFullYear()} Veridian Group. All rights reserved.
-                <br />
-                This platform provides educational content and should not be considered financial advice.
-              </p>
-            </div>
-          </div>
-        </footer>
+        <Footer />
+        <Analytics />
       </body>
     </html>
   )
