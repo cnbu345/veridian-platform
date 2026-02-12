@@ -37,7 +37,7 @@ export async function getServerUser() {
   const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
   
-  if (error) {
+  if (error && error.name !== 'AuthSessionMissingError') {
     console.error('Error getting server user:', error)
     return null
   }

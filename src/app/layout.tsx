@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import Navbar from '@/components/layout/Navbar'
@@ -10,6 +10,12 @@ const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
 })
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#0A1A2F'
+}
 
 export const metadata: Metadata = {
   title: 'Veridian Group - Executive Web3 Strategy & Location Intelligence',
@@ -31,8 +37,6 @@ export const metadata: Metadata = {
     description: 'Location-intelligent Web3 strategy for executives',
     creator: '@veridiangroup',
   },
-  viewport: 'width=device-width, initial-scale=1',
-  themeColor: '#0A1A2F',
 }
 
 export default async function RootLayout({
