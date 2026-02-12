@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { generateWeb3Report } from '@/lib/openai'
-import { classifyLocation } from '@/lib/locationService'
+import { generateWeb3Report } from '@/lib/openai/openai'
+import { classifyLocation } from '@/lib/location/locationService'
 
 export async function POST(request: NextRequest) {
   try {
