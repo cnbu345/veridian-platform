@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import Stripe from 'stripe'
 
 export async function POST(request: NextRequest) {
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Webhook Error' }, { status: 400 })
   }
 
-  const supabase = await createServerClient()
+  const supabase = await createClient()
 
   try {
     switch (event.type) {
