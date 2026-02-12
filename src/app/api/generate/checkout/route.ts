@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createCheckoutSession, createSubscriptionSession } from '@/lib/stripe'
+import { createCheckoutSession, createSubscriptionSession } from '@/lib/stripe/stripe'
 import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
