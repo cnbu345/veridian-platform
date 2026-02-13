@@ -1,7 +1,6 @@
-import { Button } from '@/components/ui/button'
-import Link from 'next/link'
-import { getServerUser } from '@/lib/supabase/server'
+import { createClient, getServerUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import GenerateClient from './GenerateClient'
 
 export default async function GeneratePage() {
   const user = await getServerUser()
@@ -10,18 +9,5 @@ export default async function GeneratePage() {
     redirect('/auth')
   }
 
-  return (
-    <div className="section-padding">
-      <div className="container-custom">
-        <h1 className="heading-1 mb-8">Generate Your Report</h1>
-        <p className="text-xl text-navy-600 mb-8">
-          Complete the form below to get your custom Web3 strategy report.
-        </p>
-        <div className="bg-white rounded-card border border-slate-200 p-8">
-          {/* Form will go here */}
-          <p className="text-center text-navy-600">Form coming soon...</p>
-        </div>
-      </div>
-    </div>
-  )
+  return <GenerateClient user={user} />
 }
