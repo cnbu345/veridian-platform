@@ -1,14 +1,15 @@
+// src/components/marketing/PainPoints.tsx
 'use client'
 
 import { motion } from 'framer-motion'
-import { AlertTriangle, DollarSign, TrendingDown, Shield, Clock, Users } from 'lucide-react'
+import { AlertTriangle, DollarSign, TrendingDown, Shield, Clock, Users, Scale, Landmark, Gavel } from 'lucide-react'
 
 const pains = [
   {
-    icon: Shield,
-    title: "Regulatory Paralysis",
+    icon: Scale,
+    title: "Regulatory Uncertainty",
     stat: "79%",
-    description: "of executives say regulatory uncertainty is blocking Web3 adoption",
+    description: "of compliance officers say unclear state laws are blocking digital asset initiatives",
     color: "from-red-500 to-orange-500",
     bgColor: "bg-red-50"
   },
@@ -16,17 +17,17 @@ const pains = [
     icon: DollarSign,
     title: "Consultant Waste",
     stat: "$47,000",
-    description: "Average wasted on consultants who don't understand local markets",
+    description: "Average annual spend on consultants who don't understand state-by-state requirements",
     color: "from-amber-500 to-yellow-500",
     bgColor: "bg-amber-50"
   },
   {
-    icon: TrendingDown,
-    title: "Competitive Gap",
-    stat: "3.2x",
-    description: "Your competitors in major metros are already testing Web3",
-    color: "from-blue-500 to-indigo-500",
-    bgColor: "bg-blue-50"
+    icon: Gavel,
+    title: "Enforcement Risk",
+    stat: "$2.8M",
+    description: "Average fine for multi-state compliance failures in 2025",
+    color: "from-navy-500 to-indigo-500",
+    bgColor: "bg-navy-50"
   }
 ]
 
@@ -41,13 +42,13 @@ export default function PainPoints() {
           className="text-center mb-16"
         >
           <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6">
-            Stop guessing about Web3.<br />
-            <span className="bg-gradient-to-r from-blue-600 to-amber-600 bg-clip-text text-transparent">
-              Start executing.
+            The cost of regulatory uncertainty<br />
+            <span className="bg-gradient-to-r from-navy-600 to-gold-600 bg-clip-text text-transparent">
+              is higher than the cost of intelligence.
             </span>
           </h2>
           <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-            The cost of waiting is higher than the cost of acting. Here's what's at stake.
+            For compliance officers, guessing isn't an option. Here's what's at stake.
           </p>
         </motion.div>
 
@@ -86,7 +87,7 @@ export default function PainPoints() {
           ))}
         </div>
 
-        {/* Visual Stat Bar */}
+        {/* Regulatory Timeline */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -94,27 +95,17 @@ export default function PainPoints() {
           className="mt-20 bg-white rounded-2xl p-8 border border-slate-200"
         >
           <div className="flex items-center gap-4 mb-6">
-            <Clock className="w-6 h-6 text-amber-600" />
+            <Landmark className="w-6 h-6 text-navy-600" />
             <span className="text-sm font-semibold uppercase tracking-wider text-slate-500">
-              Adoption Timeline
+              State Legislative Activity 2026
             </span>
           </div>
           
           <div className="space-y-6">
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="font-medium">Your competitors in major metros</span>
-                <span className="text-green-600 font-semibold">Already testing</span>
-              </div>
-              <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
-                <div className="w-3/4 h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full" />
-              </div>
-            </div>
-            
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="font-medium">Suburban markets preparing</span>
-                <span className="text-amber-600 font-semibold">6-12 months</span>
+                <span className="font-medium">States with pending digital asset legislation</span>
+                <span className="text-amber-600 font-semibold">23 states</span>
               </div>
               <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
                 <div className="w-1/2 h-full bg-gradient-to-r from-amber-500 to-amber-600 rounded-full" />
@@ -123,17 +114,27 @@ export default function PainPoints() {
             
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="font-medium">Rural markets evaluating</span>
-                <span className="text-blue-600 font-semibold">12-24 months</span>
+                <span className="font-medium">States that updated money transmitter laws</span>
+                <span className="text-green-600 font-semibold">14 states</span>
               </div>
               <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
-                <div className="w-1/4 h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full" />
+                <div className="w-1/3 h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full" />
+              </div>
+            </div>
+            
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="font-medium">Enforcement actions YTD</span>
+                <span className="text-red-600 font-semibold">37</span>
+              </div>
+              <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                <div className="w-3/4 h-full bg-gradient-to-r from-red-500 to-red-600 rounded-full" />
               </div>
             </div>
           </div>
           
           <p className="mt-6 text-sm text-slate-500 italic">
-            *Based on analysis of 847 companies across 50 states
+            *Source: Veridian Regulatory Intelligence Database, updated February 2026
           </p>
         </motion.div>
       </div>

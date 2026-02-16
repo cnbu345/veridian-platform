@@ -1,3 +1,4 @@
+// src/components/layout/Navbar.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -18,7 +19,10 @@ import {
   BarChart3,
   Shield,
   BookOpen,
-  Sparkles
+  Sparkles,
+  Scale,
+  Landmark,
+  Briefcase
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { User } from '@supabase/supabase-js'
@@ -68,28 +72,29 @@ export default function Navbar({ initialUser }: NavbarProps) {
       name: 'Solutions',
       href: '#solutions',
       dropdown: [
-        { name: 'Strategy Reports', href: '/generate', icon: FileText, description: 'AI-powered custom Web3 strategies' },
-        { name: 'Regulatory Compliance', href: '/compliance', icon: Shield, description: 'State-by-state regulatory mapping' },
-        { name: 'Talent Analysis', href: '/talent', icon: Users, description: 'Local Web3 talent density insights' },
-        { name: 'Competitor Intel', href: '/competitive', icon: BarChart3, description: 'Market positioning analysis' },
+        { name: 'Regulatory Intelligence Reports', href: '/generate', icon: Scale, description: 'State-by-state compliance analysis for digital assets' },
+        { name: 'Compliance Monitoring', href: '/compliance', icon: Shield, description: 'Track regulatory changes across all 50 states' },
+        { name: 'Risk Assessment', href: '/risk', icon: Landmark, description: 'Location-based exposure analysis for institutions' },
+        { name: 'Enterprise Solutions', href: '/enterprise', icon: Briefcase, description: 'Custom compliance frameworks for scale' },
       ]
     },
     {
       name: 'Pricing',
       href: '/pricing',
       dropdown: [
-        { name: 'Single Report', href: '/pricing#single', icon: DollarSign, description: '$497 one-time purchase' },
-        { name: 'Subscription', href: '/pricing#subscription', icon: Sparkles, description: '$197/month - 2 reports' },
-        { name: 'Enterprise', href: '/enterprise', icon: Building2, description: 'Custom solutions for scale' },
+        { name: 'Single Report', href: '/pricing#single', icon: FileText, description: '$2,497 one-time purchase' },
+        { name: 'Quarterly Subscription', href: '/pricing#quarterly', icon: Sparkles, description: '$3,997/year - 4 reports' },
+        { name: 'Monthly Subscription', href: '/pricing#monthly', icon: Building2, description: '$7,997/year - 12 reports' },
+        { name: 'Enterprise', href: '/enterprise', icon: Building2, description: 'Starting at $15,000/year' },
       ]
     },
     {
       name: 'Resources',
       href: '#resources',
       dropdown: [
-        { name: 'Sample Report', href: '/sample', icon: FileText, description: 'See what you get' },
-        { name: 'Case Studies', href: '/case-studies', icon: BookOpen, description: 'Success stories' },
-        { name: 'Web3 Guide', href: '/guide', icon: BookOpen, description: 'Executive introduction' },
+        { name: 'Sample Report', href: '/sample', icon: FileText, description: 'See the compliance intelligence' },
+        { name: 'Case Studies', href: '/case-studies', icon: BookOpen, description: 'How banks use our intelligence' },
+        { name: 'Regulatory Guide', href: '/guide', icon: BookOpen, description: 'State of digital asset regulation' },
       ]
     },
   ]
@@ -125,7 +130,7 @@ export default function Navbar({ initialUser }: NavbarProps) {
                   Group
                 </span>
                 <span className="ml-2 text-xs font-medium text-navy-500 bg-navy-50 px-2 py-0.5 rounded-full">
-                  Executive
+                  Regulatory Intelligence
                 </span>
               </div>
             </Link>

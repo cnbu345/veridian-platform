@@ -1,3 +1,4 @@
+// src/components/layout/Footer.tsx
 'use client'
 
 import { cn } from '@/lib/utils/utils'
@@ -15,21 +16,23 @@ import {
   Building2,
   Users,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Scale,
+  Landmark
 } from 'lucide-react'
 
 const navigation = {
   solutions: [
-    { name: 'Strategy Reports', href: '/generate', icon: FileText },
-    { name: 'Regulatory Compliance', href: '/compliance', icon: Shield },
-    { name: 'Talent Analysis', href: '/talent', icon: Users },
-    { name: 'Competitor Intel', href: '/competitive', icon: Building2 },
-    { name: 'Enterprise', href: '/enterprise', icon: Sparkles },
+    { name: 'Regulatory Intelligence', href: '/generate', icon: Scale },
+    { name: 'Compliance Monitoring', href: '/compliance', icon: Shield },
+    { name: 'Risk Assessment', href: '/risk', icon: Landmark },
+    { name: 'Enterprise Solutions', href: '/enterprise', icon: Building2 },
+    { name: 'API Access', href: '/api', icon: Sparkles },
   ],
   resources: [
     { name: 'Sample Report', href: '/sample' },
     { name: 'Case Studies', href: '/case-studies' },
-    { name: 'Web3 Guide', href: '/guide' },
+    { name: 'Regulatory Guide', href: '/guide' },
     { name: 'Blog', href: '/blog' },
     { name: 'Documentation', href: '/docs' },
   ],
@@ -78,8 +81,8 @@ export default function Footer() {
             </Link>
             
             <p className="text-navy-300 text-sm leading-relaxed mb-6 max-w-md">
-              The only location-intelligent Web3 strategy platform trusted by 
-              Fortune 500 executives. AI-powered analysis, human-validated strategy.
+              Regulatory intelligence for digital assets. Trusted by compliance officers,
+              law firms, and financial institutions for state-by-state analysis.
             </p>
 
             {/* Contact Info */}
@@ -90,8 +93,8 @@ export default function Footer() {
               </div>
               <div className="flex items-center gap-3 text-sm text-navy-300">
                 <Mail className="w-4 h-4 text-gold-500" />
-                <a href="mailto:executive@veridiangroup.com" className="hover:text-gold-500 transition">
-                  executive@veridiangroup.com
+                <a href="mailto:compliance@veridiangroup.com" className="hover:text-gold-500 transition">
+                  compliance@veridiangroup.com
                 </a>
               </div>
               <div className="flex items-center gap-3 text-sm text-navy-300">
@@ -249,7 +252,7 @@ export default function Footer() {
               GDPR Compliant
             </span>
             <span className="text-sm text-navy-400">
-              v2.4.0
+              v2.5.0
             </span>
           </div>
         </div>
@@ -257,12 +260,11 @@ export default function Footer() {
         {/* Disclaimer */}
         <div className="mt-8 pt-8 border-t border-navy-800">
           <p className="text-xs text-navy-500 text-center">
-            This platform provides educational content and strategic recommendations. 
+            This platform provides regulatory intelligence and educational content. 
             Veridian Group is not a law firm, financial advisor, or registered investment 
-            advisor. All Web3 and cryptocurrency strategies involve substantial risk. 
-            Past performance does not guarantee future results. Consult with qualified 
-            legal, tax, and financial professionals in your jurisdiction before 
-            implementing any strategies.
+            advisor. All compliance recommendations should be reviewed with qualified 
+            legal counsel in your jurisdiction. Regulatory information is updated 
+            weekly but may not reflect the most current legislative changes.
           </p>
         </div>
       </div>

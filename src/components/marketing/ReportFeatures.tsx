@@ -1,3 +1,4 @@
+// src/components/marketing/ReportFeatures.tsx
 'use client'
 
 import { useState } from 'react'
@@ -15,65 +16,68 @@ import {
   Network,
   FileCheck,
   Zap,
-  Target
+  Target,
+  Landmark,
+  Gavel,
+  AlertTriangle
 } from 'lucide-react'
 
 const features = [
   {
     id: 'compliance',
-    label: 'State Compliance',
+    label: 'Regulatory Matrix',
     icon: Scale,
-    title: '50-State Regulatory Matrix',
-    description: 'Every state has different crypto laws. We map them to your specific location.',
+    title: '50-State Compliance Analysis',
+    description: 'Every state has different digital asset laws. We map requirements to your specific jurisdictions.',
     points: [
       'Money transmitter license requirements by state',
       'Tax implications for your business structure',
-      'Recent legislative changes (updated monthly)',
-      'Compliance checklist for launch'
+      'Recent enforcement actions and precedents',
+      'Pending legislation tracking (updated weekly)'
     ],
-    color: 'from-blue-500 to-blue-600',
+    color: 'from-navy-500 to-navy-600',
     visual: 'regulatory-heatmap'
   },
   {
-    id: 'talent',
-    label: 'Talent Analysis',
-    icon: Users2,
-    title: 'Local Talent Density Map',
-    description: 'Find Web3 developers, designers, and community builders in your area.',
+    id: 'risk',
+    label: 'Risk Assessment',
+    icon: AlertTriangle,
+    title: 'Jurisdictional Risk Profile',
+    description: 'Identify high-risk states and compliance exposure before regulators do.',
     points: [
-      'Web3 developers per capita ranking',
-      'Local meetups and communities',
-      'Remote vs. on-site hiring strategy',
-      'Salary benchmarks by market'
+      'Enforcement history by state regulator',
+      'Consumer protection requirements',
+      'Disclosure obligations',
+      'Examination frequency scoring'
     ],
-    color: 'from-purple-500 to-purple-600',
-    visual: 'talent-map'
+    color: 'from-red-500 to-red-600',
+    visual: 'risk-map'
   },
   {
-    id: 'competitors',
-    label: 'Competitor Intel',
-    icon: Building2,
-    title: 'Local Adoption Intelligence',
-    description: 'Who\'s already building in your market? What are they doing wrong?',
+    id: 'requirements',
+    label: 'License Requirements',
+    icon: Gavel,
+    title: 'Multi-State Licensing Matrix',
+    description: 'Know exactly which licenses you need in every state you operate.',
     points: [
-      '3-5 competitors in your immediate area',
-      'Their tech stack and approach',
-      'Gaps in their strategy',
-      'Opportunities they missed'
+      'MTL, lender, and money services licenses',
+      'Bonding and capital requirements',
+      'Application timelines and fees',
+      'Renewal and reporting deadlines'
     ],
     color: 'from-amber-500 to-amber-600',
-    visual: 'competitor-grid'
+    visual: 'license-grid'
   },
   {
     id: 'roadmap',
-    label: '90-Day Plan',
+    label: 'Compliance Roadmap',
     icon: Calendar,
-    title: 'Week-by-Week Execution',
-    description: 'Not theory. A specific, actionable plan to launch in 90 days.',
+    title: '90-Day Compliance Plan',
+    description: 'Week-by-week execution plan to achieve multi-state compliance.',
     points: [
-      'Days 1-30: Foundation & legal setup',
-      'Days 31-60: MVP development',
-      'Days 61-90: Launch & community',
+      'Days 1-30: Priority license applications',
+      'Days 31-60: Policy and procedure development',
+      'Days 61-90: Regulatory filing and reporting setup',
       'Key milestones and deliverables'
     ],
     color: 'from-green-500 to-green-600',
@@ -81,17 +85,17 @@ const features = [
   },
   {
     id: 'resources',
-    label: 'Resource Directory',
+    label: 'Regulatory Contacts',
     icon: BookOpen,
-    title: 'Local Partners & Vendors',
-    description: 'Vetted legal counsel, dev shops, and investors in your state.',
+    title: 'State Regulator Directory',
+    description: 'Direct contacts at every state regulator, with compliance officer names and exam schedules.',
     points: [
-      'Crypto-savvy attorneys (by state)',
-      'Web3 development agencies',
-      'Local angel investors and VCs',
-      'Accelerator programs'
+      'Primary regulator contacts by state',
+      'Examination schedule and history',
+      'Approved legal counsel and consultants',
+      'Industry working groups and associations'
     ],
-    color: 'from-red-500 to-red-600',
+    color: 'from-purple-500 to-purple-600',
     visual: 'resource-list'
   }
 ]
@@ -108,13 +112,13 @@ export default function ReportFeatures() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <span className="text-sm font-semibold uppercase tracking-wider text-blue-600 bg-blue-50 px-4 py-2 rounded-full">
-            Inside Your Report
+          <span className="text-sm font-semibold uppercase tracking-wider text-navy-600 bg-navy-50 px-4 py-2 rounded-full">
+            Inside Your Compliance Report
           </span>
           <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mt-6 mb-6">
-            What's inside your $497 report?<br />
+            What's inside your $2,497 report?<br />
             <span className="text-slate-600 text-2xl md:text-3xl">
-              (Actually, about $2,847 worth of research)
+              (About $15,000 worth of regulatory research)
             </span>
           </h2>
         </motion.div>
@@ -133,7 +137,7 @@ export default function ReportFeatures() {
                 value={feature.id}
                 className={`group text-left p-6 rounded-2xl border-2 transition-all ${
                   activeTab === feature.id
-                    ? 'bg-white border-blue-200 shadow-lg'
+                    ? 'bg-white border-navy-200 shadow-lg'
                     : 'border-transparent hover:border-slate-200'
                 }`}
               >
@@ -148,7 +152,7 @@ export default function ReportFeatures() {
                         {feature.label}
                       </span>
                       {activeTab === feature.id && (
-                        <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
+                        <span className="text-xs bg-navy-100 text-navy-600 px-2 py-0.5 rounded-full">
                           Active
                         </span>
                       )}
@@ -211,45 +215,50 @@ export default function ReportFeatures() {
                   {feature.id === 'compliance' && (
                     <div className="space-y-3">
                       <div className="flex items-center gap-2 text-sm">
-                        <Shield className="w-4 h-4 text-blue-600" />
+                        <Shield className="w-4 h-4 text-navy-600" />
                         <span className="font-medium">Texas Regulatory Summary:</span>
                       </div>
                       <p className="text-sm text-slate-600 pl-6">
-                        No specific money transmission license required. Business-friendly environment. 
-                        No state income tax on crypto gains.
+                        No specific money transmission license required for custodial services. 
+                        Must register as Money Services Business with Texas Department of Banking.
+                        Pending HB 1234 would require licensing by Q4 2026.
                       </p>
                     </div>
                   )}
 
-                  {feature.id === 'talent' && (
+                  {feature.id === 'risk' && (
                     <div className="space-y-3">
                       <div className="flex items-center gap-2 text-sm">
-                        <Users2 className="w-4 h-4 text-purple-600" />
-                        <span className="font-medium">Austin Talent Pool:</span>
+                        <AlertTriangle className="w-4 h-4 text-red-600" />
+                        <span className="font-medium">High-Risk Jurisdictions:</span>
                       </div>
                       <div className="pl-6">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>Web3 Developers</span>
-                          <span className="font-semibold">847</span>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span>New York - BitLicense required</span>
+                          <span className="text-red-600 font-semibold">High</span>
                         </div>
-                        <div className="h-2 bg-slate-200 rounded-full">
-                          <div className="w-3/4 h-full bg-purple-600 rounded-full" />
+                        <div className="flex justify-between text-sm mb-2">
+                          <span>California - Under review</span>
+                          <span className="text-amber-600 font-semibold">Medium</span>
                         </div>
-                        <span className="text-xs text-slate-500 mt-1">Rank: #4 nationally</span>
+                        <div className="flex justify-between text-sm">
+                          <span>Texas - Business friendly</span>
+                          <span className="text-green-600 font-semibold">Low</span>
+                        </div>
                       </div>
                     </div>
                   )}
 
-                  {feature.id === 'competitors' && (
+                  {feature.id === 'requirements' && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
-                        <Building2 className="w-4 h-4 text-amber-600" />
-                        <span className="font-medium">Local Competitors:</span>
+                        <Gavel className="w-4 h-4 text-amber-600" />
+                        <span className="font-medium">Licenses Required:</span>
                       </div>
                       <div className="pl-6 space-y-2">
-                        <div className="text-sm">• ChainLink Solutions - Supply chain focus</div>
-                        <div className="text-sm">• BlockTech ATX - DeFi infrastructure</div>
-                        <div className="text-sm">• Web3 Builders - Agency services</div>
+                        <div className="text-sm">• Money Transmitter License (7 states)</div>
+                        <div className="text-sm">• Consumer Lender License (4 states)</div>
+                        <div className="text-sm">• Mortgage Broker License (2 states)</div>
                       </div>
                     </div>
                   )}
@@ -258,7 +267,7 @@ export default function ReportFeatures() {
                 <div className="mt-6 pt-6 border-t border-slate-200">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-sm text-slate-500 line-through">$800 value</span>
+                      <span className="text-sm text-slate-500 line-through">$5,000 value</span>
                       <span className="ml-2 text-sm font-semibold text-green-600">
                         Included in your report
                       </span>
@@ -280,23 +289,26 @@ export default function ReportFeatures() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center">
-                <Target className="w-8 h-8 text-amber-400" />
+                <Target className="w-8 h-8 text-gold-400" />
               </div>
               <div>
                 <div className="text-3xl font-bold mb-1">
-                  $2,847 <span className="text-lg font-normal text-slate-400 line-through">value</span>
+                  $15,000 <span className="text-lg font-normal text-slate-400 line-through">consulting value</span>
                 </div>
                 <div className="text-slate-300">
-                  Your price: <span className="text-2xl font-bold text-amber-400">$497</span>
+                  Your price: <span className="text-2xl font-bold text-gold-400">$2,497</span>
                 </div>
               </div>
             </div>
             
             <div className="text-right">
               <div className="text-sm text-slate-400 mb-1">You save</div>
-              <div className="text-3xl font-bold text-green-400">$2,350</div>
+              <div className="text-3xl font-bold text-green-400">$12,503</div>
             </div>
           </div>
+          <p className="text-sm text-slate-400 mt-4 text-center">
+            Founder's Circle: $997 for first 50 customers
+          </p>
         </motion.div>
       </div>
     </section>
