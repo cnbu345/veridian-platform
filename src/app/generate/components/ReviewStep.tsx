@@ -1,3 +1,4 @@
+// src/app/generate/components/ReviewStep.tsx
 'use client'
 
 import { useState } from 'react'
@@ -19,7 +20,10 @@ import {
   CreditCard,
   Lock,
   FileText,
-  Clock
+  Clock,
+  Scale,
+  Landmark,
+  Gavel
 } from 'lucide-react'
 import { CompanyFormData, LocationFormData, StrategyFormData } from '@/lib/reports/validation'
 import { createClient } from '@/lib/supabase/client'
@@ -46,15 +50,16 @@ export default function ReviewStep({
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [step, setStep] = useState<'review' | 'payment' | 'processing'>('review')
+  const [spotsLeft] = useState(38) // Founder's spots remaining
 
   // Helper to format budget for display
   const formatBudget = (budget: string) => {
     const budgets: Record<string, string> = {
-      'under-10k': 'Under $10,000',
-      '10k-50k': '$10,000 - $50,000',
+      'under-50k': 'Under $50,000',
       '50k-100k': '$50,000 - $100,000',
       '100k-250k': '$100,000 - $250,000',
-      '250k-plus': '$250,000+'
+      '250k-500k': '$250,000 - $500,000',
+      '500k-plus': '$500,000+'
     }
     return budgets[budget] || budget
   }
@@ -66,7 +71,8 @@ export default function ReviewStep({
       '11-50': '11-50 employees',
       '51-200': '51-200 employees',
       '201-500': '201-500 employees',
-      '500+': '500+ employees'
+      '501-1000': '501-1,000 employees',
+      '1000-plus': '1,000+ employees'
     }
     return sizes[size] || size
   }
@@ -75,11 +81,11 @@ export default function ReviewStep({
   const formatPrimaryFocus = (focus: string) => {
     const focuses: Record<string, string> = {
       'compliance': 'Regulatory Compliance',
-      'talent': 'Talent Acquisition',
-      'fundraising': 'Fundraising & Investment',
-      'product': 'Product Development',
-      'go-to-market': 'Go-to-Market Strategy',
-      'partnerships': 'Strategic Partnerships'
+      'licensing': 'Multi-State Licensing',
+      'risk': 'Risk Assessment',
+      'monitoring': 'Compliance Monitoring',
+      'talent': 'Compliance Talent',
+      'strategy': 'Market Entry Strategy'
     }
     return focuses[focus] || focus
   }
@@ -87,9 +93,9 @@ export default function ReviewStep({
   // Helper to format timeline
   const formatTimeline = (timeline: string) => {
     const timelines: Record<string, string> = {
-      '3-months': '3 Months (Aggressive)',
-      '6-months': '6 Months (Moderate)',
-      '12-months': '12 Months (Conservative)'
+      '3-months': '3 Months (Immediate)',
+      '6-months': '6 Months (Standard)',
+      '12-months': '12 Months (Strategic)'
     }
     return timelines[timeline] || timeline
   }
@@ -101,7 +107,7 @@ export default function ReviewStep({
     setStep('payment')
 
     try {
-      // Step 1: Create checkout session
+      // Step 1: Create checkout session with new pricing
       const checkoutResponse = await fetch('/api/checkout', {
         method: 'POST',
         headers: {
@@ -109,6 +115,8 @@ export default function ReviewStep({
         },
         body: JSON.stringify({
           type: 'single',
+          price: 997, // Founder's pricing
+          regularPrice: 2497,
           reportData: {
             companyName: companyData.name,
             industry: companyData.industry,
@@ -127,7 +135,7 @@ export default function ReviewStep({
         throw new Error(checkoutData.error || 'Failed to create checkout session')
       }
 
-      // Step 2: Save report request to database (pending payment)
+      // Step 2: Save report request to database
       const reportResponse = await fetch('/api/generate', {
         method: 'POST',
         headers: {
@@ -153,7 +161,6 @@ export default function ReviewStep({
 
       if (!reportResponse.ok) {
         console.warn('Report save warning:', reportData)
-        // Continue with payment even if report save fails
       }
 
       // Step 3: Redirect to Stripe checkout
@@ -171,51 +178,6 @@ export default function ReviewStep({
     }
   }
 
-  // Handle free sample (for testing)
-  const handleGenerateSample = async () => {
-    setIsProcessing(true)
-    setError(null)
-    setStep('processing')
-
-    try {
-      // Generate report without payment (for testing)
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          companyName: companyData.name,
-          industry: companyData.industry,
-          companySize: companyData.size,
-          budget: companyData.budget,
-          concerns: strategyData.concerns,
-          goals: strategyData.goals,
-          city: locationData.city,
-          state: locationData.state,
-          primaryFocus: strategyData.primary,
-          secondaryFocus: strategyData.secondary,
-          timeline: strategyData.timeline,
-          isSample: true
-        }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        // Redirect to the new report
-        router.push(`/report/${data.reportId}`)
-      } else {
-        throw new Error(data.error || 'Failed to generate report')
-      }
-    } catch (err: any) {
-      console.error('Sample generation error:', err)
-      setError(err.message || 'Failed to generate sample. Please try again.')
-      setIsProcessing(false)
-      setStep('review')
-    }
-  }
-
   // Loading state for payment processing
   if (step === 'payment' || step === 'processing') {
     return (
@@ -226,7 +188,7 @@ export default function ReviewStep({
             {step === 'payment' ? (
               <CreditCard className="w-12 h-12 text-gold-600" />
             ) : (
-              <FileText className="w-12 h-12 text-gold-600" />
+              <Scale className="w-12 h-12 text-gold-600" />
             )}
           </div>
           <div className="absolute -bottom-2 -right-2">
@@ -235,13 +197,13 @@ export default function ReviewStep({
         </div>
 
         <h2 className="text-2xl font-bold text-navy-900 mb-3">
-          {step === 'payment' ? 'Preparing Secure Checkout' : 'Generating Your Report'}
+          {step === 'payment' ? 'Preparing Secure Checkout' : 'Analyzing Regulatory Data'}
         </h2>
         
         <p className="text-navy-600 mb-8 max-w-md mx-auto">
           {step === 'payment' 
             ? 'Redirecting you to our secure payment processor...'
-            : 'Our AI is analyzing your data. This will take about 2-3 minutes.'}
+            : 'Our compliance engine is analyzing state regulations. This will take 2-3 minutes.'}
         </p>
 
         <div className="w-64 h-2 bg-slate-200 rounded-full mx-auto overflow-hidden">
@@ -278,13 +240,32 @@ export default function ReviewStep({
         </p>
       </div>
 
+      {/* Founder's Pricing Banner */}
+      <div className="bg-gradient-to-r from-gold-600 to-gold-500 rounded-2xl p-4 text-white">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+              <Shield className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-sm text-gold-100">Founder's Circle Pricing</p>
+              <p className="text-lg font-bold">{spotsLeft} spots remaining at $997</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-sm line-through text-gold-200">$2,497</p>
+            <p className="text-sm font-semibold">Save $1,500</p>
+          </div>
+        </div>
+      </div>
+
       {/* Company Summary Card */}
       <div className="bg-gradient-to-br from-navy-50 to-white rounded-2xl 
                       border border-navy-200 overflow-hidden">
         <div className="bg-navy-900 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Building2 className="w-5 h-5 text-gold-500" />
-            <h3 className="text-white font-semibold">Company Information</h3>
+            <h3 className="text-white font-semibold">Institution Information</h3>
           </div>
           <button
             onClick={onBack}
@@ -298,7 +279,7 @@ export default function ReviewStep({
         <div className="p-6">
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <p className="text-sm text-navy-500 mb-1">Company Name</p>
+              <p className="text-sm text-navy-500 mb-1">Institution Name</p>
               <p className="text-lg font-semibold text-navy-900">{companyData.name}</p>
               {companyData.website && (
                 <p className="text-sm text-navy-600 mt-1">{companyData.website}</p>
@@ -309,14 +290,14 @@ export default function ReviewStep({
               <p className="text-lg font-semibold text-navy-900">{companyData.industry}</p>
             </div>
             <div>
-              <p className="text-sm text-navy-500 mb-1">Company Size</p>
+              <p className="text-sm text-navy-500 mb-1">Institution Size</p>
               <p className="text-lg font-semibold text-navy-900 flex items-center gap-2">
                 <Users className="w-4 h-4 text-navy-400" />
                 {formatSize(companyData.size)}
               </p>
             </div>
             <div>
-              <p className="text-sm text-navy-500 mb-1">Budget Range</p>
+              <p className="text-sm text-navy-500 mb-1">Compliance Budget</p>
               <p className="text-lg font-semibold text-navy-900 flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-navy-400" />
                 {formatBudget(companyData.budget)}
@@ -335,7 +316,7 @@ export default function ReviewStep({
 
           {companyData.description && (
             <div className="mt-4 pt-4 border-t border-navy-200">
-              <p className="text-sm text-navy-500 mb-2">Company Description</p>
+              <p className="text-sm text-navy-500 mb-2">Institution Description</p>
               <p className="text-navy-700">{companyData.description}</p>
             </div>
           )}
@@ -348,7 +329,7 @@ export default function ReviewStep({
         <div className="bg-navy-900 px-6 py-4">
           <div className="flex items-center gap-3">
             <MapPin className="w-5 h-5 text-gold-500" />
-            <h3 className="text-white font-semibold">Location Analysis</h3>
+            <h3 className="text-white font-semibold">Jurisdiction Analysis</h3>
           </div>
         </div>
 
@@ -369,15 +350,15 @@ export default function ReviewStep({
                 </li>
                 <li className="flex items-center gap-1 text-sm text-navy-700">
                   <CheckCircle className="w-4 h-4 text-green-600" />
-                  Talent density
+                  License requirements
                 </li>
                 <li className="flex items-center gap-1 text-sm text-navy-700">
                   <CheckCircle className="w-4 h-4 text-green-600" />
-                  Web3 hub proximity
+                  Enforcement history
                 </li>
                 <li className="flex items-center gap-1 text-sm text-navy-700">
                   <CheckCircle className="w-4 h-4 text-green-600" />
-                  Market opportunity
+                  Pending legislation
                 </li>
               </ul>
             </div>
@@ -391,7 +372,7 @@ export default function ReviewStep({
         <div className="bg-navy-900 px-6 py-4">
           <div className="flex items-center gap-3">
             <Target className="w-5 h-5 text-gold-500" />
-            <h3 className="text-white font-semibold">Strategy Focus</h3>
+            <h3 className="text-white font-semibold">Compliance Focus</h3>
           </div>
         </div>
 
@@ -429,13 +410,13 @@ export default function ReviewStep({
 
           <div className="space-y-4">
             <div>
-              <p className="text-sm text-navy-500 mb-1">Primary Concerns</p>
+              <p className="text-sm text-navy-500 mb-1">Compliance Concerns</p>
               <p className="text-navy-700 bg-white p-4 rounded-xl border border-navy-200">
                 {strategyData.concerns}
               </p>
             </div>
             <div>
-              <p className="text-sm text-navy-500 mb-1">Key Goals</p>
+              <p className="text-sm text-navy-500 mb-1">Compliance Goals</p>
               <p className="text-navy-700 bg-white p-4 rounded-xl border border-navy-200">
                 {strategyData.goals}
               </p>
@@ -445,30 +426,37 @@ export default function ReviewStep({
       </div>
 
       {/* Pricing Summary */}
-      <div className="bg-gradient-to-r from-gold-600 to-gold-500 rounded-2xl p-8 text-white">
+      <div className="bg-gradient-to-r from-navy-800 to-navy-900 rounded-2xl p-8 text-white">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-gold-100 text-sm mb-1">Total Investment</p>
-            <p className="text-4xl font-bold">$497</p>
+            <p className="text-navy-300 text-sm mb-1">Founder's Circle Investment</p>
+            <div className="flex items-center gap-3">
+              <p className="text-4xl font-bold">$997</p>
+              <p className="text-lg line-through text-navy-400">$2,497</p>
+            </div>
           </div>
-          <div className="bg-white/20 rounded-xl px-4 py-2">
-            <p className="text-sm line-through text-gold-200">$2,847</p>
-            <p className="text-sm font-semibold">You save $2,350</p>
+          <div className="bg-white/10 rounded-xl px-4 py-2">
+            <p className="text-sm font-semibold text-gold-400">Save $1,500</p>
+            <p className="text-xs text-navy-300">{spotsLeft} spots left</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="text-center">
-            <Shield className="w-5 h-5 mx-auto mb-1 text-gold-200" />
+            <Shield className="w-5 h-5 mx-auto mb-1 text-gold-400" />
             <p className="text-xs">30-Day Guarantee</p>
           </div>
           <div className="text-center">
-            <Lock className="w-5 h-5 mx-auto mb-1 text-gold-200" />
+            <Lock className="w-5 h-5 mx-auto mb-1 text-gold-400" />
             <p className="text-xs">Secure Payment</p>
           </div>
           <div className="text-center">
-            <FileText className="w-5 h-5 mx-auto mb-1 text-gold-200" />
-            <p className="text-xs">Instant Access</p>
+            <Clock className="w-5 h-5 mx-auto mb-1 text-gold-400" />
+            <p className="text-xs">24-Hour Delivery</p>
+          </div>
+          <div className="text-center">
+            <Gavel className="w-5 h-5 mx-auto mb-1 text-gold-400" />
+            <p className="text-xs">Compliance Review</p>
           </div>
         </div>
 
@@ -477,8 +465,8 @@ export default function ReviewStep({
           <button
             onClick={handleGenerateReport}
             disabled={isProcessing}
-            className="w-full py-4 bg-white text-navy-900 font-semibold 
-                     rounded-xl hover:bg-gold-50 disabled:opacity-50
+            className="w-full py-4 bg-gold-500 text-navy-900 font-semibold 
+                     rounded-xl hover:bg-gold-400 disabled:opacity-50
                      transition-all duration-300 hover:scale-105
                      flex items-center justify-center gap-2 group"
           >
@@ -489,28 +477,22 @@ export default function ReviewStep({
               </>
             ) : (
               <>
-                Proceed to Payment
+                Purchase Report - $997
                 <CreditCard className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </>
             )}
           </button>
 
-          <button
-            onClick={handleGenerateSample}
-            disabled={isProcessing}
-            className="w-full py-3 bg-transparent border border-white/30 
-                     text-white font-medium rounded-xl hover:bg-white/10
-                     transition-colors disabled:opacity-50"
-          >
-            Generate Sample Report (No Payment)
-          </button>
+          <p className="text-xs text-center text-navy-400">
+            Regular price $2,497 • Founder's pricing for first 50 customers
+          </p>
         </div>
       </div>
 
       {/* Disclaimer */}
       <p className="text-xs text-navy-400 text-center">
         By proceeding, you agree to our Terms of Service and Privacy Policy. 
-        Your payment is securely processed by Stripe. We do not store your payment information.
+        Your payment is securely processed by Stripe. Purchase orders accepted for enterprise clients.
       </p>
 
       {/* Back Button */}

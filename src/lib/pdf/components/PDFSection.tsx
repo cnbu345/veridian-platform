@@ -1,3 +1,4 @@
+// src/lib/pdf/components/PDFSection.tsx
 import React from 'react'
 import { Text, View, StyleSheet } from '@react-pdf/renderer'
 import { pdfTheme } from '../theme'

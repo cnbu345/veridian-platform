@@ -1,3 +1,4 @@
+// src/app/dashboard/components/ReportCard.tsx
 'use client'
 
 import { useState } from 'react'
@@ -15,7 +16,9 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
-  Loader2
+  Loader2,
+  Shield,
+  Scale
 } from 'lucide-react'
 import { downloadReportPDF } from '@/lib/pdf/generator'
 
@@ -52,7 +55,7 @@ export default function ReportCard({ report }: ReportCardProps) {
       case 'ready':
         return 'Report Ready'
       case 'generating':
-        return 'Generating...'
+        return 'Analyzing...'
       case 'failed':
         return 'Generation Failed'
       default:
@@ -93,7 +96,7 @@ export default function ReportCard({ report }: ReportCardProps) {
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 bg-navy-50 rounded-xl flex items-center justify-center">
-              <FileText className="w-6 h-6 text-navy-700" />
+              <Scale className="w-6 h-6 text-navy-700" />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-navy-900 mb-1">
@@ -139,7 +142,8 @@ export default function ReportCard({ report }: ReportCardProps) {
             ${report.location_tier === 'suburban' ? 'bg-purple-100 text-purple-800' : ''}
             ${report.location_tier === 'rural' ? 'bg-green-100 text-green-800' : ''}
           `}>
-            {report.location_tier.charAt(0).toUpperCase() + report.location_tier.slice(1)} Market
+            {report.location_tier === 'major' ? 'Major Market' : 
+             report.location_tier === 'suburban' ? 'Suburban Market' : 'Rural Market'}
           </span>
           
           {report.nearest_major_city && (
@@ -172,7 +176,7 @@ export default function ReportCard({ report }: ReportCardProps) {
                 {isDownloading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Generating...
+                    Generating PDF...
                   </>
                 ) : (
                   <>
@@ -186,7 +190,7 @@ export default function ReportCard({ report }: ReportCardProps) {
             <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 
                           text-amber-700 text-sm font-medium rounded-lg">
               <Clock className="w-4 h-4 animate-spin" />
-              Generating... (2-3 minutes)
+              Analyzing regulatory data... (2-3 minutes)
             </div>
           ) : (
             <button
@@ -229,15 +233,15 @@ export default function ReportCard({ report }: ReportCardProps) {
               </h4>
               <div className="space-y-2 text-sm">
                 <p className="text-navy-600">
-                  <span className="font-medium">Company Size:</span>{' '}
+                  <span className="font-medium">Institution Type:</span>{' '}
                   {report.report_content?.company?.size || 'Not specified'}
                 </p>
                 <p className="text-navy-600">
-                  <span className="font-medium">Budget Range:</span>{' '}
+                  <span className="font-medium">Annual Budget:</span>{' '}
                   {report.report_content?.company?.budget || 'Not specified'}
                 </p>
                 <p className="text-navy-600">
-                  <span className="font-medium">Primary Focus:</span>{' '}
+                  <span className="font-medium">Primary Concern:</span>{' '}
                   {report.report_content?.strategy?.primary || 'Not specified'}
                 </p>
               </div>
@@ -245,16 +249,17 @@ export default function ReportCard({ report }: ReportCardProps) {
             
             <div>
               <h4 className="text-sm font-semibold text-navy-900 mb-3">
-                Location Analysis
+                Regulatory Analysis
               </h4>
               <div className="space-y-2 text-sm">
                 <p className="text-navy-600">
                   <span className="font-medium">Market Tier:</span>{' '}
-                  {report.location_tier}
+                  {report.location_tier === 'major' ? 'Major Market' : 
+                   report.location_tier === 'suburban' ? 'Suburban Market' : 'Rural Market'}
                 </p>
                 {report.nearest_major_city && (
                   <p className="text-navy-600">
-                    <span className="font-medium">Nearest Major City:</span>{' '}
+                    <span className="font-medium">Nearest Major Market:</span>{' '}
                     {report.nearest_major_city}
                   </p>
                 )}

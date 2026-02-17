@@ -1,213 +1,381 @@
-// Use DeepSeek API (OpenAI compatible)
-export async function generateWeb3Report(
-  companyData: {
-    name: string
-    industry: string
-    size: string
-    budget: string
-  },
-  locationData: any,
-  concerns: string
-): Promise<string> {
-  const prompt = `Generate a comprehensive Web3 strategy report for ${companyData.name} 
-based in ${locationData.city}, ${locationData.state}.
+// src/lib/openai/openai.ts
+// Use local LLAMA for free testing, fallback to DeepSeek API
 
-COMPANY DETAILS:
-- Industry: ${companyData.industry}
-- Company Size: ${companyData.size}
-- Budget: ${companyData.budget}
-- Primary Concerns: ${concerns}
+export interface ReportGenerationParams {
+  companyName: string
+  industry: string
+  companySize: string
+  budget: string
+  city: string
+  state: string
+  locationTier: string
+  nearestRegulatoryHub?: string
+  primaryFocus: string
+  secondaryFocus: string[]
+  timeline: string
+  concerns: string
+  goals: string
+}
+
+// Local LLAMA endpoint (assuming you have it running)
+const LOCAL_LLAMA_URL = process.env.NEXT_PUBLIC_LOCAL_LLAMA_URL || 'http://localhost:11434/api/generate'
+
+export async function generateRegulatoryReport(
+  params: ReportGenerationParams
+): Promise<string> {
+  const prompt = `Generate a comprehensive Regulatory Intelligence Report for ${params.companyName} 
+based in ${params.city}, ${params.state}.
+
+INSTITUTION DETAILS:
+- Industry: ${params.industry}
+- Institution Size: ${params.companySize}
+- Compliance Budget: ${params.budget}
+- Primary Compliance Focus: ${params.primaryFocus}
+- Secondary Focus Areas: ${params.secondaryFocus.join(', ')}
+- Timeline: ${params.timeline}
 
 LOCATION ANALYSIS:
-- Location Tier: ${locationData.tier}
-- State: ${locationData.state}
-- ${locationData.tier === 'major' ? `Major metropolitan area with strong infrastructure` : ''}
-- ${locationData.tier === 'suburban' ? `Suburban area near ${locationData.nearestMajorCity || 'major city'}` : ''}
-- ${locationData.tier === 'rural' ? `Rural area, nearest major hub: ${locationData.nearestMajorCity} (${locationData.distanceToMajor} miles)` : ''}
-- Nearest Web3 Hub: ${locationData.nearestWeb3Hub} (${locationData.web3HubType || 'hub'})
+- Jurisdiction: ${params.city}, ${params.state}
+- Market Classification: ${params.locationTier}
+- Nearest Regulatory Hub: ${params.nearestRegulatoryHub || 'N/A'}
 
-REPORT STRUCTURE:
-1. EXECUTIVE SUMMARY
-   - Key Opportunities for ${companyData.name}
-   - Location Advantages in ${locationData.city}, ${locationData.state}
-   - Risk Assessment Summary
+COMPLIANCE CONCERNS:
+${params.concerns}
 
-2. LOCATION-SPECIFIC OPPORTUNITIES
-   - Web3 Talent Pool Access
-   - Local Crypto Regulations in ${locationData.state}
-   - Infrastructure Availability
-   - Partnership Opportunities in ${locationData.nearestWeb3Hub}
+COMPLIANCE GOALS:
+${params.goals}
 
-3. STATE REGULATORY LANDSCAPE
-   - ${locationData.state} Crypto Laws Summary
-   - Tax Implications
-   - Compliance Requirements
-   - Recommended Legal Counsel in State
+REPORT STRUCTURE (must follow exactly):
 
-4. 90-DAY IMPLEMENTATION ROADMAP
-   - Month 1: Foundation & Education
-   - Month 2: Pilot Program Design
-   - Month 3: Launch & Community Building
+# REGULATORY INTELLIGENCE REPORT: ${params.companyName}
 
-5. RESOURCE DIRECTORY
-   - Local Web3 Meetups & Events
-   - ${locationData.state} Blockchain Organizations
-   - Recommended Service Providers
-   - Funding Opportunities
+## 1. EXECUTIVE SUMMARY
+- Summary of key compliance findings for ${params.state}
+- Overview of regulatory requirements by jurisdiction
+- Critical compliance deadlines and action items
+- Risk assessment summary
 
-6. RISK MITIGATION
-   - Location-Specific Risks
-   - Regulatory Compliance Plan
-   - Security Protocols
-   - Contingency Planning
+## 2. STATE REGULATORY ANALYSIS (${params.state})
+- Current regulatory framework for digital assets
+- Licensing requirements (money transmitter, BitLicense, etc.)
+- Enforcement history and recent actions
+- Pending legislation and regulatory trends
+- State regulator contact information
 
-TONE: Professional, authoritative, actionable. Write as a top-tier consulting firm.
-LENGTH: Approximately 5 pages worth of content.
-FORMAT: Use markdown with clear headers, bullet points, and numbered lists.
+## 3. MULTI-STATE LICENSING MATRIX
+- Licenses required by state
+- Application timelines and fees
+- Bonding and capital requirements
+- Renewal and reporting schedules
 
-IMPORTANT: Include this disclaimer at the end:
-"DISCLAIMER: This report provides educational guidance and strategic recommendations based on AI analysis. ${companyData.name} should consult with licensed legal, financial, and technical professionals in ${locationData.state} before implementing any Web3 strategies. Regulations vary by location and change frequently. Veridian Group is not responsible for implementation outcomes."
+## 4. COMPLIANCE CHECKLIST
+- Immediate actions (30 days)
+- Short-term requirements (90 days)
+- Ongoing compliance obligations
+- Documentation requirements
 
-Now generate the comprehensive report:`
+## 5. COMPLIANCE IMPLEMENTATION ROADMAP
+- Days 1-30: Foundation & Legal Setup
+- Days 31-60: Licensing & Policy Development
+- Days 61-90: Implementation & Monitoring
+- Ongoing: Compliance maintenance
 
+## 6. REGULATORY RESOURCES
+- Qualified legal counsel in ${params.state}
+- Compliance consultants and service providers
+- Regulatory technology solutions
+- Industry associations and working groups
+
+## 7. RISK ASSESSMENT
+- Regulatory risk factors
+- Enforcement risk analysis
+- Compliance gap assessment
+- Mitigation strategies
+
+IMPORTANT GUIDELINES:
+- Use professional, authoritative tone suitable for compliance officers
+- Include specific regulatory references where applicable
+- Provide actionable, practical recommendations
+- Be conservative and risk-aware in all recommendations
+
+REQUIRED DISCLAIMER:
+"DISCLAIMER: This report provides regulatory intelligence for informational purposes only. Veridian Group is not a law firm. All compliance strategies should be reviewed with qualified legal counsel in ${params.state} before implementation. Regulations are subject to change without notice."
+
+Generate the complete report now:`
+
+  // Try local LLAMA first
   try {
-    // For now, return mock data. Replace with actual API call.
-    // In production, use DeepSeek API
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    const response = await fetch(LOCAL_LLAMA_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        max_tokens: 4000
+        model: 'llama2', // or whatever model you have
+        prompt: prompt,
+        stream: false,
+        options: {
+          temperature: 0.7,
+          max_tokens: 4000
+        }
       })
     })
 
-    if (!response.ok) {
-      // Fallback to mock response for testing
-      return generateMockReport(companyData, locationData, concerns)
+    if (response.ok) {
+      const data = await response.json()
+      return data.response || generateMockRegulatoryReport(params)
     }
-
-    const data = await response.json()
-    return data.choices[0]?.message?.content || generateMockReport(companyData, locationData, concerns)
-    
   } catch (error) {
-    console.error('AI API Error:', error)
-    return generateMockReport(companyData, locationData, concerns)
+    console.log('Local LLAMA not available, falling back to mock data:', error)
   }
+
+  // Fallback to mock data for now
+  return generateMockRegulatoryReport(params)
 }
 
-function generateMockReport(companyData: any, locationData: any, concerns: string): string {
-  return `# Web3 Strategy Report for ${companyData.name}
+function generateMockRegulatoryReport(params: ReportGenerationParams): string {
+  const friendlyStates = ['TX', 'WY', 'FL', 'NH', 'TN', 'NV', 'AZ']
+  const strictStates = ['NY', 'CA', 'WA', 'NJ', 'MA']
+  
+  const isFriendly = friendlyStates.includes(params.state)
+  const isStrict = strictStates.includes(params.state)
+  const regulatoryClimate = isFriendly ? 'friendly' : isStrict ? 'strict' : 'moderate'
+  
+  return `# REGULATORY INTELLIGENCE REPORT: ${params.companyName}
 
-## Executive Summary
+## 1. EXECUTIVE SUMMARY
 
-${companyData.name}, based in ${locationData.city}, ${locationData.state}, has significant opportunities in the Web3 space. Your location (${locationData.tier} tier) provides unique advantages for ${companyData.industry} industry transformation.
+This regulatory intelligence report provides comprehensive compliance analysis for **${params.companyName}**, based in **${params.city}, ${params.state}**. Your institution operates in the **${params.industry}** sector with a compliance budget of **${params.budget}**.
 
 ### Key Findings:
-1. **Location Advantage**: ${locationData.city} offers ${locationData.tier === 'major' ? 'direct access to major Web3 talent and infrastructure' : locationData.tier === 'suburban' ? 'proximity to resources in nearby metropolitan areas' : 'opportunities for remote-first Web3 operations'}.
-2. **Regulatory Environment**: ${locationData.state} has ${getRegulatorySummary(locationData.state)}.
-3. **Implementation Readiness**: Based on your ${companyData.size} size and ${companyData.budget} budget, we recommend a phased approach.
 
-## Location-Specific Opportunities
+- **Regulatory Climate**: ${params.state} has a **${regulatoryClimate}** regulatory environment for digital asset activities.
+- **License Requirements**: ${getLicenseSummary(params.state)}
+- **Compliance Timeline**: Based on your ${params.timeline} timeline and primary focus on **${params.primaryFocus}**, we recommend immediate action on licensing.
+- **Risk Level**: ${isStrict ? 'Elevated' : isFriendly ? 'Moderate' : 'Moderate'} - enhanced compliance protocols recommended.
 
-### Talent Access
-- **Local Talent**: ${locationData.tier === 'major' ? 'Strong local Web3 developer community' : 'Consider remote hiring or relocation packages'}
-- **Nearby Hubs**: Access to talent from ${locationData.nearestWeb3Hub}
+### Critical Action Items:
+1. Engage qualified legal counsel in ${params.state} within 14 days
+2. Begin license applications within 30 days
+3. Implement compliance monitoring systems within 60 days
 
-### Infrastructure
-- High-speed internet availability assessment
-- Local data center partnerships
-- Energy costs and sustainability considerations
+## 2. STATE REGULATORY ANALYSIS (${params.state})
 
-## ${locationData.state} Regulatory Compliance
+### Current Regulatory Framework
+${getRegulatoryFramework(params.state)}
 
-### Key Regulations
-${getStateRegulations(locationData.state)}
+### Licensing Requirements
+${getLicenseDetails(params.state)}
 
-### Recommended Actions
-1. Register appropriate business entities
-2. Obtain necessary licenses
-3. Implement KYC/AML procedures
-4. Maintain proper record-keeping
+### Enforcement History
+${getEnforcementHistory(params.state)}
 
-## 90-Day Implementation Roadmap
+### Pending Legislation
+${getPendingLegislation(params.state)}
 
-### Month 1: Foundation
-- Team education and training
-- Legal structure setup
-- Technology stack selection
-- Partner identification
+### State Regulator Contact
+${getRegulatorContact(params.state)}
 
-### Month 2: Development
-- MVP design and development
-- Community building
-- Regulatory compliance setup
-- Security audit planning
+## 3. MULTI-STATE LICENSING MATRIX
 
-### Month 3: Launch
-- Pilot program launch
-- Performance monitoring
-- Scale planning
-- Community engagement
+| License Type | Required | Timeline | Bonding | Application Fee |
+|--------------|----------|----------|---------|-----------------|
+| Money Transmitter | ${getLicenseRequired(params.state, 'mtl')} | ${getLicenseTimeline(params.state, 'mtl')} | ${getLicenseBond(params.state, 'mtl')} | ${getLicenseFee(params.state, 'mtl')} |
+| BitLicense | ${params.state === 'NY' ? 'Required' : 'N/A'} | ${params.state === 'NY' ? '6-12 months' : 'N/A'} | ${params.state === 'NY' ? '$50,000' : 'N/A'} | ${params.state === 'NY' ? '$5,000' : 'N/A'} |
+| Consumer Lender | ${getLicenseRequired(params.state, 'lender')} | ${getLicenseTimeline(params.state, 'lender')} | ${getLicenseBond(params.state, 'lender')} | ${getLicenseFee(params.state, 'lender')} |
 
-## Resource Directory
+## 4. COMPLIANCE CHECKLIST
 
-### Local Organizations
-- ${locationData.state} Blockchain Association
-- ${locationData.nearestWeb3Hub} Web3 Meetup
-- University blockchain programs in state
+### Immediate Actions (Next 30 Days)
+- [ ] Retain qualified legal counsel in ${params.state}
+- [ ] Submit initial license applications
+- [ ] Designate compliance officer
+- [ ] Begin AML/KYC program development
+- [ ] Review bonding requirements
 
-### Service Providers
-- Legal firms specializing in crypto law
-- Accounting firms with crypto experience
-- Development agencies
+### Short-Term Requirements (90 Days)
+- [ ] Complete licensing process
+- [ ] Implement compliance policies and procedures
+- [ ] Establish regulatory reporting protocols
+- [ ] Conduct initial compliance training
+- [ ] Prepare for regulatory examinations
 
-### Funding Sources
-- Local angel investor networks
-- State economic development grants
-- Web3-focused VC firms
+### Ongoing Compliance Obligations
+- [ ] Quarterly regulatory reporting
+- [ ] Annual license renewals
+- [ ] Continuous monitoring of regulatory changes
+- [ ] Regular compliance audits
+- [ ] Staff training updates
 
-## Risk Assessment
+## 5. COMPLIANCE IMPLEMENTATION ROADMAP
 
-### Identified Risks
-1. Regulatory changes in ${locationData.state}
-2. Market volatility
-3. Technology adoption barriers
-4. Security vulnerabilities
+### Days 1-30: Foundation & Legal Setup
+- Week 1: Legal counsel engagement
+- Week 2: License application preparation
+- Week 3: Submit applications
+- Week 4: Compliance policy drafting
+
+### Days 31-60: Licensing & Policy Development
+- Week 5-6: License processing
+- Week 7: Policy finalization
+- Week 8: Compliance system selection
+
+### Days 61-90: Implementation & Monitoring
+- Week 9-10: System implementation
+- Week 11: Staff training
+- Week 12: Go-live and monitoring
+
+### Ongoing: Compliance Maintenance
+- Monthly: Regulatory monitoring
+- Quarterly: Reporting and review
+- Annually: License renewal and audit
+
+## 6. REGULATORY RESOURCES
+
+### Qualified Legal Counsel in ${params.state}
+${getLegalCounsel(params.state)}
+
+### Compliance Consultants
+- **Compliance Partners Inc.** - National compliance consulting
+- **Regulatory Solutions Group** - Licensing specialists
+- **AML Consultants Network** - KYC/AML implementation
+
+### Regulatory Technology
+- **ComplyAdvantage** - AML monitoring
+- **Chainalysis** - Blockchain analytics
+- **Elliptic** - Compliance screening
+
+### Industry Associations
+- Blockchain Association - National advocacy
+- Chamber of Digital Commerce - Policy development
+- ${params.state} Bankers Association - State-specific resources
+
+## 7. RISK ASSESSMENT
+
+### Regulatory Risk Factors
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| Regulatory changes | Medium | High | Quarterly legal review |
+| License delays | Medium | Medium | Begin applications early |
+| Enforcement actions | ${isStrict ? 'Medium' : 'Low'} | Critical | Maintain compliance |
+| Examination findings | Medium | High | Regular audits |
+
+### Compliance Gap Analysis
+${getGapAnalysis(params)}
 
 ### Mitigation Strategies
-- Regular compliance reviews
-- Diversified tokenomics
-- Phased implementation
-- Multi-signature security
+1. Maintain retainer with compliance counsel
+2. Implement regulatory monitoring system
+3. Conduct quarterly compliance audits
+4. Document all compliance activities
+5. Establish regulator relationships proactively
 
 ---
 
-**Disclaimer**: This report provides educational guidance. Consult with licensed professionals in ${locationData.state} for legal/financial advice.`
+**DISCLAIMER**: This report provides regulatory intelligence for informational purposes only. Veridian Group is not a law firm. All compliance strategies should be reviewed with qualified legal counsel in ${params.state} before implementation. Regulations are subject to change without notice.
+`
 }
 
-function getRegulatorySummary(state: string): string {
-  const friendlyStates = ['TX', 'WY', 'FL', 'NH', 'TN', 'NV']
-  const strictStates = ['NY', 'CA', 'WA']
-  
-  if (friendlyStates.includes(state)) return 'a crypto-friendly regulatory environment'
-  if (strictStates.includes(state)) return 'strict regulations requiring careful compliance'
-  return 'moderate regulations with growing crypto acceptance'
+// Helper functions for mock data
+function getLicenseSummary(state: string): string {
+  if (state === 'NY') return 'BitLicense required - comprehensive compliance framework'
+  if (state === 'CA') return 'DFPI licensing required for most activities'
+  if (state === 'TX') return 'No specific license required - business friendly'
+  if (state === 'WY') return 'Special purpose depository bank option available'
+  if (state === 'FL') return 'No state income tax, moderate license requirements'
+  return 'Consult with local counsel for specific requirements'
 }
 
-function getStateRegulations(state: string): string {
-  const regulations: Record<string, string> = {
-    'TX': '- No specific money transmission license required for crypto\n- Business-friendly environment\n- No state income tax',
-    'CA': '- Money transmission laws apply\n- DFPI licensing may be required\n- Strict consumer protection laws',
-    'NY': '- BitLicense required for crypto businesses\n- Stringent compliance requirements\n- Regular audits necessary',
-    'FL': '- No state income tax\n- Generally crypto-friendly\n- Money services business registration may be needed',
-    'WY': '- Most crypto-friendly state\n- Special purpose depository institutions allowed\n- Clear legal framework'
+function getRegulatoryFramework(state: string): string {
+  if (state === 'NY') return 'New York requires a BitLicense for virtual currency business activity. The NYDFS maintains strict oversight and regular examinations.'
+  if (state === 'CA') return 'California requires money transmitter licensing through DFPI. The state has active enforcement and pending comprehensive crypto legislation.'
+  if (state === 'TX') return 'Texas has no specific money transmission license for crypto. The Texas Department of Banking has issued favorable guidance.'
+  if (state === 'WY') return 'Wyoming has the most comprehensive digital asset laws, including DAO LLC structures and special purpose depository institutions.'
+  return `${state} has a developing regulatory framework. Consult with local counsel for current requirements.`
+}
+
+function getLicenseDetails(state: string): string {
+  if (state === 'NY') return '- BitLicense required for virtual currency business\n- Money transmitter license may also be required\n- Regular reporting and examinations mandated'
+  if (state === 'CA') return '- Money Transmitter Act applies\n- DFPI licensing required\n- $500k minimum bonding\n- Detailed AML program required'
+  if (state === 'TX') return '- No specific crypto license\n- May need money transmitter license for certain activities\n- Business-friendly environment'
+  return '- Determine money transmitter license applicability\n- Review state-specific exemptions\n- Consult with local counsel'
+}
+
+function getEnforcementHistory(state: string): string {
+  if (state === 'NY') return 'Active enforcement by NYDFS. Recent actions against major crypto firms for compliance failures.'
+  if (state === 'CA') return 'DFPI has issued multiple cease-and-desist orders for unlicensed activity. Increased scrutiny on DeFi projects.'
+  if (state === 'TX') return 'Limited enforcement specific to crypto. Texas has taken a generally supportive stance.'
+  return 'Limited public enforcement actions. Regulatory climate evolving.'
+}
+
+function getPendingLegislation(state: string): string {
+  if (state === 'NY') return 'Several bills proposed to modify BitLicense requirements. No immediate changes expected.'
+  if (state === 'CA') return 'Comprehensive digital assets bill pending. Would create new regulatory framework.'
+  if (state === 'TX') return 'Multiple bills supporting blockchain innovation under consideration.'
+  return 'Monitor state legislature for digital asset-related bills.'
+}
+
+function getRegulatorContact(state: string): string {
+  const regulators: Record<string, string> = {
+    'NY': 'NYDFS - (212) 709-3500 | licensing@dfs.ny.gov',
+    'CA': 'DFPI - (866) 275-2677 | licensing@dfpi.ca.gov',
+    'TX': 'Texas Department of Banking - (877) 276-5554 | info@dob.texas.gov',
+    'FL': 'Florida Office of Financial Regulation - (850) 487-9687 | licensing@flofr.gov',
+    'WY': 'Wyoming Division of Banking - (307) 777-7797 | banking@wyo.gov'
   }
-  
-  return regulations[state] || '- Consult with local legal counsel for specific regulations\n- Monitor state legislative developments\n- Consider joining state blockchain associations'
+  return regulators[state] || `${state} Department of Banking - Check website for contact information`
+}
+
+function getLicenseRequired(state: string, licenseType: string): string {
+  if (licenseType === 'mtl') {
+    if (state === 'TX' || state === 'WY' || state === 'FL') return 'Not Required'
+    if (state === 'NY' || state === 'CA') return 'Required'
+    return 'Varies by activity'
+  }
+  if (licenseType === 'lender') {
+    return 'Required in most states'
+  }
+  return 'Check requirements'
+}
+
+function getLicenseTimeline(state: string, licenseType: string): string {
+  if (state === 'NY') return '6-12 months'
+  if (state === 'CA') return '4-8 months'
+  if (state === 'TX') return '2-3 months'
+  return '3-6 months'
+}
+
+function getLicenseBond(state: string, licenseType: string): string {
+  if (state === 'NY') return '$50,000 - $500,000'
+  if (state === 'CA') return '$25,000 - $500,000'
+  return '$25,000 - $250,000'
+}
+
+function getLicenseFee(state: string, licenseType: string): string {
+  if (state === 'NY') return '$5,000 application fee'
+  if (state === 'CA') return '$1,000 - $5,000'
+  return '$500 - $2,500'
+}
+
+function getLegalCounsel(state: string): string {
+  const firms: Record<string, string> = {
+    'NY': '- Perkins Coie LLP (New York) - Blockchain & Crypto\n- Sullivan & Cromwell - FinTech practice',
+    'CA': '- Cooley LLP (San Francisco) - Digital Assets\n- Fenwick & West - Crypto compliance',
+    'TX': '- Baker Botts (Austin) - Blockchain practice\n- Haynes Boone - FinTech group',
+    'FL': '- Greenberg Traurig (Miami) - Crypto practice\n- Holland & Knight - Digital assets',
+    'WY': '- Crowley Fleck - DAO specialists\n- Williams Porter - Digital asset law'
+  }
+  return firms[state] || '- Contact local bar association for referrals\n- Major national firms with ${state} offices'
+}
+
+function getGapAnalysis(params: ReportGenerationParams): string {
+  return `Based on your stated concerns (${params.concerns.substring(0, 100)}...) and goals (${params.goals.substring(0, 100)}...), we identify the following compliance gaps:
+
+1. **Licensing**: Immediate need to determine license requirements in ${params.state}
+2. **Documentation**: Enhanced record-keeping systems required
+3. **Monitoring**: Ongoing compliance monitoring program needed
+4. **Training**: Staff compliance training required
+5. **Reporting**: Regulatory reporting systems to be established
+
+Addressing these gaps should be prioritized in the implementation roadmap.`
 }

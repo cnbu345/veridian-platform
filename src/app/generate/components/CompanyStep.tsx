@@ -1,3 +1,4 @@
+// src/app/generate/components/CompanyStep.tsx
 'use client'
 
 import { useForm } from 'react-hook-form'
@@ -12,17 +13,20 @@ interface CompanyStepProps {
 }
 
 const INDUSTRIES = [
-  'Technology / Software',
-  'Financial Services',
-  'Healthcare / Biotech',
+  'Banking / Financial Services',
+  'Insurance',
+  'Law Firm / Legal Services',
+  'Investment Management',
+  'Consulting',
+  'Technology',
+  'Healthcare',
   'Real Estate',
-  'Retail / E-commerce',
+  'Retail',
   'Manufacturing',
   'Energy / Utilities',
   'Education',
-  'Media / Entertainment',
-  'Professional Services',
   'Nonprofit',
+  'Government',
   'Other'
 ]
 
@@ -31,15 +35,16 @@ const COMPANY_SIZES = [
   { value: '11-50', label: '11-50 employees' },
   { value: '51-200', label: '51-200 employees' },
   { value: '201-500', label: '201-500 employees' },
-  { value: '500+', label: '500+ employees' }
+  { value: '501-1000', label: '501-1,000 employees' },
+  { value: '1000-plus', label: '1,000+ employees' }
 ]
 
 const BUDGET_RANGES = [
-  { value: 'under-10k', label: 'Under $10,000' },
-  { value: '10k-50k', label: '$10,000 - $50,000' },
+  { value: 'under-50k', label: 'Under $50,000' },
   { value: '50k-100k', label: '$50,000 - $100,000' },
   { value: '100k-250k', label: '$100,000 - $250,000' },
-  { value: '250k-plus', label: '$250,000+' }
+  { value: '250k-500k', label: '$250,000 - $500,000' },
+  { value: '500k-plus', label: '$500,000+' }
 ]
 
 export default function CompanyStep({ data, onUpdate, onNext }: CompanyStepProps) {
@@ -61,7 +66,7 @@ export default function CompanyStep({ data, onUpdate, onNext }: CompanyStepProps
       {/* Company Name */}
       <div className="space-y-2">
         <label className="block text-sm font-semibold text-navy-900">
-          Company Name <span className="text-gold-600">*</span>
+          Institution Name <span className="text-gold-600">*</span>
         </label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -73,7 +78,7 @@ export default function CompanyStep({ data, onUpdate, onNext }: CompanyStepProps
             className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 
                      rounded-xl focus:ring-2 focus:ring-gold-500 focus:border-transparent
                      transition-all duration-200"
-            placeholder="e.g., Acme Corporation"
+            placeholder="e.g., First Regional Bank"
           />
         </div>
         {errors.name && (
@@ -128,7 +133,7 @@ export default function CompanyStep({ data, onUpdate, onNext }: CompanyStepProps
         {/* Company Size */}
         <div className="space-y-2">
           <label className="block text-sm font-semibold text-navy-900">
-            Company Size <span className="text-gold-600">*</span>
+            Institution Size <span className="text-gold-600">*</span>
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -153,7 +158,7 @@ export default function CompanyStep({ data, onUpdate, onNext }: CompanyStepProps
         {/* Budget */}
         <div className="space-y-2">
           <label className="block text-sm font-semibold text-navy-900">
-            Web3 Budget <span className="text-gold-600">*</span>
+            Annual Compliance Budget <span className="text-gold-600">*</span>
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -198,7 +203,7 @@ export default function CompanyStep({ data, onUpdate, onNext }: CompanyStepProps
       {/* Company Description (Optional) */}
       <div className="space-y-2">
         <label className="block text-sm font-semibold text-navy-900">
-          Company Description <span className="text-navy-400 text-xs">(optional)</span>
+          Institution Description <span className="text-navy-400 text-xs">(optional)</span>
         </label>
         <div className="relative">
           <div className="absolute top-3 left-3 pointer-events-none">
@@ -209,7 +214,7 @@ export default function CompanyStep({ data, onUpdate, onNext }: CompanyStepProps
             rows={4}
             className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 
                      rounded-xl focus:ring-2 focus:ring-gold-500 focus:border-transparent"
-            placeholder="Briefly describe what your company does..."
+            placeholder="Briefly describe your institution and compliance needs..."
           />
         </div>
         {errors.description && (
@@ -239,7 +244,7 @@ export default function CompanyStep({ data, onUpdate, onNext }: CompanyStepProps
                    transition-all duration-300 hover:scale-105
                    shadow-lg shadow-gold-500/25"
         >
-          Continue to Location Analysis
+          Continue to Jurisdiction Analysis
         </button>
       </div>
     </form>

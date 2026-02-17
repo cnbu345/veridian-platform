@@ -1,7 +1,8 @@
-// Web3 talent density by state and major city
+// src/lib/location/talent.ts
+// Compliance and digital assets talent density by state and major city
 export interface TalentData {
-  totalDevelopers: number
-  companies: number
+  totalComplianceProfessionals: number
+  legalFirms: number
   meetups: number
   universities: string[]
   growthRate: number // YoY percentage
@@ -9,156 +10,156 @@ export interface TalentData {
   remote: 'high' | 'medium' | 'low'
 }
 
-// Primary Web3 hubs with detailed talent data
-export const WEB3_TALENT_HUBS = {
-  'San Francisco': {
-    state: 'CA',
-    totalDevelopers: 15700,
-    companies: 842,
-    meetups: 47,
-    universities: ['Stanford', 'UC Berkeley', 'USF'],
-    growthRate: 32,
+// Primary talent hubs for digital assets compliance
+export const COMPLIANCE_TALENT_HUBS = {
+  'New York': {
+    state: 'NY',
+    totalComplianceProfessionals: 8500,
+    legalFirms: 320,
+    meetups: 28,
+    universities: ['NYU', 'Columbia', 'Fordham'],
+    growthRate: 35,
     avgSalary: 185000,
     remote: 'medium'
   },
-  'New York': {
-    state: 'NY',
-    totalDevelopers: 14300,
-    companies: 756,
-    meetups: 52,
-    universities: ['NYU', 'Columbia', 'Cornell Tech'],
+  'San Francisco': {
+    state: 'CA',
+    totalComplianceProfessionals: 7200,
+    legalFirms: 290,
+    meetups: 24,
+    universities: ['Stanford', 'UC Berkeley', 'USF'],
+    growthRate: 32,
+    avgSalary: 195000,
+    remote: 'medium'
+  },
+  'Washington': {
+    state: 'DC',
+    totalComplianceProfessionals: 6800,
+    legalFirms: 310,
+    meetups: 22,
+    universities: ['Georgetown', 'GWU', 'American'],
     growthRate: 28,
     avgSalary: 175000,
     remote: 'medium'
   },
+  'Chicago': {
+    state: 'IL',
+    totalComplianceProfessionals: 5400,
+    legalFirms: 245,
+    meetups: 18,
+    universities: ['UChicago', 'Northwestern', 'Loyola'],
+    growthRate: 25,
+    avgSalary: 165000,
+    remote: 'medium'
+  },
+  'Boston': {
+    state: 'MA',
+    totalComplianceProfessionals: 4800,
+    legalFirms: 210,
+    meetups: 16,
+    universities: ['Harvard', 'MIT', 'BU', 'BC'],
+    growthRate: 27,
+    avgSalary: 170000,
+    remote: 'medium'
+  },
   'Austin': {
     state: 'TX',
-    totalDevelopers: 8900,
-    companies: 423,
-    meetups: 31,
+    totalComplianceProfessionals: 3200,
+    legalFirms: 145,
+    meetups: 14,
     universities: ['UT Austin', 'St. Edwards'],
-    growthRate: 45,
-    avgSalary: 155000,
+    growthRate: 42,
+    avgSalary: 150000,
     remote: 'high'
   },
   'Miami': {
     state: 'FL',
-    totalDevelopers: 5600,
-    companies: 312,
-    meetups: 24,
+    totalComplianceProfessionals: 2800,
+    legalFirms: 130,
+    meetups: 12,
     universities: ['University of Miami', 'FIU'],
-    growthRate: 52,
+    growthRate: 48,
     avgSalary: 145000,
     remote: 'high'
   },
   'Los Angeles': {
     state: 'CA',
-    totalDevelopers: 7200,
-    companies: 389,
-    meetups: 28,
-    universities: ['UCLA', 'USC', 'Caltech'],
-    growthRate: 25,
-    avgSalary: 165000,
-    remote: 'medium'
-  },
-  'Chicago': {
-    state: 'IL',
-    totalDevelopers: 4800,
-    companies: 256,
-    meetups: 19,
-    universities: ['UChicago', 'Northwestern', 'UIUC'],
-    growthRate: 22,
-    avgSalary: 148000,
+    totalComplianceProfessionals: 4100,
+    legalFirms: 185,
+    meetups: 15,
+    universities: ['UCLA', 'USC', 'Loyola'],
+    growthRate: 24,
+    avgSalary: 160000,
     remote: 'medium'
   },
   'Seattle': {
     state: 'WA',
-    totalDevelopers: 6100,
-    companies: 334,
-    meetups: 23,
+    totalComplianceProfessionals: 2900,
+    legalFirms: 125,
+    meetups: 11,
     universities: ['UW', 'Seattle U'],
     growthRate: 30,
-    avgSalary: 172000,
+    avgSalary: 165000,
     remote: 'medium'
   },
   'Denver': {
     state: 'CO',
-    totalDevelopers: 3900,
-    companies: 198,
-    meetups: 17,
-    universities: ['CU Boulder', 'Denver U', 'CSU'],
-    growthRate: 35,
-    avgSalary: 152000,
-    remote: 'high'
-  },
-  'Boston': {
-    state: 'MA',
-    totalDevelopers: 5200,
-    companies: 287,
-    meetups: 21,
-    universities: ['MIT', 'Harvard', 'BU', 'Northeastern'],
-    growthRate: 27,
-    avgSalary: 168000,
-    remote: 'medium'
-  },
-  'Atlanta': {
-    state: 'GA',
-    totalDevelopers: 3100,
-    companies: 167,
-    meetups: 14,
-    universities: ['Georgia Tech', 'Emory', 'GSU'],
-    growthRate: 38,
-    avgSalary: 142000,
+    totalComplianceProfessionals: 2100,
+    legalFirms: 95,
+    meetups: 9,
+    universities: ['CU Boulder', 'Denver U'],
+    growthRate: 33,
+    avgSalary: 150000,
     remote: 'high'
   }
 } as const
 
-// Secondary markets with growing talent
+// Secondary markets with growing compliance talent
 export const SECONDARY_TALENT_MARKETS = [
-  { city: 'Salt Lake City', state: 'UT', developers: 1800, growth: 42 },
-  { city: 'Raleigh', state: 'NC', developers: 2100, growth: 39 },
-  { city: 'Nashville', state: 'TN', developers: 1600, growth: 44 },
-  { city: 'Portland', state: 'OR', developers: 2200, growth: 28 },
-  { city: 'Phoenix', state: 'AZ', developers: 1900, growth: 35 },
-  { city: 'San Diego', state: 'CA', developers: 2800, growth: 24 },
-  { city: 'Dallas', state: 'TX', developers: 3400, growth: 31 },
-  { city: 'Houston', state: 'TX', developers: 2600, growth: 27 },
-  { city: 'Philadelphia', state: 'PA', developers: 2300, growth: 21 },
-  { city: 'Detroit', state: 'MI', developers: 1200, growth: 18 },
-  { city: 'Minneapolis', state: 'MN', developers: 1700, growth: 23 },
-  { city: 'St. Louis', state: 'MO', developers: 1100, growth: 19 },
-  { city: 'Kansas City', state: 'MO', developers: 1300, growth: 22 },
-  { city: 'New Orleans', state: 'LA', developers: 800, growth: 31 },
-  { city: 'Memphis', state: 'TN', developers: 600, growth: 25 }
+  { city: 'Salt Lake City', state: 'UT', professionals: 950, growth: 38 },
+  { city: 'Raleigh', state: 'NC', professionals: 1100, growth: 35 },
+  { city: 'Nashville', state: 'TN', professionals: 850, growth: 40 },
+  { city: 'Portland', state: 'OR', professionals: 1200, growth: 26 },
+  { city: 'Phoenix', state: 'AZ', professionals: 1000, growth: 32 },
+  { city: 'San Diego', state: 'CA', professionals: 1500, growth: 22 },
+  { city: 'Dallas', state: 'TX', professionals: 1800, growth: 28 },
+  { city: 'Houston', state: 'TX', professionals: 1400, growth: 24 },
+  { city: 'Philadelphia', state: 'PA', professionals: 1300, growth: 20 },
+  { city: 'Atlanta', state: 'GA', professionals: 1600, growth: 30 },
+  { city: 'Minneapolis', state: 'MN', professionals: 950, growth: 21 },
+  { city: 'St. Louis', state: 'MO', professionals: 700, growth: 18 },
 ]
 
-// Remote-friendly states (based on laws, time zones, infrastructure)
+// Remote-friendly states for compliance roles
 export const REMOTE_FRIENDLY_STATES = [
-  'TX', 'FL', 'TN', 'NV', 'WY', 'SD', 'NH', 'AZ', 'CO', 'NC', 'GA'
+  'TX', 'FL', 'TN', 'NV', 'WY', 'SD', 'NH', 'AZ', 'CO', 'NC', 'GA', 'UT'
 ]
 
-// State talent scores (0-100)
+// State compliance talent scores (0-100)
 export const STATE_TALENT_SCORES: Record<string, number> = {
-  'CA': 98,
-  'NY': 95,
-  'TX': 82,
-  'FL': 76,
-  'IL': 71,
-  'WA': 79,
-  'CO': 74,
-  'MA': 81,
+  'NY': 98,
+  'CA': 95,
+  'DC': 94,
+  'IL': 85,
+  'MA': 88,
+  'TX': 76,
+  'FL': 72,
+  'WA': 75,
+  'CO': 70,
   'GA': 65,
   'NC': 62,
-  'VA': 60,
-  'PA': 58,
+  'VA': 64,
+  'PA': 60,
   'OH': 52,
   'MI': 48,
   'MN': 55,
   'TN': 53,
   'AZ': 51,
-  'OR': 59,
-  'MD': 57,
-  'UT': 56
+  'OR': 57,
+  'MD': 61,
+  'UT': 58,
+  'DE': 82,
+  'WY': 70
 }
 
 // Get talent score for a location
@@ -166,13 +167,13 @@ export function getTalentScoreForLocation(city: string, state: string): {
   score: number
   rank: 'high' | 'medium' | 'low'
   details: {
-    developers: number
+    professionals: number
     growthRate: number
     remote: 'high' | 'medium' | 'low'
   }
 } {
   // Check if it's a primary hub
-  const hubEntry = Object.entries(WEB3_TALENT_HUBS).find(
+  const hubEntry = Object.entries(COMPLIANCE_TALENT_HUBS).find(
     ([hubCity, data]) => hubCity === city && data.state === state
   )
   
@@ -182,7 +183,7 @@ export function getTalentScoreForLocation(city: string, state: string): {
       score: 95,
       rank: 'high',
       details: {
-        developers: data.totalDevelopers,
+        professionals: data.totalComplianceProfessionals,
         growthRate: data.growthRate,
         remote: data.remote
       }
@@ -199,7 +200,7 @@ export function getTalentScoreForLocation(city: string, state: string): {
       score: 70,
       rank: 'medium',
       details: {
-        developers: secondary.developers,
+        professionals: secondary.professionals,
         growthRate: secondary.growth,
         remote: REMOTE_FRIENDLY_STATES.includes(state) ? 'high' : 'medium'
       }
@@ -213,8 +214,8 @@ export function getTalentScoreForLocation(city: string, state: string): {
     score: stateScore,
     rank: stateScore >= 70 ? 'high' : stateScore >= 45 ? 'medium' : 'low',
     details: {
-      developers: Math.round(stateScore * 15),
-      growthRate: 15 + Math.round(stateScore / 5),
+      professionals: Math.round(stateScore * 8),
+      growthRate: 12 + Math.round(stateScore / 4),
       remote: REMOTE_FRIENDLY_STATES.includes(state) ? 'high' : 'medium'
     }
   }
@@ -233,58 +234,58 @@ export function getTalentRecommendations(
   estimatedTimeToHire: string
 } {
   const talentScore = getTalentScoreForLocation(city, state)
-  const isHub = !!Object.keys(WEB3_TALENT_HUBS).find(h => h === city)
+  const isHub = !!Object.keys(COMPLIANCE_TALENT_HUBS).find(h => h === city)
   const remoteFriendly = REMOTE_FRIENDLY_STATES.includes(state)
   
   let hiringApproach: 'local' | 'remote' | 'hybrid' = 'hybrid'
   let salaryMultiplier = 1.0
-  let estimatedTimeToHire = '4-6 weeks'
+  let estimatedTimeToHire = '6-8 weeks'
   
   if (isHub) {
     hiringApproach = 'local'
     salaryMultiplier = 1.3
-    estimatedTimeToHire = '2-4 weeks'
+    estimatedTimeToHire = '4-6 weeks'
   } else if (tier === 'rural') {
     hiringApproach = 'remote'
     salaryMultiplier = 0.9
-    estimatedTimeToHire = '6-8 weeks'
+    estimatedTimeToHire = '8-10 weeks'
   } else if (remoteFriendly) {
     hiringApproach = 'hybrid'
     salaryMultiplier = 1.0
-    estimatedTimeToHire = '4-6 weeks'
+    estimatedTimeToHire = '6-8 weeks'
   }
   
   let topChannels: string[] = []
   
   if (isHub) {
     topChannels = [
-      'Local meetups and hackathons',
-      `${city} Blockchain Developers group`,
-      'University career fairs',
-      'Local VC portfolio companies'
+      'Local compliance networking events',
+      `${city} Bar Association - FinTech section`,
+      'University law school career services',
+      'Regulatory agency alumni networks'
     ]
   } else if (tier === 'major') {
     topChannels = [
-      'Remote-first job boards',
-      'Web3 talent platforms',
-      'Industry Discord servers',
-      'Twitter crypto community'
+      'LinkedIn Recruiter - compliance focus',
+      'Specialized legal search firms',
+      'Compliance professional associations',
+      'Remote compliance job boards'
     ]
   } else {
     topChannels = [
-      'Remote job boards (WeWorkRemotely, RemoteOK)',
-      'Web3 native hiring platforms',
-      'International developer communities',
-      'Bounty-based hiring'
+      'Remote compliance job boards',
+      'International talent platforms',
+      'Virtual compliance communities',
+      'Contract-to-hire arrangements'
     ]
   }
   
   return {
     strategy: isHub 
-      ? `Leverage ${city}'s deep talent pool through local hiring and partnerships with blockchain meetups.`
+      ? `Leverage ${city}'s deep compliance talent pool through local hiring and partnerships with law firms.`
       : remoteFriendly
-        ? `Combine local hiring with remote talent to access the best of both worlds.`
-        : `Focus on remote-first hiring with occasional in-person gatherings for team building.`,
+        ? `Combine local compliance hires with remote talent to build an effective team.`
+        : `Focus on remote-first compliance hiring with quarterly in-person gatherings.`,
     hiringApproach,
     salaryMultiplier,
     topChannels,

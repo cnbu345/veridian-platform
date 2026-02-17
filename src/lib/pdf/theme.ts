@@ -1,4 +1,5 @@
-// PDF Theme Configuration - Matches Veridian Group Branding
+// src/lib/pdf/theme.ts
+// PDF Theme Configuration - Veridian Group Regulatory Intelligence
 export const pdfTheme = {
   colors: {
     navy: {
@@ -60,15 +61,14 @@ export const pdfTheme = {
   }
 }
 
-// Report Sections Configuration
+// Report Sections Configuration - Regulatory Focus
 export const REPORT_SECTIONS = [
   { id: 'executive-summary', title: 'Executive Summary', pages: 1 },
-  { id: 'location-analysis', title: 'Location Intelligence Analysis', pages: 1 },
-  { id: 'regulatory-landscape', title: 'State Regulatory Landscape', pages: 1 },
-  { id: 'talent-ecosystem', title: 'Talent & Ecosystem Analysis', pages: 1 },
-  { id: 'implementation-roadmap', title: '90-Day Implementation Roadmap', pages: 1 },
-  { id: 'resource-directory', title: 'Local Resource Directory', pages: 1 },
-  { id: 'risk-assessment', title: 'Risk Assessment & Mitigation', pages: 1 },
+  { id: 'regulatory-landscape', title: 'Regulatory Landscape', pages: 1 },
+  { id: 'licensing-matrix', title: 'Multi-State Licensing Matrix', pages: 1 },
+  { id: 'compliance-roadmap', title: 'Compliance Roadmap', pages: 1 },
+  { id: 'risk-assessment', title: 'Risk Assessment', pages: 1 },
+  { id: 'regulatory-contacts', title: 'Regulatory Contacts', pages: 1 },
   { id: 'appendices', title: 'Appendices & Methodology', pages: 1 },
 ]
 

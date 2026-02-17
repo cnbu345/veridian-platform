@@ -1,3 +1,4 @@
+// src/lib/reports/generator.ts
 import { CompanyFormData } from './validation'
 import { LocationAnalysis } from '../location/analyzer'
 import { StrategyFormData } from './validation'
@@ -10,9 +11,9 @@ export interface GenerationResult {
   location_analysis: any
   regulatory_analysis: any
   talent_analysis: any
-  competitor_analysis: any
-  implementation_roadmap: any
-  resource_directory: any
+  licensing_matrix: any
+  compliance_roadmap: any
+  regulatory_contacts: any
   risk_assessment: any
 }
 
@@ -22,7 +23,7 @@ export async function generateReport(
   strategy: StrategyFormData,
   userId: string
 ): Promise<GenerationResult> {
-  console.log('Starting report generation for:', company.name)
+  console.log('Starting regulatory report generation for:', company.name)
   
   // Simulate AI processing time
   await new Promise(resolve => setTimeout(resolve, 2000))
@@ -44,14 +45,14 @@ export async function generateReport(
   // Generate talent analysis
   const talent_analysis = generateTalentAnalysis(location, talentScore, talentRecs)
   
-  // Generate competitor analysis
-  const competitor_analysis = generateCompetitorAnalysis(location, company)
+  // Generate licensing matrix
+  const licensing_matrix = generateLicensingMatrix(location, regulation)
   
-  // Generate implementation roadmap
-  const implementation_roadmap = generateRoadmap(strategy)
+  // Generate compliance roadmap
+  const compliance_roadmap = generateComplianceRoadmap(strategy)
   
-  // Generate resource directory
-  const resource_directory = generateResourceDirectory(location)
+  // Generate regulatory contacts
+  const regulatory_contacts = generateRegulatoryContacts(location)
   
   // Generate risk assessment
   const risk_assessment = generateRiskAssessment(location, strategy)
@@ -61,9 +62,9 @@ export async function generateReport(
     location_analysis,
     regulatory_analysis,
     talent_analysis,
-    competitor_analysis,
-    implementation_roadmap,
-    resource_directory,
+    licensing_matrix,
+    compliance_roadmap,
+    regulatory_contacts,
     risk_assessment
   }
 }
@@ -75,52 +76,50 @@ function generateExecutiveSummary(
   regulation: any
 ): string {
   const marketDesc = location.tier === 'major' 
-    ? 'major metropolitan Web3 hub'
+    ? 'major market with established regulatory infrastructure'
     : location.tier === 'suburban'
-      ? `suburban market with access to ${location.nearestMajorCity}`
-      : 'rural market ideal for remote-first Web3 operations'
+      ? `suburban market with access to ${location.nearestRegulatoryHub || location.nearestMajorCity}`
+      : 'rural market requiring remote compliance resources'
   
   const regulatoryDesc = regulation.cryptoFriendly === 'friendly'
-    ? 'favorable regulatory environment'
+    ? 'favorable regulatory environment with lower compliance burden'
     : regulation.cryptoFriendly === 'moderate'
-      ? 'moderate regulatory requirements'
-      : 'strict regulatory framework requiring careful compliance'
+      ? 'moderate regulatory requirements requiring standard compliance'
+      : 'strict regulatory framework requiring comprehensive compliance programs'
   
-  return `# Executive Summary: ${company.name} Web3 Strategy
+  return `# Executive Summary: ${company.name} Regulatory Intelligence Report
 
-## Company Overview
-${company.name} operates in the ${company.industry} industry with ${company.size} employees. 
-With a budget of ${company.budget.replace('-', ' to ').replace('k', 'K')}, 
-the company is positioned to explore Web3 opportunities strategically.
+## Institution Overview
+${company.name} operates in the ${company.industry} sector with ${company.size} employees. 
+With a compliance budget of ${formatBudget(company.budget)}, the institution is positioned to develop comprehensive digital asset compliance programs.
 
-## Location Advantage
-Based in ${location.city}, ${location.state}, your company has access to a ${marketDesc}. 
-This location offers ${location.talentDensity} talent density and a ${regulatoryDesc}.
+## Jurisdiction Analysis
+Based in ${location.city}, ${location.state}, your institution operates in a ${marketDesc}. 
+This jurisdiction offers ${location.regulatoryClimate} regulatory climate and ${location.talentDensity} compliance talent density.
 
-## Strategic Focus
-Based on your primary focus on ${strategy.primary.replace('-', ' ')}, 
-we've developed a ${strategy.timeline} roadmap that addresses your key concerns:
+## Regulatory Focus
+Based on your primary focus on ${formatPrimaryFocus(strategy.primary)}, 
+we've developed a ${strategy.timeline} compliance roadmap that addresses your key concerns:
 ${strategy.concerns.substring(0, 150)}...
 
-## Key Recommendations
-1. ${location.tier === 'major' ? 'Leverage local Web3 talent and community' : 'Build a remote-first team with periodic gatherings'}
-2. ${regulation.cryptoFriendly === 'strict' ? 'Prioritize compliance infrastructure early' : 'Move quickly while maintaining compliance basics'}
-3. Focus on ${strategy.secondary.slice(0, 2).join(' and ')} as secondary priorities
+## Key Compliance Recommendations
+1. ${location.licenseRequired !== 'none' ? `Prioritize license applications in ${location.state} - start within 30 days` : 'Leverage favorable regulatory environment for rapid market entry'}
+2. ${regulation.cryptoFriendly === 'strict' ? 'Implement enhanced compliance infrastructure immediately' : 'Establish standard compliance protocols aligned with industry best practices'}
+3. Focus on ${strategy.secondary.slice(0, 2).map(formatSecondaryFocus).join(' and ')} as secondary priorities
 
 ## Expected Outcomes
-Within ${strategy.timeline}, you can expect to have a functional Web3 strategy 
-aligned with your business goals and compliant with ${location.state} regulations.
+Within ${strategy.timeline}, your institution can expect to have established a compliant framework for digital asset activities, with appropriate licenses and regulatory relationships in place.
 `
 }
 
 function generateLocationAnalysis(location: LocationAnalysis, talentScore: any): any {
   return {
     marketTier: location.tier,
-    nearestHub: location.nearestWeb3Hub,
+    nearestRegulatoryHub: location.nearestRegulatoryHub,
     hubDistance: location.distanceToMajor || 0,
     talentScore: talentScore.score,
     talentRank: talentScore.rank,
-    developers: talentScore.details.developers,
+    complianceProfessionals: talentScore.details.professionals,
     growthRate: talentScore.details.growthRate,
     msaInfo: location.msaName ? {
       name: location.msaName,
@@ -128,7 +127,7 @@ function generateLocationAnalysis(location: LocationAnalysis, talentScore: any):
     } : null,
     summary: `${location.city} is a ${location.tier} market with ${
       talentScore.rank === 'high' ? 'strong' : 'developing'
-    } Web3 talent. ${location.nearestWeb3Hub ? `Nearest major hub: ${location.nearestWeb3Hub}` : ''}`
+    } compliance talent. ${location.nearestRegulatoryHub ? `Nearest regulatory hub: ${location.nearestRegulatoryHub}` : ''}`
   }
 }
 
@@ -140,12 +139,13 @@ function generateRegulatoryAnalysis(location: LocationAnalysis, regulation: any,
     notes: regulation.notes,
     checklist,
     lastUpdated: regulation.lastUpdated,
+    licenseRequired: location.licenseRequired,
     summary: `${location.state} has a ${regulation.cryptoFriendly} regulatory climate. ${
       regulation.cryptoFriendly === 'friendly' 
-        ? 'This presents fewer compliance barriers for Web3 initiatives.'
+        ? 'This presents lower compliance barriers for digital asset initiatives.'
         : regulation.cryptoFriendly === 'strict'
           ? 'Expect significant compliance requirements and regulatory oversight.'
-          : 'Moderate compliance requirements with room to operate.'
+          : 'Standard compliance requirements with room to operate.'
     }`
   }
 }
@@ -154,7 +154,7 @@ function generateTalentAnalysis(location: LocationAnalysis, talentScore: any, re
   return {
     score: talentScore.score,
     rank: talentScore.rank,
-    estimatedDevelopers: talentScore.details.developers,
+    estimatedComplianceProfessionals: talentScore.details.professionals,
     growthRate: talentScore.details.growthRate,
     remoteCapability: talentScore.details.remote,
     hiringStrategy: recs.strategy,
@@ -165,33 +165,65 @@ function generateTalentAnalysis(location: LocationAnalysis, talentScore: any, re
   }
 }
 
-function generateCompetitorAnalysis(location: LocationAnalysis, company: CompanyFormData): any {
-  const competitorsByTier = {
-    major: 15 + Math.floor(Math.random() * 10),
-    suburban: 8 + Math.floor(Math.random() * 7),
-    rural: 3 + Math.floor(Math.random() * 5)
+function generateLicensingMatrix(location: LocationAnalysis, regulation: any): any {
+  const licenses = []
+  
+  // Add money transmitter license
+  if (regulation.moneyTransmitter.includes('required') || regulation.moneyTransmitter.includes('BitLicense')) {
+    licenses.push({
+      type: 'Money Transmitter License',
+      required: true,
+      timeline: '4-8 months',
+      bonding: '$25,000 - $500,000',
+      fee: '$1,000 - $5,000',
+      notes: regulation.moneyTransmitter
+    })
   }
   
-  const competitorCount = competitorsByTier[location.tier as keyof typeof competitorsByTier] || 5
+  // Add BitLicense for NY
+  if (location.state === 'NY') {
+    licenses.push({
+      type: 'BitLicense',
+      required: true,
+      timeline: '6-12 months',
+      bonding: '$50,000 - $500,000',
+      fee: '$5,000',
+      notes: 'Comprehensive compliance program required'
+    })
+  }
+  
+  // Add DFPI for CA
+  if (location.state === 'CA') {
+    licenses.push({
+      type: 'DFPI License',
+      required: true,
+      timeline: '4-8 months',
+      bonding: '$25,000 - $500,000',
+      fee: '$1,000 - $5,000',
+      notes: 'California-specific requirements'
+    })
+  }
+  
+  // Add generic license
+  if (licenses.length === 0) {
+    licenses.push({
+      type: 'State License',
+      required: 'May be required',
+      timeline: '2-6 months',
+      bonding: 'Varies by state',
+      fee: '$500 - $2,500',
+      notes: 'Consult with counsel for specific requirements'
+    })
+  }
   
   return {
-    totalCompetitors: competitorCount,
-    activeInWeb3: Math.floor(competitorCount * 0.6),
-    raisingFunding: Math.floor(competitorCount * 0.3),
-    gaps: [
-      'Most competitors lack location-specific strategy',
-      'Few are addressing regulatory compliance comprehensively',
-      'Talent acquisition remains a common pain point'
-    ],
-    opportunities: [
-      `Differentiate through ${location.state}-specific compliance expertise`,
-      `Build community in ${location.city} before competitors establish presence`,
-      'Focus on your specific industry vertical'
-    ]
+    state: location.state,
+    licenses,
+    summary: `${location.state} requires ${licenses.length} license(s) for digital asset activities.`
   }
 }
 
-function generateRoadmap(strategy: StrategyFormData): any {
+function generateComplianceRoadmap(strategy: StrategyFormData): any {
   const months = strategy.timeline === '3-months' ? 3 : strategy.timeline === '6-months' ? 6 : 12
   
   return {
@@ -199,78 +231,65 @@ function generateRoadmap(strategy: StrategyFormData): any {
     phases: [
       {
         month: 1,
-        focus: 'Foundation',
+        focus: 'Foundation & Legal Setup',
         tasks: [
-          'Legal entity setup and compliance review',
-          'Team education and Web3 fundamentals training',
-          'Technology stack selection',
-          'Initial community building'
+          'Engage qualified legal counsel',
+          'Determine license requirements',
+          'Begin license applications',
+          'Designate compliance officer',
+          'Initial compliance policy drafting'
         ]
       },
       {
         month: Math.floor(months / 3),
-        focus: 'Development',
+        focus: 'Licensing & Policy Development',
         tasks: [
-          'MVP or pilot program development',
-          'Partnership outreach',
-          'Regulatory documentation preparation',
-          'User testing with early adopters'
+          'Submit all license applications',
+          'Finalize compliance policies',
+          'Select compliance technology',
+          'Begin AML/KYC implementation',
+          'Establish reporting protocols'
         ]
       },
       {
         month: Math.floor(months * 0.66),
-        focus: 'Launch',
+        focus: 'Implementation & Monitoring',
         tasks: [
-          'Public launch or pilot expansion',
-          'Marketing and community engagement',
-          'Performance monitoring setup',
-          'Iterate based on feedback'
+          'Complete license processing',
+          'Full compliance system implementation',
+          'Staff training completion',
+          'Initial regulatory reporting',
+          'Compliance audit preparation'
         ]
       }
     ],
     milestones: [
-      `Complete regulatory review by end of Month 1`,
-      `Launch pilot by end of Month ${Math.floor(months / 2)}`,
-      `Public launch by end of Month ${months}`
+      `Legal counsel engaged by end of Week 1`,
+      `License applications submitted by end of Month 1`,
+      `Compliance systems operational by Month ${Math.floor(months / 2)}`,
+      `Full compliance achieved by Month ${months}`
     ]
   }
 }
 
-function generateResourceDirectory(location: LocationAnalysis): any {
+function generateRegulatoryContacts(location: LocationAnalysis): any {
   return {
-    legalFirms: [
-      { name: 'Perkins Coie', focus: 'Blockchain & Crypto', national: true },
-      { name: 'Anderson Kill', focus: 'Cryptocurrency', national: true },
-      { name: 'Cooley LLP', focus: 'Tech & Blockchain', national: true }
+    stateRegulator: getRegulatorContact(location.state),
+    legalFirms: getLegalFirms(location.state),
+    consultants: [
+      { name: 'Compliance Partners Inc.', focus: 'Full-service compliance consulting' },
+      { name: 'Regulatory Solutions Group', focus: 'Multi-state licensing specialists' },
+      { name: 'AML Consultants Network', focus: 'KYC/AML program development' }
     ],
-    localResources: [
-      {
-        type: 'Meetup',
-        name: `${location.city} Blockchain Developers`,
-        url: `https://meetup.com/${location.city}-blockchain`
-      },
-      {
-        type: 'Accelerator',
-        name: 'Web3 Launchpad',
-        url: 'https://web3launchpad.io'
-      },
-      {
-        type: 'Community',
-        name: 'Crypto Commons',
-        url: 'https://cryptocommons.community'
-      }
+    technologyProviders: [
+      { name: 'ComplyAdvantage', focus: 'AML monitoring solutions' },
+      { name: 'Chainalysis', focus: 'Blockchain analytics' },
+      { name: 'Elliptic', focus: 'Compliance screening' }
     ],
-    fundingSources: [
-      'Local angel investor networks',
-      'Web3-focused VC firms',
-      'State economic development grants',
-      'Crypto native DAO treasuries'
-    ],
-    developmentPartners: [
-      'ConsenSys',
-      'Alchemy Ventures',
-      'ThirdWeb',
-      'Local dev shops'
+    industryAssociations: [
+      { name: 'Blockchain Association', focus: 'National advocacy' },
+      { name: 'Chamber of Digital Commerce', focus: 'Policy development' },
+      { name: `${location.state} Bankers Association`, focus: 'State-specific resources' }
     ]
   }
 }
@@ -278,46 +297,130 @@ function generateResourceDirectory(location: LocationAnalysis): any {
 function generateRiskAssessment(location: LocationAnalysis, strategy: StrategyFormData): any {
   const risks = [
     {
-      category: 'Regulatory',
+      category: 'Regulatory Change',
       risk: `Regulatory changes in ${location.state}`,
-      likelihood: location.regulatoryClimate === 'strict' ? 'high' : 'medium',
-      impact: 'high',
-      mitigation: 'Regular compliance reviews, legal counsel retainer, flexible architecture'
+      likelihood: location.regulatoryClimate === 'strict' ? 'High' : 'Medium',
+      impact: 'High',
+      mitigation: 'Quarterly legal reviews, regulatory monitoring subscription'
     },
     {
-      category: 'Market',
-      risk: 'Market volatility and crypto winter',
-      likelihood: 'medium',
-      impact: 'high',
-      mitigation: 'Diversified treasury strategy, focus on fundamentals, extended runway planning'
+      category: 'License Delays',
+      risk: 'Extended processing times for licenses',
+      likelihood: 'Medium',
+      impact: 'Medium',
+      mitigation: 'Begin applications early, engage experienced counsel'
     },
     {
-      category: 'Talent',
-      risk: `Difficulty hiring in ${location.tier} market`,
-      likelihood: location.talentDensity === 'low' ? 'high' : 'medium',
-      impact: 'medium',
-      mitigation: location.talentDensity === 'low' 
-        ? 'Remote-first hiring, relocation packages, contractor relationships'
-        : 'Competitive packages, culture building, internship programs'
+      category: 'Enforcement Action',
+      risk: `Regulatory enforcement in ${location.state}`,
+      likelihood: location.regulatoryClimate === 'strict' ? 'Medium' : 'Low',
+      impact: 'Critical',
+      mitigation: 'Proactive compliance, documented procedures, regular audits'
     },
     {
-      category: 'Technical',
-      risk: 'Security vulnerabilities or smart contract risks',
-      likelihood: 'medium',
-      impact: 'critical',
-      mitigation: 'Multiple security audits, bug bounty program, gradual feature rollout'
+      category: 'Examination Findings',
+      risk: 'Compliance gaps identified during examination',
+      likelihood: 'Medium',
+      impact: 'High',
+      mitigation: 'Regular compliance audits, third-party reviews'
     }
   ]
   
   return {
     risks,
-    overall: location.regulatoryClimate === 'strict' ? 'elevated' : 'moderate',
+    overall: location.regulatoryClimate === 'strict' ? 'Elevated' : 'Moderate',
     recommendations: [
-      'Conduct quarterly compliance reviews',
-      'Maintain legal counsel retainer in your state',
-      'Implement multi-signature security for all contracts',
-      'Build with upgradeable contract architecture',
-      'Diversify across multiple chains/protocols'
+      'Maintain retainer with qualified compliance counsel',
+      'Implement regulatory monitoring system',
+      'Conduct quarterly compliance audits',
+      'Document all compliance activities',
+      'Establish proactive regulator relationships'
     ]
   }
+}
+
+// Helper functions
+function formatBudget(budget: string): string {
+  const budgets: Record<string, string> = {
+    'under-50k': 'under $50,000',
+    '50k-100k': '$50,000 - $100,000',
+    '100k-250k': '$100,000 - $250,000',
+    '250k-500k': '$250,000 - $500,000',
+    '500k-plus': '$500,000+'
+  }
+  return budgets[budget] || budget
+}
+
+function formatPrimaryFocus(focus: string): string {
+  const focuses: Record<string, string> = {
+    'compliance': 'regulatory compliance',
+    'licensing': 'multi-state licensing',
+    'risk': 'risk assessment',
+    'monitoring': 'compliance monitoring',
+    'talent': 'compliance talent',
+    'strategy': 'market entry strategy'
+  }
+  return focuses[focus] || focus
+}
+
+function formatSecondaryFocus(focus: string): string {
+  const focuses: Record<string, string> = {
+    'compliance': 'regulatory compliance',
+    'licensing': 'licensing',
+    'risk': 'risk assessment',
+    'monitoring': 'monitoring',
+    'talent': 'talent acquisition',
+    'strategy': 'market strategy',
+    'reporting': 'regulatory reporting',
+    'audit': 'compliance audits',
+    'policy': 'policy development',
+    'training': 'staff training'
+  }
+  return focuses[focus] || focus
+}
+
+function getRegulatorContact(state: string): { name: string, phone: string, email: string } {
+  const regulators: Record<string, any> = {
+    'NY': { name: 'NYDFS', phone: '(212) 709-3500', email: 'licensing@dfs.ny.gov' },
+    'CA': { name: 'DFPI', phone: '(866) 275-2677', email: 'licensing@dfpi.ca.gov' },
+    'TX': { name: 'Texas Department of Banking', phone: '(877) 276-5554', email: 'info@dob.texas.gov' },
+    'FL': { name: 'Florida Office of Financial Regulation', phone: '(850) 487-9687', email: 'licensing@flofr.gov' },
+    'WY': { name: 'Wyoming Division of Banking', phone: '(307) 777-7797', email: 'banking@wyo.gov' }
+  }
+  
+  return regulators[state] || { 
+    name: `${state} Department of Banking`, 
+    phone: 'Check website', 
+    email: 'Check website' 
+  }
+}
+
+function getLegalFirms(state: string): any[] {
+  const firms: Record<string, any[]> = {
+    'NY': [
+      { name: 'Perkins Coie LLP', focus: 'Blockchain & Crypto' },
+      { name: 'Sullivan & Cromwell', focus: 'FinTech' }
+    ],
+    'CA': [
+      { name: 'Cooley LLP', focus: 'Digital Assets' },
+      { name: 'Fenwick & West', focus: 'Crypto compliance' }
+    ],
+    'TX': [
+      { name: 'Baker Botts', focus: 'Blockchain practice' },
+      { name: 'Haynes Boone', focus: 'FinTech' }
+    ],
+    'FL': [
+      { name: 'Greenberg Traurig', focus: 'Crypto practice' },
+      { name: 'Holland & Knight', focus: 'Digital assets' }
+    ],
+    'WY': [
+      { name: 'Crowley Fleck', focus: 'DAO specialists' },
+      { name: 'Williams Porter', focus: 'Digital asset law' }
+    ]
+  }
+  
+  return firms[state] || [
+    { name: 'Contact local bar association', focus: 'For referrals' },
+    { name: 'Major national firms', focus: 'With local offices' }
+  ]
 }

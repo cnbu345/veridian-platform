@@ -1,3 +1,4 @@
+// src/lib/pdf/components/PDFCover.tsx
 import React from 'react'
 import { Text, View, StyleSheet } from '@react-pdf/renderer'
 import { pdfTheme } from '../theme'
@@ -93,15 +94,15 @@ export const PDFCover: React.FC<PDFCoverProps> = ({
       </Text>
       
       <Text style={styles.title}>
-        Web3 Strategy Report
+        Regulatory Intelligence Report
       </Text>
       
       <Text style={styles.subtitle}>
-        Location-Intelligent Analysis
+        State-by-State Compliance Analysis
       </Text>
       
       <View style={styles.badge}>
-        <Text style={styles.badgeText}>CONFIDENTIAL</Text>
+        <Text style={styles.badgeText}>CONFIDENTIAL • FOR COMPLIANCE USE</Text>
       </View>
       
       <Text style={styles.companyName}>{companyName}</Text>

@@ -1,3 +1,4 @@
+// src/app/generate/components/StrategyStep.tsx
 'use client'
 
 import { useState } from 'react'
@@ -13,7 +14,11 @@ import {
   Handshake,
   Clock,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Scale,
+  Gavel,
+  Landmark,
+  FileCheck
 } from 'lucide-react'
 
 interface StrategyStepProps {
@@ -24,40 +29,40 @@ interface StrategyStepProps {
 }
 
 const PRIMARY_FOCUS_OPTIONS = [
-  { value: 'compliance', label: 'Regulatory Compliance', icon: Shield, 
-    description: 'Navigate state-specific crypto regulations and licensing' },
-  { value: 'talent', label: 'Talent Acquisition', icon: Users,
-    description: 'Find and hire Web3 developers, designers, and community managers' },
-  { value: 'fundraising', label: 'Fundraising & Investment', icon: TrendingUp,
-    description: 'Connect with VCs, structure token economics, raise capital' },
-  { value: 'product', label: 'Product Development', icon: Lightbulb,
-    description: 'Build and launch Web3 products, smart contracts, dApps' },
-  { value: 'go-to-market', label: 'Go-to-Market Strategy', icon: Target,
-    description: 'Launch strategy, community building, user acquisition' },
-  { value: 'partnerships', label: 'Strategic Partnerships', icon: Handshake,
-    description: 'Identify and secure partnerships with Web3-native companies' }
+  { value: 'compliance', label: 'Regulatory Compliance', icon: Scale, 
+    description: 'Navigate state-specific digital asset regulations and licensing' },
+  { value: 'licensing', label: 'Multi-State Licensing', icon: Gavel,
+    description: 'Identify required licenses across all operating jurisdictions' },
+  { value: 'risk', label: 'Risk Assessment', icon: AlertCircle,
+    description: 'Evaluate regulatory exposure and enforcement risk by state' },
+  { value: 'monitoring', label: 'Compliance Monitoring', icon: FileCheck,
+    description: 'Track regulatory changes and maintain ongoing compliance' },
+  { value: 'talent', label: 'Compliance Talent', icon: Users,
+    description: 'Build your compliance team and find regulatory expertise' },
+  { value: 'strategy', label: 'Market Entry', icon: Landmark,
+    description: 'Determine where to operate based on regulatory climate' }
 ]
 
 const SECONDARY_FOCUS_OPTIONS = [
   { value: 'compliance', label: 'Regulatory Compliance' },
+  { value: 'licensing', label: 'Licensing' },
+  { value: 'risk', label: 'Risk Assessment' },
+  { value: 'monitoring', label: 'Monitoring' },
   { value: 'talent', label: 'Talent Acquisition' },
-  { value: 'fundraising', label: 'Fundraising' },
-  { value: 'product', label: 'Product Development' },
-  { value: 'go-to-market', label: 'Go-to-Market' },
-  { value: 'partnerships', label: 'Partnerships' },
-  { value: 'community', label: 'Community Building' },
-  { value: 'marketing', label: 'Marketing & Brand' },
-  { value: 'technology', label: 'Technology Stack' },
-  { value: 'security', label: 'Security & Audits' }
+  { value: 'strategy', label: 'Market Strategy' },
+  { value: 'reporting', label: 'Regulatory Reporting' },
+  { value: 'audit', label: 'Compliance Audits' },
+  { value: 'policy', label: 'Policy Development' },
+  { value: 'training', label: 'Staff Training' }
 ]
 
 const TIMELINE_OPTIONS = [
-  { value: '3-months', label: '3 Months (Aggressive)', 
-    description: 'Fast-paced implementation for quick market entry' },
-  { value: '6-months', label: '6 Months (Moderate)', 
-    description: 'Balanced approach with thorough planning' },
-  { value: '12-months', label: '12 Months (Conservative)', 
-    description: 'Comprehensive strategy with risk mitigation' }
+  { value: '3-months', label: '3 Months (Immediate)', 
+    description: 'Urgent compliance needs or pending enforcement' },
+  { value: '6-months', label: '6 Months (Standard)', 
+    description: 'Balanced approach for most institutions' },
+  { value: '12-months', label: '12 Months (Strategic)', 
+    description: 'Comprehensive compliance program build-out' }
 ]
 
 export default function StrategyStep({ data, onUpdate, onNext, onBack }: StrategyStepProps) {
@@ -98,10 +103,10 @@ export default function StrategyStep({ data, onUpdate, onNext, onBack }: Strateg
       {/* Primary Focus */}
       <div className="space-y-4">
         <label className="block text-sm font-semibold text-navy-900">
-          Primary Focus Area <span className="text-gold-600">*</span>
+          Primary Compliance Focus <span className="text-gold-600">*</span>
         </label>
         <p className="text-sm text-navy-600 mb-4">
-          What's your main priority for Web3 implementation?
+          What's your main regulatory priority?
         </p>
 
         <div className="grid gap-4">
@@ -192,7 +197,7 @@ export default function StrategyStep({ data, onUpdate, onNext, onBack }: Strateg
       {/* Timeline */}
       <div className="space-y-4">
         <label className="block text-sm font-semibold text-navy-900">
-          Implementation Timeline <span className="text-gold-600">*</span>
+          Compliance Timeline <span className="text-gold-600">*</span>
         </label>
 
         <div className="grid md:grid-cols-3 gap-4">
@@ -235,10 +240,10 @@ export default function StrategyStep({ data, onUpdate, onNext, onBack }: Strateg
       {/* Concerns */}
       <div className="space-y-2">
         <label className="block text-sm font-semibold text-navy-900">
-          Primary Concerns <span className="text-gold-600">*</span>
+          Compliance Concerns <span className="text-gold-600">*</span>
         </label>
         <p className="text-sm text-navy-600 mb-2">
-          What keeps you up at night? Regulatory uncertainty? Security? Adoption?
+          What regulatory challenges keep you up at night? Enforcement actions? Licensing gaps?
         </p>
         <div className="relative">
           <div className="absolute top-3 left-3 pointer-events-none">
@@ -249,7 +254,7 @@ export default function StrategyStep({ data, onUpdate, onNext, onBack }: Strateg
             rows={4}
             className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 
                      rounded-xl focus:ring-2 focus:ring-gold-500 focus:border-transparent"
-            placeholder="e.g., We're worried about regulatory compliance in our state, lack of Web3 talent, and security risks..."
+            placeholder="e.g., We're worried about state enforcement actions, need clarity on licensing requirements in 12 states, and want to ensure we're compliant before regulators review us..."
           />
         </div>
         {errors.concerns && (
@@ -263,10 +268,10 @@ export default function StrategyStep({ data, onUpdate, onNext, onBack }: Strateg
       {/* Goals */}
       <div className="space-y-2">
         <label className="block text-sm font-semibold text-navy-900">
-          Key Goals <span className="text-gold-600">*</span>
+          Compliance Goals <span className="text-gold-600">*</span>
         </label>
         <p className="text-sm text-navy-600 mb-2">
-          What does success look like in 6-12 months?
+          What does compliance success look like in 6-12 months?
         </p>
         <div className="relative">
           <div className="absolute top-3 left-3 pointer-events-none">
@@ -277,7 +282,7 @@ export default function StrategyStep({ data, onUpdate, onNext, onBack }: Strateg
             rows={4}
             className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 
                      rounded-xl focus:ring-2 focus:ring-gold-500 focus:border-transparent"
-            placeholder="e.g., Launch an NFT collection, raise $2M from Web3 VCs, hire 5 blockchain developers..."
+            placeholder="e.g., Obtain licenses in all operating states, implement compliance monitoring system, pass regulatory examination with no findings..."
           />
         </div>
         {errors.goals && (

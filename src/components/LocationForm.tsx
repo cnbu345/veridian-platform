@@ -1,3 +1,4 @@
+// src/components/LocationForm.tsx
 'use client'
 
 import { useState } from 'react'
@@ -56,9 +57,9 @@ export default function LocationForm() {
   return (
     <div className="space-y-6 max-w-md">
       <div>
-        <h3 className="text-lg font-semibold mb-4">Enter Your Business Location</h3>
+        <h3 className="text-lg font-semibold mb-4">Enter Your Business Jurisdiction</h3>
         <p className="text-sm text-gray-600 mb-4">
-          We'll analyze your location for Web3 opportunities and regulations
+          We'll analyze your location for state-specific regulations and compliance requirements
         </p>
       </div>
       
@@ -96,23 +97,23 @@ export default function LocationForm() {
         disabled={loading || !city || !state}
         className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {loading ? 'Analyzing...' : 'Analyze Location'}
+        {loading ? 'Analyzing...' : 'Analyze Jurisdiction'}
       </button>
 
       {locationInfo && (
         <div className="p-6 bg-white rounded-lg border border-gray-200 shadow-sm">
-          <h3 className="text-xl font-bold mb-4">Location Analysis Results</h3>
+          <h3 className="text-xl font-bold mb-4">Regulatory Analysis Results</h3>
           
           <div className="space-y-4">
             <div>
-              <span className="text-sm text-gray-600">Location</span>
+              <span className="text-sm text-gray-600">Jurisdiction</span>
               <p className="text-lg font-semibold">
                 {locationInfo.city}, {locationInfo.state}
               </p>
             </div>
 
             <div>
-              <span className="text-sm text-gray-600">Market Tier</span>
+              <span className="text-sm text-gray-600">Market Classification</span>
               <div className="flex items-center gap-2">
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${getTierColor(locationInfo.tier)}`}>
                   {locationInfo.tier.toUpperCase()}
@@ -123,7 +124,7 @@ export default function LocationForm() {
 
             {locationInfo.nearestWeb3Hub && (
               <div>
-                <span className="text-sm text-gray-600">Nearest Web3 Hub</span>
+                <span className="text-sm text-gray-600">Nearest Compliance Hub</span>
                 <p className="text-lg font-semibold">
                   {locationInfo.nearestWeb3Hub}, {locationInfo.state}
                   {locationInfo.web3HubType && (
@@ -132,12 +133,15 @@ export default function LocationForm() {
                     </span>
                   )}
                 </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Access to specialized regulatory counsel and compliance resources
+                </p>
               </div>
             )}
 
             {locationInfo.distanceToMajor && (
               <div>
-                <span className="text-sm text-gray-600">Distance to Major City</span>
+                <span className="text-sm text-gray-600">Distance to Major Market</span>
                 <p className="text-lg font-semibold">
                   ≈ {locationInfo.distanceToMajor} miles
                 </p>
@@ -146,7 +150,7 @@ export default function LocationForm() {
 
             <div className="pt-4 border-t border-gray-200">
               <p className="text-sm text-gray-600">
-                <strong>Next Step:</strong> Based on this analysis, your AI-generated Web3 strategy report will include location-specific recommendations, regulatory guidance for {locationInfo.state}, and connections to resources in {locationInfo.nearestWeb3Hub || 'nearby major cities'}.
+                <strong>Next Step:</strong> Based on this analysis, your compliance report will include state-specific regulatory requirements for {locationInfo.state}, licensing obligations, and connections to compliance resources in {locationInfo.nearestWeb3Hub || 'your region'}.
               </p>
             </div>
           </div>

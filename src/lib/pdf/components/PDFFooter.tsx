@@ -1,3 +1,4 @@
+// src/lib/pdf/components/PDFFooter.tsx
 import React from 'react'
 import { Text, View, StyleSheet } from '@react-pdf/renderer'
 import { pdfTheme } from '../theme'
@@ -40,7 +41,7 @@ export const PDFFooter: React.FC<PDFFooterProps> = ({
     <View style={styles.footer} fixed>
       {showDisclaimer && (
         <Text style={styles.disclaimer}>
-          Not legal or financial advice. See full disclaimer.
+          Not legal advice. Review with counsel. See full disclaimer.
         </Text>
       )}
       {pageNumber && totalPages && (

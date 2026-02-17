@@ -1,3 +1,4 @@
+// src/app/dashboard/DashboardClient.tsx
 'use client'
 
 import { cn } from '@/lib/utils/utils'
@@ -18,7 +19,10 @@ import {
   MoreVertical,
   Building2,
   MapPin,
-  Calendar
+  Calendar,
+  Scale,
+  Landmark,
+  Shield
 } from 'lucide-react'
 import ReportsList from './components/ReportsList'
 import EmptyState from './components/EmptyState'
@@ -69,7 +73,7 @@ export default function DashboardClient({
                 Welcome back, {user.email?.split('@')[0]}
               </h1>
               <p className={cn("text-navy-600")}>
-                Manage your Web3 strategy reports and generate new insights
+                Manage your regulatory intelligence reports and compliance analysis
               </p>
             </div>
             
@@ -130,7 +134,7 @@ export default function DashboardClient({
                 "flex items-center justify-between",
                 "mb-2"
               )}>
-                <TrendingUp className={cn("w-5 h-5", "text-green-600")} />
+                <Scale className={cn("w-5 h-5", "text-green-600")} />
                 <span className={cn(
                   "text-2xl",
                   "font-bold",

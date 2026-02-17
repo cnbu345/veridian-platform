@@ -1,4 +1,5 @@
-// Major US cities (top 50)
+// src/lib/locationService.ts
+// Major US cities (top 50) - for market classification
 const MAJOR_CITIES = [
   { city: 'New York', state: 'NY', population: 8419000 },
   { city: 'Los Angeles', state: 'CA', population: 3929000 },
@@ -52,32 +53,69 @@ const MAJOR_CITIES = [
   { city: 'Cleveland', state: 'OH', population: 367000 },
 ]
 
-// Major Web3 hubs
-const WEB3_HUBS = [
-  { city: 'San Francisco', state: 'CA', type: 'primary' },
-  { city: 'New York', state: 'NY', type: 'primary' },
-  { city: 'Austin', state: 'TX', type: 'primary' },
-  { city: 'Miami', state: 'FL', type: 'primary' },
-  { city: 'Denver', state: 'CO', type: 'secondary' },
-  { city: 'Seattle', state: 'WA', type: 'secondary' },
-  { city: 'Boston', state: 'MA', type: 'secondary' },
-  { city: 'Los Angeles', state: 'CA', type: 'secondary' },
-  { city: 'Chicago', state: 'IL', type: 'secondary' },
+// Major compliance/regulatory hubs (where specialized counsel exists)
+const REGULATORY_HUBS = [
+  { city: 'New York', state: 'NY', type: 'primary', specialty: 'BitLicense, Banking' },
+  { city: 'San Francisco', state: 'CA', type: 'primary', specialty: 'FinTech, DFPI' },
+  { city: 'Washington', state: 'DC', type: 'primary', specialty: 'Federal, SEC' },
+  { city: 'Chicago', state: 'IL', type: 'secondary', specialty: 'Commodities, Futures' },
+  { city: 'Boston', state: 'MA', type: 'secondary', specialty: 'Securities' },
+  { city: 'Austin', state: 'TX', type: 'secondary', specialty: 'Money Transmission' },
+  { city: 'Miami', state: 'FL', type: 'secondary', specialty: 'International' },
+  { city: 'Denver', state: 'CO', type: 'secondary', specialty: 'Digital Assets' },
+  { city: 'Seattle', state: 'WA', type: 'secondary', specialty: 'Tech Regulation' },
+  { city: 'Wilmington', state: 'DE', type: 'primary', specialty: 'Corporate, Banking' },
+  { city: 'Cheyenne', state: 'WY', type: 'secondary', specialty: 'DAO, Crypto' },
 ]
+
+// State regulatory climate data
+export const STATE_REGULATORY_CLIMATE = {
+  'NY': { climate: 'strict', license: 'BitLicense', tax: 'income' },
+  'CA': { climate: 'strict', license: 'DFPI', tax: 'income' },
+  'TX': { climate: 'friendly', license: 'none', tax: 'none' },
+  'FL': { climate: 'friendly', license: 'none', tax: 'none' },
+  'WY': { climate: 'friendly', license: 'none', tax: 'none', special: 'DAO LLC' },
+  'NV': { climate: 'friendly', license: 'none', tax: 'none' },
+  'DE': { climate: 'friendly', license: 'none', tax: 'corporate' },
+  'IL': { climate: 'moderate', license: 'required', tax: 'income' },
+  'MA': { climate: 'moderate', license: 'required', tax: 'income' },
+  'WA': { climate: 'strict', license: 'required', tax: 'income' },
+  'CO': { climate: 'friendly', license: 'none', tax: 'income' },
+  'AZ': { climate: 'friendly', license: 'none', tax: 'income' },
+  'NC': { climate: 'moderate', license: 'required', tax: 'income' },
+  'GA': { climate: 'moderate', license: 'none', tax: 'income' },
+  'PA': { climate: 'moderate', license: 'none', tax: 'income' },
+  'OH': { climate: 'friendly', license: 'none', tax: 'income' },
+  'MI': { climate: 'moderate', license: 'none', tax: 'income' },
+  'VA': { climate: 'friendly', license: 'none', tax: 'income' },
+  'TN': { climate: 'friendly', license: 'none', tax: 'none' },
+  'NH': { climate: 'friendly', license: 'none', tax: 'none' },
+}
 
 export interface LocationData {
   city: string
   state: string
   tier: 'major' | 'suburban' | 'rural'
   nearestMajorCity?: string
-  nearestWeb3Hub?: string
+  nearestRegulatoryHub?: string
+  regulatoryHubType?: 'primary' | 'secondary'
+  regulatoryHubSpecialty?: string
   distanceToMajor?: number
-  web3HubType?: 'primary' | 'secondary'
+  regulatoryClimate?: 'friendly' | 'moderate' | 'strict'
+  licenseRequired?: string
+  taxStatus?: 'income' | 'none' | 'corporate'
 }
 
 export async function classifyLocation(city: string, state: string): Promise<LocationData> {
   const normalizedCity = city.trim().toLowerCase()
   const normalizedState = state.trim().toUpperCase()
+
+  // Get regulatory data for the state
+  const regulatoryData = STATE_REGULATORY_CLIMATE[normalizedState as keyof typeof STATE_REGULATORY_CLIMATE] || {
+    climate: 'moderate',
+    license: 'unknown',
+    tax: 'income'
+  }
 
   // Check if it's a major city
   const isMajor = MAJOR_CITIES.some(
@@ -85,8 +123,8 @@ export async function classifyLocation(city: string, state: string): Promise<Loc
   )
 
   if (isMajor) {
-    // Find if it's a Web3 hub
-    const web3Hub = WEB3_HUBS.find(
+    // Find if it's a regulatory hub
+    const regulatoryHub = REGULATORY_HUBS.find(
       hub => hub.city.toLowerCase() === normalizedCity && hub.state === normalizedState
     )
     
@@ -94,13 +132,16 @@ export async function classifyLocation(city: string, state: string): Promise<Loc
       city,
       state,
       tier: 'major',
-      nearestWeb3Hub: web3Hub ? web3Hub.city : city,
-      web3HubType: web3Hub?.type || undefined
+      nearestRegulatoryHub: regulatoryHub ? regulatoryHub.city : city,
+      regulatoryHubType: regulatoryHub?.type || undefined,
+      regulatoryHubSpecialty: regulatoryHub?.specialty,
+      regulatoryClimate: regulatoryData.climate,
+      licenseRequired: regulatoryData.license,
+      taxStatus: regulatoryData.tax
     }
   }
 
   // Check for suburban (within 50 miles of major city)
-  // For simplicity, we'll check if it's in a major state
   const isSuburban = MAJOR_CITIES.some(mc => 
     mc.state === normalizedState && 
     normalizedCity.includes(mc.city.toLowerCase().substring(0, 3))
@@ -108,39 +149,46 @@ export async function classifyLocation(city: string, state: string): Promise<Loc
 
   if (isSuburban) {
     const majorInState = MAJOR_CITIES.find(mc => mc.state === normalizedState)
-    const web3HubInState = WEB3_HUBS.find(hub => hub.state === normalizedState)
+    const regulatoryHubInState = REGULATORY_HUBS.find(hub => hub.state === normalizedState)
     
     return {
       city,
       state,
       tier: 'suburban',
       nearestMajorCity: majorInState?.city,
-      nearestWeb3Hub: web3HubInState?.city || majorInState?.city,
-      web3HubType: web3HubInState?.type,
-      distanceToMajor: 25
+      nearestRegulatoryHub: regulatoryHubInState?.city || majorInState?.city,
+      regulatoryHubType: regulatoryHubInState?.type,
+      regulatoryHubSpecialty: regulatoryHubInState?.specialty,
+      distanceToMajor: 25,
+      regulatoryClimate: regulatoryData.climate,
+      licenseRequired: regulatoryData.license,
+      taxStatus: regulatoryData.tax
     }
   }
 
   // Default to rural
-  // Find nearest major city in any state
+  // Find nearest regulatory hub
+  const nearestHub = REGULATORY_HUBS.reduce((nearest, current) => {
+    if (current.state[0] === normalizedState[0]) return current
+    return nearest
+  }, REGULATORY_HUBS[0])
+
   const nearestMajor = MAJOR_CITIES.reduce((nearest, current) => {
-    // Simple proximity based on alphabetical closeness (in reality use geocoding)
     if (current.state[0] === normalizedState[0]) return current
     return nearest
   }, MAJOR_CITIES[0])
-
-  const nearestWeb3 = WEB3_HUBS.reduce((nearest, current) => {
-    if (current.state[0] === normalizedState[0]) return current
-    return nearest
-  }, WEB3_HUBS[0])
 
   return {
     city,
     state,
     tier: 'rural',
     nearestMajorCity: nearestMajor.city,
-    nearestWeb3Hub: nearestWeb3.city,
-    web3HubType: nearestWeb3.type,
-    distanceToMajor: 75
+    nearestRegulatoryHub: nearestHub.city,
+    regulatoryHubType: nearestHub.type,
+    regulatoryHubSpecialty: nearestHub.specialty,
+    distanceToMajor: 75,
+    regulatoryClimate: regulatoryData.climate,
+    licenseRequired: regulatoryData.license,
+    taxStatus: regulatoryData.tax
   }
 }

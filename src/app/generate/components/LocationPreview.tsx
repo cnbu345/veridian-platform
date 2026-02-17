@@ -1,3 +1,4 @@
+// src/app/generate/components/LocationPreview.tsx
 'use client'
 
 import { LocationAnalysis } from '@/lib/location/analyzer'
@@ -9,7 +10,10 @@ import {
   TrendingUp,
   CheckCircle,
   AlertCircle,
-  Loader2
+  Loader2,
+  Scale,
+  Gavel,
+  Landmark
 } from 'lucide-react'
 
 interface LocationPreviewProps {
@@ -25,7 +29,7 @@ export default function LocationPreview({ analysis, regulation, isLoading }: Loc
         <div className="flex items-center justify-center">
           <Loader2 className="w-8 h-8 text-gold-600 animate-spin" />
           <span className="ml-3 text-navy-600 font-medium">
-            Analyzing location data...
+            Analyzing regulatory data...
           </span>
         </div>
       </div>
@@ -59,13 +63,14 @@ export default function LocationPreview({ analysis, regulation, isLoading }: Loc
       <div className="bg-navy-900 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <MapPin className="w-5 h-5 text-gold-500" />
+            <Scale className="w-5 h-5 text-gold-500" />
             <h3 className="text-white font-semibold">
-              Location Intelligence Report
+              Regulatory Intelligence Preview
             </h3>
           </div>
           <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getTierColor(analysis.tier)}`}>
-            {analysis.tier.charAt(0).toUpperCase() + analysis.tier.slice(1)} Market
+            {analysis.tier === 'major' ? 'Major Market' : 
+             analysis.tier === 'suburban' ? 'Suburban Market' : 'Rural Market'}
           </span>
         </div>
       </div>
@@ -75,7 +80,7 @@ export default function LocationPreview({ analysis, regulation, isLoading }: Loc
         {/* Location Summary */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-navy-500">Location</p>
+            <p className="text-sm text-navy-500">Jurisdiction</p>
             <p className="text-2xl font-bold text-navy-900">
               {analysis.city}, {analysis.state}
             </p>
@@ -95,7 +100,7 @@ export default function LocationPreview({ analysis, regulation, isLoading }: Loc
           {/* Regulatory Climate */}
           <div className="bg-white rounded-xl p-4 border border-slate-200">
             <div className="flex items-center gap-2 mb-2">
-              <Shield className="w-4 h-4 text-navy-500" />
+              <Gavel className="w-4 h-4 text-navy-500" />
               <span className="text-xs font-medium text-navy-500">Regulatory</span>
             </div>
             <div className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${getRegulatoryColor(analysis.regulatoryClimate)}`}>
@@ -108,50 +113,43 @@ export default function LocationPreview({ analysis, regulation, isLoading }: Loc
             )}
           </div>
 
-          {/* Web3 Hub Access */}
+          {/* License Requirements */}
           <div className="bg-white rounded-xl p-4 border border-slate-200">
             <div className="flex items-center gap-2 mb-2">
-              <Building2 className="w-4 h-4 text-navy-500" />
-              <span className="text-xs font-medium text-navy-500">Web3 Hub</span>
+              <Landmark className="w-4 h-4 text-navy-500" />
+              <span className="text-xs font-medium text-navy-500">Licensing</span>
             </div>
-            {analysis.nearestWeb3Hub ? (
+            {regulation?.moneyTransmitter && (
               <>
-                <p className="text-lg font-bold text-navy-900">
-                  {analysis.nearestWeb3Hub}
+                <p className="text-sm font-bold text-navy-900">
+                  {regulation.moneyTransmitter.includes('required') ? 'Required' : 
+                   regulation.moneyTransmitter.includes('specific') ? 'No License' : 'Unknown'}
                 </p>
-                {analysis.web3HubType && (
-                  <span className="text-xs text-navy-600">
-                    {analysis.web3HubType === 'primary' ? 'Primary Hub' : 'Secondary Hub'}
-                  </span>
-                )}
-                {analysis.distanceToMajor && (
-                  <p className="text-xs text-navy-500 mt-1">
-                    {analysis.distanceToMajor} miles away
-                  </p>
-                )}
+                <p className="text-xs text-navy-500 mt-1">
+                  {regulation.moneyTransmitter}
+                </p>
               </>
-            ) : (
-              <p className="text-sm text-navy-600">No nearby hub</p>
             )}
           </div>
 
-          {/* Talent Density */}
+          {/* Tax Treatment */}
           <div className="bg-white rounded-xl p-4 border border-slate-200">
             <div className="flex items-center gap-2 mb-2">
-              <Users className="w-4 h-4 text-navy-500" />
-              <span className="text-xs font-medium text-navy-500">Talent</span>
+              <TrendingUp className="w-4 h-4 text-navy-500" />
+              <span className="text-xs font-medium text-navy-500">Tax</span>
             </div>
-            <p className={`text-lg font-bold ${
-              analysis.talentDensity === 'high' ? 'text-green-600' :
-              analysis.talentDensity === 'medium' ? 'text-amber-600' :
-              'text-slate-600'
-            }`}>
-              {analysis.talentDensity.charAt(0).toUpperCase() + analysis.talentDensity.slice(1)}
-            </p>
-            {analysis.web3HubScore && (
-              <p className="text-xs text-navy-500 mt-1">
-                Hub Score: {analysis.web3HubScore}/100
-              </p>
+            {regulation?.taxTreatment && (
+              <>
+                <p className="text-sm font-bold text-navy-900">
+                  {regulation.taxTreatment}
+                </p>
+                {analysis.state === 'TX' || analysis.state === 'FL' || 
+                 analysis.state === 'NV' || analysis.state === 'WY' ? (
+                  <p className="text-xs text-green-600 mt-1">No state income tax</p>
+                ) : (
+                  <p className="text-xs text-amber-600 mt-1">State income tax applies</p>
+                )}
+              </>
             )}
           </div>
 
@@ -172,55 +170,79 @@ export default function LocationPreview({ analysis, regulation, isLoading }: Loc
           </div>
         </div>
 
-        {/* Key Insights */}
+        {/* Regulatory Insights */}
         <div className="bg-navy-50 rounded-xl p-4">
           <h4 className="text-sm font-semibold text-navy-900 mb-3">
-            Location Insights
+            Regulatory Insights
           </h4>
           <ul className="space-y-2">
-            {analysis.tier === 'major' && (
-              <li className="flex items-start gap-2 text-sm text-navy-700">
-                <CheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                <span>Major metropolitan area with strong Web3 infrastructure and talent pool</span>
-              </li>
-            )}
-            {analysis.tier === 'suburban' && analysis.nearestMajorCity && (
-              <li className="flex items-start gap-2 text-sm text-navy-700">
-                <CheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                <span>Suburban location with access to {analysis.nearestMajorCity} ecosystem</span>
-              </li>
-            )}
-            {analysis.tier === 'rural' && analysis.nearestMajorCity && (
-              <li className="flex items-start gap-2 text-sm text-navy-700">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <span>Rural location - recommend remote-first strategy with hub access in {analysis.nearestMajorCity}</span>
-              </li>
-            )}
             {analysis.regulatoryClimate === 'friendly' && (
               <li className="flex items-start gap-2 text-sm text-navy-700">
                 <CheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                <span>Crypto-friendly regulations - lower compliance barriers</span>
+                <span>Business-friendly regulatory environment - lower compliance burden</span>
               </li>
             )}
             {analysis.regulatoryClimate === 'strict' && (
               <li className="flex items-start gap-2 text-sm text-navy-700">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <span>Strict regulatory environment - enhanced compliance planning needed</span>
+                <span>Strict regulatory oversight - enhanced compliance planning required</span>
               </li>
             )}
-            {analysis.web3HubType === 'primary' && (
+            {analysis.state === 'NY' && (
+              <li className="flex items-start gap-2 text-sm text-navy-700">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <span>BitLicense required for digital asset activities</span>
+              </li>
+            )}
+            {analysis.state === 'CA' && (
+              <li className="flex items-start gap-2 text-sm text-navy-700">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <span>DFPI licensing required for money transmission</span>
+              </li>
+            )}
+            {analysis.state === 'TX' && (
               <li className="flex items-start gap-2 text-sm text-navy-700">
                 <CheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                <span>Located in a primary Web3 hub - access to talent, capital, and community</span>
+                <span>No specific money transmitter license - business friendly</span>
+              </li>
+            )}
+            {analysis.state === 'WY' && (
+              <li className="flex items-start gap-2 text-sm text-navy-700">
+                <CheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                <span>Most crypto-friendly state - DAO LLC structure available</span>
+              </li>
+            )}
+            {regulation?.lastUpdated && (
+              <li className="flex items-start gap-2 text-sm text-navy-500 mt-2">
+                <span className="text-xs">Last updated: {regulation.lastUpdated}</span>
               </li>
             )}
           </ul>
         </div>
 
+        {/* Talent/Web3 Hub Info (secondary) */}
+        {analysis.nearestWeb3Hub && (
+          <div className="bg-white rounded-xl p-4 border border-slate-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Building2 className="w-4 h-4 text-navy-500" />
+              <span className="text-xs font-medium text-navy-500">Compliance Resources</span>
+            </div>
+            <p className="text-sm text-navy-700">
+              <span className="font-medium">Nearest legal/regulatory hub:</span> {analysis.nearestWeb3Hub}
+              {analysis.web3HubType === 'primary' && ' (Major compliance center)'}
+            </p>
+            {analysis.distanceToMajor && (
+              <p className="text-xs text-navy-500 mt-1">
+                ~{analysis.distanceToMajor} miles • Access to specialized compliance counsel
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Disclaimer */}
         <p className="text-xs text-navy-400 italic">
-          *Analysis based on current Web3 ecosystem data. Talent density and regulatory 
-          classifications are estimates and should be verified independently.
+          *Regulatory analysis based on current state laws. Requirements may change. 
+          Consult with qualified legal counsel in {analysis.state} before making compliance decisions.
         </p>
       </div>
     </div>

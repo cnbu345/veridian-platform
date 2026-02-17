@@ -1,3 +1,4 @@
+// src/lib/reports/validation.ts
 import { z } from 'zod'
 
 // Company validation
@@ -11,10 +12,10 @@ export const companySchema = z.object({
     .or(z.literal('')),
   industry: z.string()
     .min(1, 'Please select an industry'),
-  size: z.enum(['1-10', '11-50', '51-200', '201-500', '500+'], {
-    required_error: 'Please select company size'
+  size: z.enum(['1-10', '11-50', '51-200', '201-500', '501-1000', '1000-plus'], {
+    required_error: 'Please select institution size'
   }),
-  budget: z.enum(['under-10k', '10k-50k', '50k-100k', '100k-250k', '250k-plus'], {
+  budget: z.enum(['under-50k', '50k-100k', '100k-250k', '250k-500k', '500k-plus'], {
     required_error: 'Please select budget range'
   }),
   founded: z.string().optional(),
@@ -35,7 +36,7 @@ export const locationSchema = z.object({
 // Strategy validation
 export const strategySchema = z.object({
   primary: z.enum([
-    'compliance', 'talent', 'fundraising', 'product', 'go-to-market', 'partnerships'
+    'compliance', 'licensing', 'risk', 'monitoring', 'talent', 'strategy'
   ], {
     required_error: 'Please select a primary focus area'
   }),

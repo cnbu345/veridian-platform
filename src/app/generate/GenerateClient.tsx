@@ -1,9 +1,10 @@
+// src/app/generate/GenerateClient.tsx
 'use client'
 
 import { useState } from 'react'
 import { User } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
-import { Shield } from 'lucide-react'
+import { Shield, Scale } from 'lucide-react'
 import ProgressSteps from './components/ProgressSteps'
 import CompanyStep from './components/CompanyStep'
 import LocationStep from './components/LocationStep'
@@ -17,10 +18,10 @@ interface GenerateClientProps {
 }
 
 const STEPS = [
-  { id: 1, name: 'Company', description: 'Business details' },
-  { id: 2, name: 'Location', description: 'Market analysis' },
-  { id: 3, name: 'Strategy', description: 'Focus areas' },
-  { id: 4, name: 'Review', description: 'Confirm & pay' }
+  { id: 1, name: 'Institution', description: 'Business details' },
+  { id: 2, name: 'Jurisdiction', description: 'State analysis' },
+  { id: 3, name: 'Compliance', description: 'Focus areas' },
+  { id: 4, name: 'Review', description: 'Confirm & purchase' }
 ]
 
 export default function GenerateClient({ user }: GenerateClientProps) {
@@ -33,7 +34,7 @@ export default function GenerateClient({ user }: GenerateClientProps) {
     website: '',
     industry: '',
     size: '1-10',
-    budget: 'under-10k',
+    budget: 'under-50k',
     founded: '',
     description: ''
   })
@@ -46,7 +47,7 @@ export default function GenerateClient({ user }: GenerateClientProps) {
   const [strategyData, setStrategyData] = useState<StrategyFormData>({
     primary: 'compliance',
     secondary: [],
-    timeline: '3-months',
+    timeline: '6-months',
     concerns: '',
     goals: ''
   })
@@ -70,10 +71,10 @@ export default function GenerateClient({ user }: GenerateClientProps) {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="heading-2 text-navy-900 mb-4">
-            Generate Your Web3 Strategy Report
+            Generate Your Regulatory Intelligence Report
           </h1>
           <p className="text-lg text-navy-600">
-            Complete the 4-step process to get your customized location-intelligent report
+            Complete the 4-step process to get your state-by-state compliance analysis
           </p>
         </div>
 
@@ -126,9 +127,9 @@ export default function GenerateClient({ user }: GenerateClientProps) {
         <div className="mt-8 text-center">
           <div className="inline-flex items-center gap-2 bg-white px-6 py-3 
                         rounded-full border border-slate-200 shadow-soft">
-            <Shield className="w-4 h-4 text-gold-600" />
+            <Scale className="w-4 h-4 text-gold-600" />
             <span className="text-sm text-navy-600">
-              Your data is encrypted and never shared
+              Enterprise-grade encryption • SOC2 Type II compliant
             </span>
           </div>
         </div>

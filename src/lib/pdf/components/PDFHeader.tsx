@@ -1,3 +1,4 @@
+// src/lib/pdf/components/PDFHeader.tsx
 import React from 'react'
 import { Text, View, StyleSheet } from '@react-pdf/renderer'
 import { pdfTheme } from '../theme'
@@ -45,7 +46,7 @@ interface PDFHeaderProps {
 }
 
 export const PDFHeader: React.FC<PDFHeaderProps> = ({ 
-  reportType = 'Strategy Report',
+  reportType = 'Regulatory Intelligence',
   date = new Date(),
   showConfidential = true
 }) => {
@@ -63,7 +64,7 @@ export const PDFHeader: React.FC<PDFHeaderProps> = ({
         </Text>
         <Text style={styles.reportType}>{reportType}</Text>
         {showConfidential && (
-          <Text style={styles.confidential}>CONFIDENTIAL • FOR INTERNAL USE</Text>
+          <Text style={styles.confidential}>CONFIDENTIAL • COMPLIANCE USE ONLY</Text>
         )}
       </View>
       <View>

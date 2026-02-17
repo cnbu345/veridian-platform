@@ -1,3 +1,4 @@
+// src/types/supabase.ts
 export type Json =
   | string
   | number
@@ -15,27 +16,30 @@ export interface Database {
           email: string
           full_name: string | null
           company_name: string | null
-          subscription_tier: string
+          subscription_tier: 'free' | 'single' | 'quarterly' | 'monthly' | 'enterprise'
           stripe_customer_id: string | null
           created_at: string
+          updated_at: string
         }
         Insert: {
           id: string
           email: string
           full_name?: string | null
           company_name?: string | null
-          subscription_tier?: string
+          subscription_tier?: 'free' | 'single' | 'quarterly' | 'monthly' | 'enterprise'
           stripe_customer_id?: string | null
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
           email?: string
           full_name?: string | null
           company_name?: string | null
-          subscription_tier?: string
+          subscription_tier?: 'free' | 'single' | 'quarterly' | 'monthly' | 'enterprise'
           stripe_customer_id?: string | null
           created_at?: string
+          updated_at?: string
         }
       }
       reports: {
@@ -46,12 +50,14 @@ export interface Database {
           industry: string
           city: string
           state: string
-          location_tier: string
+          location_tier: 'major' | 'suburban' | 'rural'
           nearest_major_city: string | null
           report_content: Json
           pdf_url: string | null
           stripe_payment_id: string | null
+          status: 'pending' | 'generating' | 'ready' | 'failed'
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
@@ -60,12 +66,14 @@ export interface Database {
           industry: string
           city: string
           state: string
-          location_tier: string
+          location_tier?: 'major' | 'suburban' | 'rural'
           nearest_major_city?: string | null
           report_content: Json
           pdf_url?: string | null
           stripe_payment_id?: string | null
+          status?: 'pending' | 'generating' | 'ready' | 'failed'
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
@@ -74,38 +82,46 @@ export interface Database {
           industry?: string
           city?: string
           state?: string
-          location_tier?: string
+          location_tier?: 'major' | 'suburban' | 'rural'
           nearest_major_city?: string | null
           report_content?: Json
           pdf_url?: string | null
           stripe_payment_id?: string | null
+          status?: 'pending' | 'generating' | 'ready' | 'failed'
           created_at?: string
+          updated_at?: string
         }
       }
       state_regulations: {
         Row: {
           state_code: string
           state_name: string
-          crypto_regulations: string | null
-          tax_treatment: string | null
+          crypto_friendly: 'friendly' | 'moderate' | 'strict' | 'unknown'
+          money_transmitter: string
+          tax_treatment: string
+          notes: string
           resources: string[] | null
-          updated_at: string
+          last_updated: string
         }
         Insert: {
           state_code: string
           state_name: string
-          crypto_regulations?: string | null
-          tax_treatment?: string | null
+          crypto_friendly?: 'friendly' | 'moderate' | 'strict' | 'unknown'
+          money_transmitter?: string
+          tax_treatment?: string
+          notes?: string
           resources?: string[] | null
-          updated_at?: string
+          last_updated?: string
         }
         Update: {
           state_code?: string
           state_name?: string
-          crypto_regulations?: string | null
-          tax_treatment?: string | null
+          crypto_friendly?: 'friendly' | 'moderate' | 'strict' | 'unknown'
+          money_transmitter?: string
+          tax_treatment?: string
+          notes?: string
           resources?: string[] | null
-          updated_at?: string
+          last_updated?: string
         }
       }
     }

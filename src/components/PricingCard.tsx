@@ -1,4 +1,6 @@
+// src/components/PricingCard.tsx
 import Link from 'next/link'
+import { Check } from 'lucide-react'
 
 interface PricingCardProps {
   title: string
@@ -9,6 +11,8 @@ interface PricingCardProps {
   buttonText: string
   buttonLink: string
   featured?: boolean
+  badge?: string
+  savings?: string
 }
 
 export default function PricingCard({
@@ -19,42 +23,53 @@ export default function PricingCard({
   features,
   buttonText,
   buttonLink,
-  featured = false
+  featured = false,
+  badge,
+  savings
 }: PricingCardProps) {
   return (
-    <div className={`relative rounded-2xl border ${featured ? 'border-blue-300 bg-gradient-to-b from-blue-50 to-white shadow-lg' : 'border-gray-200 bg-white'} p-8`}>
-      {featured && (
+    <div className={`relative rounded-2xl border ${featured ? 'border-navy-300 bg-gradient-to-b from-navy-50 to-white shadow-lg' : 'border-slate-200 bg-white'} p-8 hover:shadow-premium transition-all duration-300`}>
+      {badge && (
         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-          <span className="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
-            Most Popular
+          <span className="bg-gold-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
+            {badge}
           </span>
         </div>
       )}
       
-      <h3 className="text-2xl font-bold text-gray-900 mb-2">{title}</h3>
-      <div className="mb-4">
-        <span className="text-4xl font-bold text-gray-900">{price}</span>
-        <span className="text-gray-600">/{period}</span>
+      <h3 className="text-2xl font-bold text-navy-900 mb-2">{title}</h3>
+      <div className="mb-2">
+        <span className="text-4xl font-bold text-navy-900">{price}</span>
+        <span className="text-navy-500">/{period}</span>
       </div>
-      <p className="text-gray-600 mb-8">{description}</p>
+      {savings && (
+        <p className="text-sm text-green-600 font-semibold mb-4">{savings}</p>
+      )}
+      <p className="text-navy-600 mb-8">{description}</p>
       
       <ul className="space-y-4 mb-8">
         {features.map((feature, index) => (
-          <li key={index} className="flex items-center">
-            <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
-            <span>{feature}</span>
+          <li key={index} className="flex items-start gap-3">
+            <Check className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+            <span className="text-sm text-navy-700">{feature}</span>
           </li>
         ))}
       </ul>
       
       <Link
         href={buttonLink}
-        className={`block w-full text-center py-3 px-4 rounded-lg font-semibold ${featured ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-900 text-white hover:bg-gray-800'}`}
+        className={`block w-full text-center py-3 px-4 rounded-xl font-semibold transition-all duration-300 ${
+          featured 
+            ? 'bg-navy-900 text-white hover:bg-navy-800' 
+            : 'bg-white border-2 border-navy-200 text-navy-900 hover:border-gold-500 hover:bg-gold-50'
+        }`}
       >
         {buttonText}
       </Link>
+      
+      <p className="text-xs text-center text-navy-400 mt-4">
+        Secure enterprise payment • 30-day guarantee
+      </p>
     </div>
   )
 }

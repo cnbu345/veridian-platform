@@ -1,3 +1,4 @@
+// src/lib/reports/storage.ts
 import { createClient } from '@/lib/supabase/server'
 import { GeneratedReport, ReportRequest } from './types'
 
@@ -18,7 +19,7 @@ export async function saveReportRequest(
       city: request.location.city,
       state: request.location.state,
       location_tier: request.location.tier,
-      nearest_major_city: request.location.nearestMajorCity,
+      nearest_major_city: request.location.nearestRegulatoryHub || request.location.nearestMajorCity,
       report_content: {
         ...request,
         status: 'pending',

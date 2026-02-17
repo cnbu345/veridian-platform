@@ -1,3 +1,4 @@
+// src/app/report/[id]/ReportViewClient.tsx
 'use client'
 
 import { useState } from 'react'
@@ -16,7 +17,12 @@ import {
   Printer,
   Share2,
   MoreVertical,
-  Loader2
+  Loader2,
+  Scale,
+  Gavel,
+  Landmark,
+  Shield,
+  AlertTriangle
 } from 'lucide-react'
 import { downloadReportPDF } from '@/lib/pdf/generator'
 import { format } from 'date-fns'
@@ -35,11 +41,11 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
 
   const tabs = [
     { id: 'executive-summary', label: 'Executive Summary' },
-    { id: 'location', label: 'Location Analysis' },
-    { id: 'regulatory', label: 'Regulatory' },
-    { id: 'talent', label: 'Talent' },
-    { id: 'roadmap', label: 'Roadmap' },
-    { id: 'resources', label: 'Resources' },
+    { id: 'regulatory', label: 'Regulatory Analysis' },
+    { id: 'licensing', label: 'Licensing Matrix' },
+    { id: 'compliance', label: 'Compliance Roadmap' },
+    { id: 'resources', label: 'Regulatory Contacts' },
+    { id: 'risk', label: 'Risk Assessment' },
   ]
 
   const handleDownloadPDF = async () => {
@@ -110,7 +116,7 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
                   ${status === 'generating' ? 'bg-amber-100 text-amber-800' : ''}
                   ${status === 'failed' ? 'bg-red-100 text-red-800' : ''}
                 `}>
-                  {status === 'ready' ? 'Report Ready' : status}
+                  {status === 'ready' ? 'Compliance Report Ready' : status}
                 </span>
               </div>
               
@@ -136,18 +142,19 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
             </div>
           </div>
 
-          {/* Location Tier Badge */}
+          {/* Regulatory Badge */}
           <div className="flex items-center gap-2">
             <span className={`px-3 py-1 rounded-lg text-xs font-medium
               ${report.location_tier === 'major' ? 'bg-blue-100 text-blue-800' : ''}
               ${report.location_tier === 'suburban' ? 'bg-purple-100 text-purple-800' : ''}
               ${report.location_tier === 'rural' ? 'bg-green-100 text-green-800' : ''}
             `}>
-              {report.location_tier.charAt(0).toUpperCase() + report.location_tier.slice(1)} Market
+              {report.location_tier === 'major' ? 'Major Market' : 
+               report.location_tier === 'suburban' ? 'Suburban Market' : 'Rural Market'}
             </span>
             {report.nearest_major_city && (
               <span className="text-sm text-navy-500">
-                Near {report.nearest_major_city}
+                Compliance hub access via {report.nearest_major_city}
               </span>
             )}
           </div>
@@ -182,30 +189,31 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
               <div className="space-y-6">
                 <p className="text-navy-700 leading-relaxed">
                   {report.report_content?.executive_summary || 
-                    `This report provides a comprehensive Web3 strategy for ${report.company_name} 
-                     based in ${report.city}, ${report.state}. Our analysis reveals significant 
-                     opportunities in the ${report.industry} sector.`}
+                    `This regulatory intelligence report provides a comprehensive compliance 
+                     analysis for ${report.company_name} based in ${report.city}, ${report.state}. 
+                     Our analysis identifies key regulatory requirements, licensing obligations, 
+                     and compliance risks across your operating jurisdictions.`}
                 </p>
                 
                 <div className="bg-navy-50 p-6 rounded-xl">
-                  <h3 className="font-semibold text-navy-900 mb-3">Key Insights</h3>
+                  <h3 className="font-semibold text-navy-900 mb-3">Key Compliance Insights</h3>
                   <ul className="space-y-2">
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
                       <span className="text-navy-700">
-                        Market opportunity score: 85/100
+                        Regulatory climate: {report.report_content?.regulatory_climate || 'Moderate'}
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
                       <span className="text-navy-700">
-                        Regulatory climate: Favorable
+                        Licenses required: {report.report_content?.licenses_required || '2-3 states'}
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
                       <span className="text-navy-700">
-                        Implementation timeline: 3-6 months
+                        Implementation timeline: {report.report_content?.timeline || '90 days'}
                       </span>
                     </li>
                   </ul>
@@ -214,51 +222,84 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
             </div>
           )}
 
-          {activeTab === 'location' && (
+          {activeTab === 'regulatory' && (
             <div className="prose max-w-none">
               <h2 className="text-2xl font-bold text-navy-900 mb-6">
-                Location Analysis: {report.city}, {report.state}
+                {report.state} Regulatory Analysis
               </h2>
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="bg-navy-50 p-6 rounded-xl">
-                  <h3 className="font-semibold text-navy-900 mb-4">Market Metrics</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm text-navy-600 mb-1">Market Tier</p>
-                      <p className="text-lg font-semibold text-navy-900">
-                        {report.location_tier}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-navy-600 mb-1">Nearest Web3 Hub</p>
-                      <p className="text-lg font-semibold text-navy-900">
-                        {report.nearest_major_city || 'N/A'}
-                      </p>
-                    </div>
-                  </div>
+                  <h3 className="font-semibold text-navy-900 mb-4 flex items-center gap-2">
+                    <Gavel className="w-5 h-5" />
+                    Regulatory Climate
+                  </h3>
+                  <p className="text-lg font-semibold text-navy-900 mb-2">
+                    {report.report_content?.regulatory_climate || 'Moderate'}
+                  </p>
+                  <p className="text-sm text-navy-600">
+                    {report.state === 'NY' && 'BitLicense required - strict oversight'}
+                    {report.state === 'CA' && 'DFPI licensing - active enforcement'}
+                    {report.state === 'TX' && 'Business friendly - no specific license'}
+                    {report.state === 'WY' && 'Most crypto-friendly - DAO structure available'}
+                    {!['NY','CA','TX','WY'].includes(report.state) && 
+                      'Moderate regulation - consult specific requirements'}
+                  </p>
                 </div>
                 <div className="bg-navy-50 p-6 rounded-xl">
-                  <h3 className="font-semibold text-navy-900 mb-4">Opportunity Score</h3>
-                  <div className="text-center">
-                    <span className="text-5xl font-bold text-gold-600">85</span>
-                    <span className="text-xl text-navy-400">/100</span>
-                    <p className="text-sm text-navy-600 mt-2">Based on location analysis</p>
-                  </div>
+                  <h3 className="font-semibold text-navy-900 mb-4 flex items-center gap-2">
+                    <Shield className="w-5 h-5" />
+                    Key Requirements
+                  </h3>
+                  <ul className="space-y-2">
+                    <li className="text-sm text-navy-700">• Money transmitter license: {report.state === 'TX' ? 'Not required' : 'Required in most states'}</li>
+                    <li className="text-sm text-navy-700">• Bonding requirements: $25k-$500k depending on volume</li>
+                    <li className="text-sm text-navy-700">• Annual reporting: Required</li>
+                  </ul>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Add other tabs similarly... */}
+          {activeTab === 'risk' && (
+            <div className="prose max-w-none">
+              <h2 className="text-2xl font-bold text-navy-900 mb-6">
+                Compliance Risk Assessment
+              </h2>
+              <div className="space-y-4">
+                <div className="bg-amber-50 p-6 rounded-xl border border-amber-200">
+                  <h3 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5" />
+                    High Priority Risks
+                  </h3>
+                  <ul className="space-y-2">
+                    <li className="text-sm text-amber-700">• Multi-state licensing gaps identified</li>
+                    <li className="text-sm text-amber-700">• Recent enforcement actions in {report.state}</li>
+                    <li className="text-sm text-amber-700">• Pending legislation that may affect operations</li>
+                  </ul>
+                </div>
+                <div className="bg-green-50 p-6 rounded-xl border border-green-200">
+                  <h3 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5" />
+                    Mitigation Strategies
+                  </h3>
+                  <ul className="space-y-2">
+                    <li className="text-sm text-green-700">• 90-day compliance plan included</li>
+                    <li className="text-sm text-green-700">• Regulatory contacts provided for each state</li>
+                    <li className="text-sm text-green-700">• Quarterly monitoring subscription available</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
 
-          {activeTab !== 'executive-summary' && activeTab !== 'location' && (
+          {activeTab !== 'executive-summary' && activeTab !== 'regulatory' && activeTab !== 'risk' && (
             <div className="text-center py-12">
               <FileText className="w-12 h-12 text-navy-300 mx-auto mb-4" />
               <p className="text-navy-600">
-                This section contains detailed analysis specific to your report.
+                This section contains detailed compliance analysis specific to your report.
               </p>
               <p className="text-sm text-navy-400 mt-2">
-                Download the PDF for complete content.
+                Download the PDF for complete regulatory intelligence.
               </p>
             </div>
           )}
@@ -267,11 +308,10 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
         {/* Disclaimer */}
         <div className="mt-8 p-6 bg-navy-50 rounded-xl border border-navy-200">
           <p className="text-xs text-navy-500 text-center">
-            DISCLAIMER: This report provides educational guidance and strategic recommendations 
-            based on AI analysis and human review. Veridian Group is not a law firm, financial 
-            advisor, or registered investment advisor. All Web3 and cryptocurrency strategies 
-            involve substantial risk. You should consult with qualified legal, tax, and financial 
-            professionals before implementing any strategies.
+            DISCLAIMER: This report provides regulatory intelligence and educational guidance 
+            based on AI analysis and human review. Veridian Group is not a law firm. 
+            All compliance recommendations should be reviewed with qualified legal counsel 
+            in {report.state} before implementation.
           </p>
         </div>
       </div>

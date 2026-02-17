@@ -1,3 +1,4 @@
+// src/app/dashboard/components/EmptyState.tsx
 'use client'
 
 import Link from 'next/link'
@@ -8,7 +9,10 @@ import {
   ArrowRight,
   Map,
   Shield,
-  TrendingUp
+  TrendingUp,
+  Scale,
+  Landmark,
+  Gavel
 } from 'lucide-react'
 
 export default function EmptyState() {
@@ -23,7 +27,7 @@ export default function EmptyState() {
         <div className="relative inline-block mb-6">
           <div className="w-20 h-20 bg-gradient-to-br from-gold-500/20 to-gold-600/20 
                         rounded-3xl flex items-center justify-center">
-            <FileText className="w-10 h-10 text-gold-600" />
+            <Scale className="w-10 h-10 text-gold-600" />
           </div>
           <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-navy-900 
                         rounded-full flex items-center justify-center">
@@ -33,33 +37,33 @@ export default function EmptyState() {
 
         {/* Title */}
         <h2 className="text-2xl font-display font-bold text-navy-900 mb-3">
-          No reports yet
+          No compliance reports yet
         </h2>
         
         <p className="text-navy-600 mb-8">
-          Generate your first Web3 strategy report and get location-specific insights 
-          for your business in minutes.
+          Generate your first regulatory intelligence report and get state-specific 
+          compliance analysis for your institution in 24 hours.
         </p>
 
         {/* Features Preview */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="text-center">
-            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center mx-auto mb-2">
-              <Map className="w-5 h-5 text-blue-600" />
-            </div>
-            <span className="text-xs font-medium text-navy-700">Location Intel</span>
-          </div>
-          <div className="text-center">
-            <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center mx-auto mb-2">
-              <Shield className="w-5 h-5 text-purple-600" />
+            <div className="w-10 h-10 bg-navy-50 rounded-lg flex items-center justify-center mx-auto mb-2">
+              <Scale className="w-5 h-5 text-navy-600" />
             </div>
             <span className="text-xs font-medium text-navy-700">Regulatory</span>
           </div>
           <div className="text-center">
-            <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center mx-auto mb-2">
-              <TrendingUp className="w-5 h-5 text-green-600" />
+            <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center mx-auto mb-2">
+              <Landmark className="w-5 h-5 text-purple-600" />
             </div>
-            <span className="text-xs font-medium text-navy-700">Strategy</span>
+            <span className="text-xs font-medium text-navy-700">Compliance</span>
+          </div>
+          <div className="text-center">
+            <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center mx-auto mb-2">
+              <Gavel className="w-5 h-5 text-green-600" />
+            </div>
+            <span className="text-xs font-medium text-navy-700">Licensing</span>
           </div>
         </div>
 
@@ -78,7 +82,7 @@ export default function EmptyState() {
         </Link>
 
         <p className="text-xs text-navy-400 mt-4">
-          Takes less than 2 minutes • No credit card required to start
+          Takes less than 5 minutes • Purchase order accepted
         </p>
       </div>
     </motion.div>

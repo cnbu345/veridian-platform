@@ -1,3 +1,4 @@
+// src/lib/location/cities.ts
 // Major US cities for location intelligence
 export const MAJOR_CITIES = [
   { city: 'New York', state: 'NY', population: 8419000, region: 'Northeast' },
@@ -28,18 +29,20 @@ export const MAJOR_CITIES = [
   { city: 'Atlanta', state: 'GA', population: 498000, region: 'South' },
 ] as const
 
-// Web3 hubs (cities with strong blockchain ecosystems)
-export const WEB3_HUBS = [
-  { city: 'San Francisco', state: 'CA', type: 'primary', score: 98 },
-  { city: 'New York', state: 'NY', type: 'primary', score: 95 },
-  { city: 'Austin', state: 'TX', type: 'primary', score: 92 },
-  { city: 'Miami', state: 'FL', type: 'primary', score: 90 },
-  { city: 'Los Angeles', state: 'CA', type: 'secondary', score: 85 },
-  { city: 'Chicago', state: 'IL', type: 'secondary', score: 82 },
-  { city: 'Seattle', state: 'WA', type: 'secondary', score: 80 },
-  { city: 'Denver', state: 'CO', type: 'secondary', score: 78 },
-  { city: 'Boston', state: 'MA', type: 'secondary', score: 76 },
-  { city: 'San Diego', state: 'CA', type: 'secondary', score: 74 },
+// Regulatory hubs (cities with strong compliance/legal infrastructure for digital assets)
+export const REGULATORY_HUBS = [
+  { city: 'New York', state: 'NY', type: 'primary', score: 98, specialty: 'BitLicense, Banking Law' },
+  { city: 'San Francisco', state: 'CA', type: 'primary', score: 95, specialty: 'FinTech, DFPI' },
+  { city: 'Washington', state: 'DC', type: 'primary', score: 94, specialty: 'Federal Regulation, SEC' },
+  { city: 'Chicago', state: 'IL', type: 'primary', score: 90, specialty: 'Commodities, Futures' },
+  { city: 'Boston', state: 'MA', type: 'primary', score: 88, specialty: 'Securities Law' },
+  { city: 'Austin', state: 'TX', type: 'secondary', score: 85, specialty: 'Money Transmission' },
+  { city: 'Miami', state: 'FL', type: 'secondary', score: 84, specialty: 'International Finance' },
+  { city: 'Los Angeles', state: 'CA', type: 'secondary', score: 82, specialty: 'Entertainment Law' },
+  { city: 'Seattle', state: 'WA', type: 'secondary', score: 80, specialty: 'Tech Regulation' },
+  { city: 'Denver', state: 'CO', type: 'secondary', score: 78, specialty: 'Digital Assets' },
+  { city: 'Wilmington', state: 'DE', type: 'primary', score: 92, specialty: 'Corporate Law, Banking' },
+  { city: 'Cheyenne', state: 'WY', type: 'secondary', score: 86, specialty: 'DAO, Crypto Banking' },
 ] as const
 
 // Metropolitan Statistical Areas
