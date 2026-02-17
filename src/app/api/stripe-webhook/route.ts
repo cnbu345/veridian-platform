@@ -1,113 +1,160 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getStripe } from '@/lib/stripe/stripe'
-import { createClient } from '@/lib/supabase/server'
+// src/app/api/stripe/webhook/route.ts
+import { NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 import Stripe from 'stripe'
+import { getStripe, handleCheckoutCompleted, handleInvoicePaid, handleSubscriptionUpdated } from '@/lib/stripe/stripe'
 
-export async function POST(request: NextRequest) {
-  const stripe = getStripe()
-  const body = await request.text()
-  const signature = request.headers.get('stripe-signature')!
+export async function POST(req: Request) {
+  const body = await req.text()
+  const headersList = headers()
+  const signature = headersList.get('stripe-signature')
+
+  if (!signature) {
+    return NextResponse.json(
+      { error: 'No stripe signature' },
+      { status: 400 }
+    )
+  }
 
   let event: Stripe.Event
 
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
+    const stripe = getStripe()
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+
+    if (!webhookSecret) {
+      throw new Error('STRIPE_WEBHOOK_SECRET is not set')
+    }
+
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
+  } catch (error) {
+    console.error('Webhook signature verification failed:', error)
+    return NextResponse.json(
+      { error: 'Webhook signature verification failed' },
+      { status: 400 }
     )
-  } catch (err: any) {
-    console.error(`Webhook signature verification failed:`, err.message)
-    return NextResponse.json({ error: 'Webhook Error' }, { status: 400 })
   }
 
-  const supabase = await createClient()
-
   try {
+    // Handle the event
     switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session
-        const userId = session.metadata?.userId
-        const productType = session.metadata?.productType
-
-        if (userId) {
-          // Update user's subscription status
-          await supabase
-            .from('users')
-            .update({
-              subscription_tier: productType === 'monthly_subscription' ? 'premium' : 'paid',
-              stripe_customer_id: session.customer as string
-            })
-            .eq('id', userId)
-
-          // If this is for a specific report, mark it as paid
-          if (session.metadata?.reportData) {
-            const reportData = JSON.parse(session.metadata.reportData)
-            // You can trigger report generation here if needed
-          }
-        }
+      case 'checkout.session.completed':
+        await handleCheckoutCompleted(event.data.object)
         break
-      }
-
-      case 'customer.subscription.created':
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription
-        const customerId = subscription.customer as string
         
-        // Update user's subscription status
-        await supabase
-          .from('users')
-          .update({
-            subscription_tier: 'premium',
-            stripe_customer_id: customerId
-          })
-          .eq('stripe_customer_id', customerId)
+      case 'invoice.paid':
+        await handleInvoicePaid(event.data.object)
         break
-      }
-
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription
-        const customerId = subscription.customer as string
         
-        // Downgrade user to free tier
-        await supabase
-          .from('users')
-          .update({
-            subscription_tier: 'free'
-          })
-          .eq('stripe_customer_id', customerId)
+      case 'customer.subscription.updated':
+        await handleSubscriptionUpdated(event.data.object)
         break
-      }
-
-      case 'invoice.payment_succeeded': {
-        // Handle successful subscription payment
-        const invoice = event.data.object as Stripe.Invoice
-        // You could send a payment confirmation email here
+        
+      case 'customer.subscription.deleted':
+        // Handle subscription cancellation
+        await handleSubscriptionDeleted(event.data.object)
         break
-      }
-
-      case 'invoice.payment_failed': {
+        
+      case 'payment_intent.payment_failed':
         // Handle failed payment
-        const invoice = event.data.object as Stripe.Invoice
-        const customerId = invoice.customer as string
-        
-        // Notify user of payment failure
-        await supabase
-          .from('users')
-          .update({
-            subscription_tier: 'payment_failed'
-          })
-          .eq('stripe_customer_id', customerId)
+        await handlePaymentFailed(event.data.object)
         break
-      }
+        
+      default:
+        console.log(`Unhandled event type: ${event.type}`)
     }
 
     return NextResponse.json({ received: true })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Webhook processing error:', error)
     return NextResponse.json(
       { error: 'Webhook processing failed' },
       { status: 500 }
     )
+  }
+}
+
+// Additional handlers
+async function handleSubscriptionDeleted(subscription: any) {
+  const supabase = await createClient()
+  const customerId = subscription.customer
+
+  const { data: user } = await supabase
+    .from('users')
+    .select('id, email, company_name')
+    .eq('stripe_customer_id', customerId)
+    .single()
+
+  if (user) {
+    // Update user subscription to free
+    await supabase
+      .from('users')
+      .update({
+        subscription_tier: 'free',
+        subscription_status: 'canceled',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', user.id)
+
+    // Log cancellation
+    await supabase.from('audit_log').insert({
+      user_id: user.id,
+      action: 'subscription_canceled',
+      entity_type: 'subscription',
+      metadata: {
+        subscriptionId: subscription.id,
+        timestamp: new Date().toISOString()
+      }
+    })
+
+    console.log(`Subscription canceled for user ${user.id}`)
+  }
+}
+
+async function handlePaymentFailed(paymentIntent: any) {
+  const supabase = await createClient()
+  const customerId = paymentIntent.customer
+
+  const { data: user } = await supabase
+    .from('users')
+    .select('id, email, company_name')
+    .eq('stripe_customer_id', customerId)
+    .single()
+
+  if (user) {
+    // Log failed payment
+    await supabase.from('audit_log').insert({
+      user_id: user.id,
+      action: 'payment_failed',
+      entity_type: 'payment',
+      metadata: {
+        paymentIntentId: paymentIntent.id,
+        amount: paymentIntent.amount / 100,
+        timestamp: new Date().toISOString()
+      }
+    })
+
+    // Send notification email
+    const resend = new Resend(process.env.RESEND_API_KEY)
+    await resend.emails.send({
+      from: 'Veridian Group <billing@veridiangroup.com>',
+      to: user.email,
+      subject: 'Payment Failed - Veridian Group',
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #0A1A2F;">Payment Failed</h1>
+          <p>Hello ${user.company_name || user.email},</p>
+          <p>Your recent payment of <strong>$${paymentIntent.amount / 100}</strong> failed.</p>
+          <p>Please update your payment information to continue your subscription.</p>
+          <p><a href="${process.env.NEXT_PUBLIC_URL}/account/billing" style="background: #C6A13B; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block; margin: 20px 0;">Update Payment Method</a></p>
+          <hr style="border: 1px solid #E2E8F0; margin: 30px 0;" />
+          <p style="color: #64748B; font-size: 14px;">
+            Need help? Contact us at support@veridiangroup.com
+          </p>
+        </div>
+      `
+    })
+
+    console.log(`Payment failed for user ${user.id}`)
   }
 }

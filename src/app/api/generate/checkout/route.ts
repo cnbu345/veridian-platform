@@ -1,6 +1,18 @@
+// src/app/api/generate/checkout/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { createCheckoutSession, createSubscriptionSession } from '@/lib/stripe/stripe'
+import { createCheckoutSession } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
+
+// ✅ Add this GET handler to test the route
+export async function GET() {
+  return NextResponse.json({ 
+    status: 'ok', 
+    message: 'Checkout API is working',
+    endpoints: {
+      post: '/api/generate/checkout - Create checkout session'
+    }
+  })
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,19 +24,36 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { type, reportData } = body // type: 'single' or 'subscription'
+    const { tier, reportData } = body // tier: 'single' | 'quarterly' | 'monthly' | 'enterprise'
 
-    let session
-
-    if (type === 'subscription') {
-      session = await createSubscriptionSession(user.id, user.email!)
-    } else {
-      session = await createCheckoutSession(user.id, user.email!, reportData)
+    if (!tier) {
+      return NextResponse.json(
+        { error: 'Missing tier parameter' }, 
+        { status: 400 }
+      )
     }
+
+    // Validate tier
+    const validTiers = ['single', 'quarterly', 'monthly', 'enterprise']
+    if (!validTiers.includes(tier)) {
+      return NextResponse.json(
+        { error: 'Invalid tier specified' }, 
+        { status: 400 }
+      )
+    }
+
+    // Create checkout session with the specified tier
+    const session = await createCheckoutSession(
+      user.id, 
+      user.email!, 
+      tier, 
+      reportData
+    )
 
     return NextResponse.json({ 
       url: session.url,
-      sessionId: session.id
+      sessionId: session.id,
+      tier
     })
 
   } catch (error: any) {

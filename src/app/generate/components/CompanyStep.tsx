@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { companySchema, CompanyFormData } from '@/lib/reports/validation'
 import { Building2, Users, DollarSign, Globe, Calendar, FileText } from 'lucide-react'
+import { useEffect } from 'react'
 
 interface CompanyStepProps {
   data: CompanyFormData
@@ -52,17 +53,38 @@ export default function CompanyStep({ data, onUpdate, onNext }: CompanyStepProps
     register,
     handleSubmit,
     formState: { errors, isValid },
-    watch
+    watch,
+    reset,
+    setValue
   } = useForm<CompanyFormData>({
     resolver: zodResolver(companySchema),
     defaultValues: data,
     mode: 'onChange'
   })
 
+  // Reset form when data prop changes (important for when navigating back)
+  useEffect(() => {
+    reset(data)
+  }, [data, reset])
+
   const formData = watch()
 
+  // Helper to get display label for selected values
+  const getSizeLabel = (value: string) => {
+    return COMPANY_SIZES.find(s => s.value === value)?.label || value
+  }
+
+  const getBudgetLabel = (value: string) => {
+    return BUDGET_RANGES.find(b => b.value === value)?.label || value
+  }
+
+  const onSubmit = (formData: CompanyFormData) => {
+    onUpdate(formData)
+    onNext()
+  }
+
   return (
-    <form onSubmit={handleSubmit(onNext)} className="space-y-8">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
       {/* Company Name */}
       <div className="space-y-2">
         <label className="block text-sm font-semibold text-navy-900">
@@ -126,6 +148,9 @@ export default function CompanyStep({ data, onUpdate, onNext }: CompanyStepProps
         {errors.industry && (
           <p className="text-sm text-red-600 mt-1">{errors.industry.message}</p>
         )}
+        {formData.industry && (
+          <p className="text-xs text-green-600 mt-1">Selected: {formData.industry}</p>
+        )}
       </div>
 
       {/* Company Size & Budget - Grid */}
@@ -153,6 +178,9 @@ export default function CompanyStep({ data, onUpdate, onNext }: CompanyStepProps
           {errors.size && (
             <p className="text-sm text-red-600 mt-1">{errors.size.message}</p>
           )}
+          {formData.size && (
+            <p className="text-xs text-green-600 mt-1">Selected: {getSizeLabel(formData.size)}</p>
+          )}
         </div>
 
         {/* Budget */}
@@ -177,6 +205,9 @@ export default function CompanyStep({ data, onUpdate, onNext }: CompanyStepProps
           </div>
           {errors.budget && (
             <p className="text-sm text-red-600 mt-1">{errors.budget.message}</p>
+          )}
+          {formData.budget && (
+            <p className="text-xs text-green-600 mt-1">Selected: {getBudgetLabel(formData.budget)}</p>
           )}
         </div>
       </div>
@@ -224,6 +255,14 @@ export default function CompanyStep({ data, onUpdate, onNext }: CompanyStepProps
           {formData.description?.length || 0}/500 characters
         </p>
       </div>
+
+      {/* Debug Info - Remove in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="p-4 bg-slate-100 rounded-lg text-xs">
+          <p className="font-medium">Debug - Form Data:</p>
+          <pre>{JSON.stringify(formData, null, 2)}</pre>
+        </div>
+      )}
 
       {/* Form Progress & Next Button */}
       <div className="flex items-center justify-between pt-6 border-t border-slate-200">
