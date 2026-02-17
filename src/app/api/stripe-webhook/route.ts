@@ -1,8 +1,10 @@
-// src/app/api/stripe/webhook/route.ts
+ a// src/app/api/stripe/webhook/route.ts
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import Stripe from 'stripe'
 import { getStripe, handleCheckoutCompleted, handleInvoicePaid, handleSubscriptionUpdated } from '@/lib/stripe/stripe'
+import { createClient } from '@/lib/supabase/server'
+import { Resend } from 'resend'
 
 export async function POST(req: Request) {
   const body = await req.text()
