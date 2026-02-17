@@ -31,7 +31,11 @@ export async function saveReportRequest(
     .select()
     .single()
   
-  if (error) throw error
+  if (error) {
+    console.error('Error saving report request:', error)
+    throw new Error(`Failed to save report: ${error.message}`)
+  }
+  
   return data
 }
 
@@ -45,7 +49,11 @@ export async function getUserReports(userId: string) {
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
   
-  if (error) throw error
+  if (error) {
+    console.error('Error fetching user reports:', error)
+    throw new Error(`Failed to fetch reports: ${error.message}`)
+  }
+  
   return data as GeneratedReport[]
 }
 
@@ -60,7 +68,11 @@ export async function getReport(reportId: string, userId: string) {
     .eq('user_id', userId)
     .single()
   
-  if (error) throw error
+  if (error) {
+    console.error('Error fetching report:', error)
+    throw new Error(`Failed to fetch report: ${error.message}`)
+  }
+  
   return data as GeneratedReport
 }
 
@@ -72,18 +84,23 @@ export async function updateReportStatus(
 ) {
   const supabase = await createClient()
   
+  const currentContent = content || {}
+  
   const { error } = await supabase
     .from('reports')
     .update({
       report_content: {
-        ...content,
+        ...currentContent,
         status,
         updated_at: new Date().toISOString()
       }
     })
     .eq('id', reportId)
   
-  if (error) throw error
+  if (error) {
+    console.error('Error updating report status:', error)
+    throw new Error(`Failed to update report: ${error.message}`)
+  }
 }
 
 // Delete report
@@ -96,5 +113,8 @@ export async function deleteReport(reportId: string, userId: string) {
     .eq('id', reportId)
     .eq('user_id', userId)
   
-  if (error) throw error
+  if (error) {
+    console.error('Error deleting report:', error)
+    throw new Error(`Failed to delete report: ${error.message}`)
+  }
 }

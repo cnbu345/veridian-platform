@@ -23,7 +23,8 @@ import {
   Clock,
   Scale,
   Landmark,
-  Gavel
+  Gavel,
+  AlertTriangle
 } from 'lucide-react'
 import { CompanyFormData, LocationFormData, StrategyFormData } from '@/lib/reports/validation'
 import { createClient } from '@/lib/supabase/client'
@@ -90,6 +91,23 @@ export default function ReviewStep({
     return focuses[focus] || focus
   }
 
+  // Helper to format secondary focus
+  const formatSecondaryFocus = (focus: string) => {
+    const focuses: Record<string, string> = {
+      'compliance': 'Regulatory Compliance',
+      'licensing': 'Licensing',
+      'risk': 'Risk Assessment',
+      'monitoring': 'Monitoring',
+      'talent': 'Talent Acquisition',
+      'strategy': 'Market Strategy',
+      'reporting': 'Regulatory Reporting',
+      'audit': 'Compliance Audits',
+      'policy': 'Policy Development',
+      'training': 'Staff Training'
+    }
+    return focuses[focus] || focus
+  }
+
   // Helper to format timeline
   const formatTimeline = (timeline: string) => {
     const timelines: Record<string, string> = {
@@ -100,14 +118,14 @@ export default function ReviewStep({
     return timelines[timeline] || timeline
   }
 
-  // Handle payment and report generation
+  // Handle report generation
   const handleGenerateReport = async () => {
     setIsProcessing(true)
     setError(null)
     setStep('payment')
 
     try {
-      // Step 1: Create checkout session with new pricing
+      // Step 1: Create checkout session
       const checkoutResponse = await fetch('/api/checkout', {
         method: 'POST',
         headers: {
@@ -115,16 +133,11 @@ export default function ReviewStep({
         },
         body: JSON.stringify({
           type: 'single',
-          price: 997, // Founder's pricing
+          price: 997,
           regularPrice: 2497,
-          reportData: {
+          metadata: {
             companyName: companyData.name,
-            industry: companyData.industry,
-            city: locationData.city,
-            state: locationData.state,
-            companySize: companyData.size,
-            budget: companyData.budget,
-            concerns: strategyData.concerns
+            userId: user.id
           }
         }),
       })
@@ -135,7 +148,9 @@ export default function ReviewStep({
         throw new Error(checkoutData.error || 'Failed to create checkout session')
       }
 
-      // Step 2: Save report request to database
+      // Step 2: Generate report
+      setStep('processing')
+      
       const reportResponse = await fetch('/api/generate', {
         method: 'POST',
         headers: {
@@ -146,33 +161,33 @@ export default function ReviewStep({
           industry: companyData.industry,
           companySize: companyData.size,
           budget: companyData.budget,
-          concerns: strategyData.concerns,
-          goals: strategyData.goals,
           city: locationData.city,
           state: locationData.state,
+          concerns: strategyData.concerns,
+          goals: strategyData.goals,
           primaryFocus: strategyData.primary,
           secondaryFocus: strategyData.secondary,
           timeline: strategyData.timeline,
-          status: 'pending_payment'
+          website: companyData.website,
+          description: companyData.description,
+          founded: companyData.founded,
+          stripePaymentId: checkoutData.paymentIntentId
         }),
       })
 
       const reportData = await reportResponse.json()
 
       if (!reportResponse.ok) {
-        console.warn('Report save warning:', reportData)
+        throw new Error(reportData.error || 'Failed to generate report')
       }
 
-      // Step 3: Redirect to Stripe checkout
-      if (checkoutData.url) {
-        window.location.href = checkoutData.url
-      } else {
-        throw new Error('No checkout URL received')
-      }
+      // Step 3: Redirect to report page
+      router.push(`/reports/${reportData.reportId}`)
+      onComplete()
 
     } catch (err: any) {
-      console.error('Payment error:', err)
-      setError(err.message || 'Failed to process payment. Please try again.')
+      console.error('Generation error:', err)
+      setError(err.message || 'Failed to generate report. Please try again.')
       setIsProcessing(false)
       setStep('review')
     }
@@ -197,27 +212,52 @@ export default function ReviewStep({
         </div>
 
         <h2 className="text-2xl font-bold text-navy-900 mb-3">
-          {step === 'payment' ? 'Preparing Secure Checkout' : 'Analyzing Regulatory Data'}
+          {step === 'payment' ? 'Preparing Secure Checkout' : 'Generating Your Regulatory Intelligence Report'}
         </h2>
         
         <p className="text-navy-600 mb-8 max-w-md mx-auto">
           {step === 'payment' 
             ? 'Redirecting you to our secure payment processor...'
-            : 'Our compliance engine is analyzing state regulations. This will take 2-3 minutes.'}
+            : 'Our AI compliance engine is analyzing state regulations, licensing requirements, and compliance risks. This typically takes 2-3 minutes.'}
         </p>
 
         <div className="w-64 h-2 bg-slate-200 rounded-full mx-auto overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-gold-600 to-gold-500 
-                        rounded-full animate-pulse"
-               style={{ width: step === 'payment' ? '50%' : '75%' }} />
+          <div 
+            className="h-full bg-gradient-to-r from-gold-600 to-gold-500 
+                       rounded-full animate-pulse"
+            style={{ width: step === 'payment' ? '50%' : '75%' }} 
+          />
+        </div>
+
+        <div className="mt-8 space-y-2 text-sm text-navy-500">
+          {step === 'processing' && (
+            <>
+              <p className="flex items-center justify-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                Analyzing {locationData.state} regulatory framework
+              </p>
+              <p className="flex items-center justify-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                Identifying license requirements
+              </p>
+              <p className="flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 text-gold-600 animate-spin" />
+                Generating compliance roadmap
+              </p>
+            </>
+          )}
         </div>
 
         {error && (
-          <div className="mt-8 p-4 bg-red-50 border border-red-200 rounded-xl">
-            <p className="text-red-700 text-sm">{error}</p>
+          <div className="mt-8 p-4 bg-red-50 border border-red-200 rounded-xl max-w-md mx-auto">
+            <div className="flex items-center gap-2 text-red-700 mb-2">
+              <AlertCircle className="w-5 h-5" />
+              <p className="font-semibold">Generation Failed</p>
+            </div>
+            <p className="text-red-600 text-sm mb-4">{error}</p>
             <button
               onClick={() => setStep('review')}
-              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg 
+              className="w-full px-4 py-2 bg-red-600 text-white rounded-lg 
                        hover:bg-red-700 transition-colors"
             >
               Go Back
@@ -401,7 +441,7 @@ export default function ReviewStep({
                   <span key={focus} 
                         className="px-3 py-1 bg-navy-100 text-navy-700 
                                  rounded-full text-sm">
-                    {focus.replace(/-/g, ' ')}
+                    {formatSecondaryFocus(focus)}
                   </span>
                 ))}
               </div>
@@ -420,6 +460,49 @@ export default function ReviewStep({
               <p className="text-navy-700 bg-white p-4 rounded-xl border border-navy-200">
                 {strategyData.goals}
               </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* What's Included */}
+      <div className="bg-gradient-to-r from-navy-800 to-navy-900 rounded-2xl p-8 text-white">
+        <h3 className="text-xl font-bold mb-4">Your Report Includes:</h3>
+        <div className="grid md:grid-cols-2 gap-4 mb-6">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-gold-500/20 rounded-lg flex items-center justify-center shrink-0">
+              <Scale className="w-4 h-4 text-gold-500" />
+            </div>
+            <div>
+              <p className="font-semibold">Regulatory Analysis</p>
+              <p className="text-sm text-navy-300">State-by-state framework breakdown</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-gold-500/20 rounded-lg flex items-center justify-center shrink-0">
+              <Gavel className="w-4 h-4 text-gold-500" />
+            </div>
+            <div>
+              <p className="font-semibold">Licensing Matrix</p>
+              <p className="text-sm text-navy-300">Requirements, fees, timelines</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-gold-500/20 rounded-lg flex items-center justify-center shrink-0">
+              <Landmark className="w-4 h-4 text-gold-500" />
+            </div>
+            <div>
+              <p className="font-semibold">Regulatory Contacts</p>
+              <p className="text-sm text-navy-300">State regulators & legal counsel</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-gold-500/20 rounded-lg flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-4 h-4 text-gold-500" />
+            </div>
+            <div>
+              <p className="font-semibold">Risk Assessment</p>
+              <p className="text-sm text-navy-300">Gap analysis & mitigation</p>
             </div>
           </div>
         </div>
@@ -455,8 +538,8 @@ export default function ReviewStep({
             <p className="text-xs">24-Hour Delivery</p>
           </div>
           <div className="text-center">
-            <Gavel className="w-5 h-5 mx-auto mb-1 text-gold-400" />
-            <p className="text-xs">Compliance Review</p>
+            <FileText className="w-5 h-5 mx-auto mb-1 text-gold-400" />
+            <p className="text-xs">PDF Export</p>
           </div>
         </div>
 
@@ -478,7 +561,7 @@ export default function ReviewStep({
             ) : (
               <>
                 Purchase Report - $997
-                <CreditCard className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </>
             )}
           </button>

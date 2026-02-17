@@ -4,6 +4,7 @@ import { LocationAnalysis } from '../location/analyzer'
 import { StrategyFormData } from './validation'
 import { getStateRegulation, getComplianceChecklist } from '../location/regulations'
 import { getTalentScoreForLocation, getTalentRecommendations } from '../location/talent'
+import { generateRegulatoryReport } from '../openai/openai'
 import { GeneratedReport } from './types'
 
 export interface GenerationResult {
@@ -15,6 +16,7 @@ export interface GenerationResult {
   compliance_roadmap: any
   regulatory_contacts: any
   risk_assessment: any
+  full_report?: string
 }
 
 export async function generateReport(
@@ -25,50 +27,299 @@ export async function generateReport(
 ): Promise<GenerationResult> {
   console.log('Starting regulatory report generation for:', company.name)
   
-  // Simulate AI processing time
-  await new Promise(resolve => setTimeout(resolve, 2000))
+  try {
+    // Generate full AI report using our service
+    const fullReport = await generateRegulatoryReport({
+      companyName: company.name,
+      industry: company.industry,
+      companySize: company.size,
+      budget: company.budget,
+      city: location.city,
+      state: location.state,
+      locationTier: location.tier,
+      nearestRegulatoryHub: location.nearestRegulatoryHub,
+      primaryFocus: strategy.primary,
+      secondaryFocus: strategy.secondary,
+      timeline: strategy.timeline,
+      concerns: strategy.concerns,
+      goals: strategy.goals
+    })
+
+    // Parse the AI report into structured sections
+    const executive_summary = extractExecutiveSummary(fullReport)
+    const regulatory_analysis = extractRegulatoryAnalysis(fullReport, location, strategy)
+    const licensing_matrix = extractLicensingMatrix(fullReport, location)
+    const compliance_roadmap = extractComplianceRoadmap(fullReport, strategy)
+    const regulatory_contacts = extractRegulatoryContacts(fullReport, location)
+    const risk_assessment = extractRiskAssessment(fullReport, location, strategy)
+
+    // Get local data for sections not fully covered by AI
+    const regulation = getStateRegulation(location.state)
+    const talentScore = getTalentScoreForLocation(location.city, location.state)
+    const talentRecs = getTalentRecommendations(location.city, location.state, location.tier)
+    const complianceChecklist = getComplianceChecklist(location.state)
+
+    return {
+      executive_summary,
+      location_analysis: generateLocationAnalysis(location, talentScore),
+      regulatory_analysis,
+      talent_analysis: generateTalentAnalysis(location, talentScore, talentRecs),
+      licensing_matrix,
+      compliance_roadmap,
+      regulatory_contacts,
+      risk_assessment,
+      full_report: fullReport
+    }
+  } catch (error) {
+    console.error('AI generation failed, using local data:', error)
+    
+    // Fallback to completely local generation
+    return generateLocalReport(company, location, strategy)
+  }
+}
+
+// AI Report Parsing Functions
+function extractExecutiveSummary(fullReport: string): string {
+  const regex = /## 1\. EXECUTIVE SUMMARY([\s\S]*?)(?=## 2\.|$)/
+  const match = fullReport.match(regex)
+  return match ? match[1].trim() : generateLocalExecutiveSummary()
+}
+
+function extractRegulatoryAnalysis(
+  fullReport: string, 
+  location: LocationAnalysis, 
+  strategy: StrategyFormData
+): any {
+  const regex = /## 2\. STATE REGULATORY ANALYSIS[\s\S]*?\([A-Z]{2}\)([\s\S]*?)(?=## 3\.|$)/
+  const match = fullReport.match(regex)
   
+  const regulation = getStateRegulation(location.state)
+  const checklist = getComplianceChecklist(location.state)
+  
+  return {
+    climate: regulation.cryptoFriendly,
+    moneyTransmitter: regulation.moneyTransmitter,
+    taxTreatment: regulation.taxTreatment,
+    notes: regulation.notes,
+    checklist,
+    lastUpdated: regulation.lastUpdated,
+    licenseRequired: location.licenseRequired,
+    summary: match ? match[1].trim() : generateLocalRegulatorySummary(location, regulation),
+    fullAnalysis: match ? match[0].trim() : null
+  }
+}
+
+function extractLicensingMatrix(fullReport: string, location: LocationAnalysis): any {
+  const regex = /## 3\. MULTI-STATE LICENSING MATRIX([\s\S]*?)(?=## 4\.|$)/
+  const match = fullReport.match(regex)
+  
+  const regulation = getStateRegulation(location.state)
+  const licenses = []
+  
+  if (regulation.moneyTransmitter.includes('required') || regulation.moneyTransmitter.includes('BitLicense')) {
+    licenses.push({
+      type: 'Money Transmitter License',
+      required: true,
+      timeline: '4-8 months',
+      bonding: '$25,000 - $500,000',
+      fee: '$1,000 - $5,000',
+      notes: regulation.moneyTransmitter
+    })
+  }
+  
+  if (location.state === 'NY') {
+    licenses.push({
+      type: 'BitLicense',
+      required: true,
+      timeline: '6-12 months',
+      bonding: '$50,000 - $500,000',
+      fee: '$5,000',
+      notes: 'Comprehensive compliance program required'
+    })
+  }
+  
+  if (location.state === 'CA') {
+    licenses.push({
+      type: 'DFPI License',
+      required: true,
+      timeline: '4-8 months',
+      bonding: '$25,000 - $500,000',
+      fee: '$1,000 - $5,000',
+      notes: 'California-specific requirements'
+    })
+  }
+  
+  if (licenses.length === 0) {
+    licenses.push({
+      type: 'State License',
+      required: 'May be required',
+      timeline: '2-6 months',
+      bonding: 'Varies by state',
+      fee: '$500 - $2,500',
+      notes: 'Consult with counsel for specific requirements'
+    })
+  }
+  
+  return {
+    state: location.state,
+    licenses,
+    summary: match ? match[1].trim() : `${location.state} requires ${licenses.length} license(s) for digital asset activities.`,
+    fullMatrix: match ? match[0].trim() : null
+  }
+}
+
+function extractComplianceRoadmap(fullReport: string, strategy: StrategyFormData): any {
+  const regex = /## 5\. COMPLIANCE IMPLEMENTATION ROADMAP([\s\S]*?)(?=## 6\.|$)/
+  const match = fullReport.match(regex)
+  
+  const months = strategy.timeline === '3-months' ? 3 : strategy.timeline === '6-months' ? 6 : 12
+  
+  return {
+    timeline: strategy.timeline,
+    phases: [
+      {
+        month: 1,
+        focus: 'Foundation & Legal Setup',
+        tasks: [
+          'Engage qualified legal counsel',
+          'Determine license requirements',
+          'Begin license applications',
+          'Designate compliance officer',
+          'Initial compliance policy drafting'
+        ]
+      },
+      {
+        month: Math.floor(months / 3),
+        focus: 'Licensing & Policy Development',
+        tasks: [
+          'Submit all license applications',
+          'Finalize compliance policies',
+          'Select compliance technology',
+          'Begin AML/KYC implementation',
+          'Establish reporting protocols'
+        ]
+      },
+      {
+        month: Math.floor(months * 0.66),
+        focus: 'Implementation & Monitoring',
+        tasks: [
+          'Complete license processing',
+          'Full compliance system implementation',
+          'Staff training completion',
+          'Initial regulatory reporting',
+          'Compliance audit preparation'
+        ]
+      }
+    ],
+    milestones: [
+      `Legal counsel engaged by end of Week 1`,
+      `License applications submitted by end of Month 1`,
+      `Compliance systems operational by Month ${Math.floor(months / 2)}`,
+      `Full compliance achieved by Month ${months}`
+    ],
+    fullRoadmap: match ? match[0].trim() : null
+  }
+}
+
+function extractRegulatoryContacts(fullReport: string, location: LocationAnalysis): any {
+  const regex = /## 6\. REGULATORY RESOURCES([\s\S]*?)(?=## 7\.|$)/
+  const match = fullReport.match(regex)
+  
+  return {
+    stateRegulator: getRegulatorContact(location.state),
+    legalFirms: getLegalFirms(location.state),
+    consultants: [
+      { name: 'Compliance Partners Inc.', focus: 'Full-service compliance consulting' },
+      { name: 'Regulatory Solutions Group', focus: 'Multi-state licensing specialists' },
+      { name: 'AML Consultants Network', focus: 'KYC/AML program development' }
+    ],
+    technologyProviders: [
+      { name: 'ComplyAdvantage', focus: 'AML monitoring solutions' },
+      { name: 'Chainalysis', focus: 'Blockchain analytics' },
+      { name: 'Elliptic', focus: 'Compliance screening' }
+    ],
+    industryAssociations: [
+      { name: 'Blockchain Association', focus: 'National advocacy' },
+      { name: 'Chamber of Digital Commerce', focus: 'Policy development' },
+      { name: `${location.state} Bankers Association`, focus: 'State-specific resources' }
+    ],
+    fullResources: match ? match[0].trim() : null
+  }
+}
+
+function extractRiskAssessment(fullReport: string, location: LocationAnalysis, strategy: StrategyFormData): any {
+  const regex = /## 7\. RISK ASSESSMENT([\s\S]*?)(?=## 8\.|$|DISCLAIMER)/
+  const match = fullReport.match(regex)
+  
+  const risks = [
+    {
+      category: 'Regulatory Change',
+      risk: `Regulatory changes in ${location.state}`,
+      likelihood: location.regulatoryClimate === 'strict' ? 'High' : 'Medium',
+      impact: 'High',
+      mitigation: 'Quarterly legal reviews, regulatory monitoring subscription'
+    },
+    {
+      category: 'License Delays',
+      risk: 'Extended processing times for licenses',
+      likelihood: 'Medium',
+      impact: 'Medium',
+      mitigation: 'Begin applications early, engage experienced counsel'
+    },
+    {
+      category: 'Enforcement Action',
+      risk: `Regulatory enforcement in ${location.state}`,
+      likelihood: location.regulatoryClimate === 'strict' ? 'Medium' : 'Low',
+      impact: 'Critical',
+      mitigation: 'Proactive compliance, documented procedures, regular audits'
+    },
+    {
+      category: 'Examination Findings',
+      risk: 'Compliance gaps identified during examination',
+      likelihood: 'Medium',
+      impact: 'High',
+      mitigation: 'Regular compliance audits, third-party reviews'
+    }
+  ]
+  
+  return {
+    risks,
+    overall: location.regulatoryClimate === 'strict' ? 'Elevated' : 'Moderate',
+    recommendations: [
+      'Maintain retainer with qualified compliance counsel',
+      'Implement regulatory monitoring system',
+      'Conduct quarterly compliance audits',
+      'Document all compliance activities',
+      'Establish proactive regulator relationships'
+    ],
+    fullAssessment: match ? match[0].trim() : null
+  }
+}
+
+// Local generation functions (fallback when AI fails)
+function generateLocalReport(
+  company: CompanyFormData,
+  location: LocationAnalysis,
+  strategy: StrategyFormData
+): GenerationResult {
   const regulation = getStateRegulation(location.state)
   const talentScore = getTalentScoreForLocation(location.city, location.state)
   const talentRecs = getTalentRecommendations(location.city, location.state, location.tier)
   const complianceChecklist = getComplianceChecklist(location.state)
   
-  // Generate executive summary
-  const executive_summary = generateExecutiveSummary(company, location, strategy, regulation)
-  
-  // Generate location analysis
-  const location_analysis = generateLocationAnalysis(location, talentScore)
-  
-  // Generate regulatory analysis
-  const regulatory_analysis = generateRegulatoryAnalysis(location, regulation, complianceChecklist)
-  
-  // Generate talent analysis
-  const talent_analysis = generateTalentAnalysis(location, talentScore, talentRecs)
-  
-  // Generate licensing matrix
-  const licensing_matrix = generateLicensingMatrix(location, regulation)
-  
-  // Generate compliance roadmap
-  const compliance_roadmap = generateComplianceRoadmap(strategy)
-  
-  // Generate regulatory contacts
-  const regulatory_contacts = generateRegulatoryContacts(location)
-  
-  // Generate risk assessment
-  const risk_assessment = generateRiskAssessment(location, strategy)
-  
   return {
-    executive_summary,
-    location_analysis,
-    regulatory_analysis,
-    talent_analysis,
-    licensing_matrix,
-    compliance_roadmap,
-    regulatory_contacts,
-    risk_assessment
+    executive_summary: generateExecutiveSummary(company, location, strategy, regulation),
+    location_analysis: generateLocationAnalysis(location, talentScore),
+    regulatory_analysis: generateRegulatoryAnalysis(location, regulation, complianceChecklist),
+    talent_analysis: generateTalentAnalysis(location, talentScore, talentRecs),
+    licensing_matrix: generateLicensingMatrix(location, regulation),
+    compliance_roadmap: generateComplianceRoadmap(strategy),
+    regulatory_contacts: generateRegulatoryContacts(location),
+    risk_assessment: generateRiskAssessment(location, strategy)
   }
 }
 
+// Local generation helper functions
 function generateExecutiveSummary(
   company: CompanyFormData,
   location: LocationAnalysis,
@@ -168,7 +419,6 @@ function generateTalentAnalysis(location: LocationAnalysis, talentScore: any, re
 function generateLicensingMatrix(location: LocationAnalysis, regulation: any): any {
   const licenses = []
   
-  // Add money transmitter license
   if (regulation.moneyTransmitter.includes('required') || regulation.moneyTransmitter.includes('BitLicense')) {
     licenses.push({
       type: 'Money Transmitter License',
@@ -180,7 +430,6 @@ function generateLicensingMatrix(location: LocationAnalysis, regulation: any): a
     })
   }
   
-  // Add BitLicense for NY
   if (location.state === 'NY') {
     licenses.push({
       type: 'BitLicense',
@@ -192,7 +441,6 @@ function generateLicensingMatrix(location: LocationAnalysis, regulation: any): a
     })
   }
   
-  // Add DFPI for CA
   if (location.state === 'CA') {
     licenses.push({
       type: 'DFPI License',
@@ -204,7 +452,6 @@ function generateLicensingMatrix(location: LocationAnalysis, regulation: any): a
     })
   }
   
-  // Add generic license
   if (licenses.length === 0) {
     licenses.push({
       type: 'State License',
@@ -337,6 +584,20 @@ function generateRiskAssessment(location: LocationAnalysis, strategy: StrategyFo
       'Establish proactive regulator relationships'
     ]
   }
+}
+
+function generateLocalExecutiveSummary(): string {
+  return `Executive summary could not be extracted from AI report. Please refer to the full report below for complete analysis.`
+}
+
+function generateLocalRegulatorySummary(location: LocationAnalysis, regulation: any): string {
+  return `${location.state} has a ${regulation.cryptoFriendly} regulatory climate. ${
+    regulation.cryptoFriendly === 'friendly' 
+      ? 'This presents lower compliance barriers for digital asset initiatives.'
+      : regulation.cryptoFriendly === 'strict'
+        ? 'Expect significant compliance requirements and regulatory oversight.'
+        : 'Standard compliance requirements with room to operate.'
+  }`
 }
 
 // Helper functions

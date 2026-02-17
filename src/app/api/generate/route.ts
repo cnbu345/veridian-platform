@@ -1,7 +1,9 @@
+// src/app/api/generate/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { generateWeb3Report } from '@/lib/openai/openai'
+import { generateRegulatoryReport } from '@/lib/openai/openai'
 import { classifyLocation } from '@/lib/location/locationService'
+import { saveReportRequest } from '@/lib/reports/storage'
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,60 +15,126 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { companyName, industry, companySize, budget, concerns, city, state } = body
+    const { 
+      companyName, 
+      industry, 
+      companySize, 
+      budget, 
+      city, 
+      state,
+      concerns,
+      goals,
+      primaryFocus,
+      secondaryFocus,
+      timeline,
+      stripePaymentId,
+      website,
+      description,
+      founded
+    } = body
 
-    if (!companyName || !industry || !city || !state) {
+    // Validate required fields
+    if (!companyName || !industry || !city || !state || !primaryFocus) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       )
     }
 
-    // Classify location
+    console.log('Starting report generation for:', companyName)
+
+    // Step 1: Classify location
     const locationData = await classifyLocation(city, state)
 
-    // Generate AI report
-    const reportContent = await generateWeb3Report(
+    // Step 2: Generate AI report using your service
+    const reportContent = await generateRegulatoryReport({
+      companyName,
+      industry,
+      companySize: companySize || 'Not specified',
+      budget: budget || 'Not specified',
+      city,
+      state,
+      locationTier: locationData.tier,
+      nearestRegulatoryHub: locationData.nearestRegulatoryHub || locationData.nearestMajorCity,
+      primaryFocus,
+      secondaryFocus: secondaryFocus || [],
+      timeline: timeline || '6-months',
+      concerns: concerns || 'No specific concerns provided',
+      goals: goals || 'Establish compliant digital asset operations'
+    })
+
+    // Step 3: Save to database using your storage function
+    const savedReport = await saveReportRequest(
+      user.id,
       {
-        name: companyName,
-        industry,
-        size: companySize || 'Not specified',
-        budget: budget || 'Not specified'
+        company: {
+          name: companyName,
+          industry,
+          size: companySize,
+          budget,
+          description,
+          website,
+          founded
+        },
+        location: {
+          city,
+          state,
+          tier: locationData.tier,
+          nearestRegulatoryHub: locationData.nearestRegulatoryHub,
+          nearestMajorCity: locationData.nearestMajorCity,
+          distanceToMajor: locationData.distanceToMajor,
+          regulatoryClimate: locationData.regulatoryClimate,
+          talentDensity: locationData.talentDensity,
+          msaName: locationData.msaName,
+          msaPopulation: locationData.msaPopulation
+        },
+        strategy: {
+          primary: primaryFocus,
+          secondary: secondaryFocus || [],
+          timeline: timeline || '6-months',
+          concerns: concerns || '',
+          goals: goals || ''
+        }
       },
-      locationData,
-      concerns || 'Not specified'
+      stripePaymentId || 'free_trial'
     )
 
-    // Save to database
-    const { data: report, error } = await supabase
+    // Step 4: Update report with generated content
+    const { error: updateError } = await supabase
       .from('reports')
-      .insert({
-        user_id: user.id,
-        company_name: companyName,
-        industry,
-        city,
-        state,
-        location_tier: locationData.tier,
-        nearest_major_city: locationData.nearestMajorCity || locationData.nearestWeb3Hub,
-        report_content: { 
+      .update({
+        report_content: {
           content: reportContent,
           generated_at: new Date().toISOString(),
-          company_data: body,
-          location_data: locationData
-        },
-        stripe_payment_id: body.stripePaymentId || 'free_trial'
+          location_data: locationData,
+          company_data: {
+            name: companyName,
+            industry,
+            size: companySize,
+            budget,
+            website,
+            description,
+            founded
+          },
+          strategy_data: {
+            primary: primaryFocus,
+            secondary: secondaryFocus,
+            timeline,
+            concerns,
+            goals
+          },
+          status: 'ready'
+        }
       })
-      .select()
-      .single()
+      .eq('id', savedReport.id)
 
-    if (error) {
-      console.error('Database error:', error)
-      throw error
+    if (updateError) {
+      console.error('Error updating report content:', updateError)
     }
 
     return NextResponse.json({ 
       success: true, 
-      reportId: report.id,
+      reportId: savedReport.id,
       message: 'Report generated successfully'
     })
 
