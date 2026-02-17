@@ -1,6 +1,6 @@
 // src/app/api/generate/checkout/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { createCheckoutSession } from '@/lib/stripe'
+import { createCheckoutSession } from '@/lib/stripe/stripe'
 import { createClient } from '@/lib/supabase/server'
 
 // ✅ Add this GET handler to test the route
