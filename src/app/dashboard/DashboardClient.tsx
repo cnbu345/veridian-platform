@@ -5,7 +5,6 @@ import { cn } from '@/lib/utils/utils'
 import { useState } from 'react'
 import { User } from '@supabase/supabase-js'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
 import { 
   FileText, 
   Plus, 
@@ -14,18 +13,11 @@ import {
   CheckCircle,
   AlertCircle,
   ArrowRight,
-  Download,
-  Eye,
-  MoreVertical,
-  Building2,
-  MapPin,
-  Calendar,
-  Scale,
-  Landmark,
-  Shield
+  Scale
 } from 'lucide-react'
 import ReportsList from './components/ReportsList'
 import EmptyState from './components/EmptyState'
+import Settings from '@/app/dashboard/settings/'
 
 interface DashboardClientProps {
   user: User
@@ -38,8 +30,7 @@ export default function DashboardClient({
   initialReports, 
   error 
 }: DashboardClientProps) {
-  const [reports, setReports] = useState(initialReports)
-  const [isLoading, setIsLoading] = useState(false)
+  const [reports] = useState(initialReports)
 
   // Stats calculation
   const totalReports = reports.length
@@ -55,169 +46,76 @@ export default function DashboardClient({
   ).length
 
   return (
-    <div className={cn("min-h-screen", "bg-slate-50")}>
+    <div className="space-y-6">
       {/* Header */}
-      <div className={cn("bg-white", "border-b border-slate-200")}>
-        <div className={cn("container-custom", "py-8")}>
-          <div className={cn(
-            "flex flex-col md:flex-row",
-            "md:items-center md:justify-between",
-            "gap-4"
-          )}>
-            <div>
-              <h1 className={cn(
-                "heading-2",
-                "text-navy-900",
-                "mb-2"
-              )}>
-                Welcome back, {user.email?.split('@')[0]}
-              </h1>
-              <p className={cn("text-navy-600")}>
-                Manage your regulatory intelligence reports and compliance analysis
-              </p>
-            </div>
-            
-            <Link
-              href="/generate"
-              className={cn(
-                "inline-flex items-center justify-center",
-                "px-6 py-3",
-                "bg-gradient-to-r from-gold-600 to-gold-500",
-                "text-white font-semibold rounded-xl",
-                "hover:from-gold-500 hover:to-gold-400",
-                "transition-all duration-300 hover:scale-105",
-                "shadow-lg shadow-gold-500/25",
-                "group"
-              )}
-            >
-              <Plus className={cn("w-5 h-5", "mr-2")} />
-              Generate New Report
-              <ArrowRight className={cn(
-                "w-4 h-4",
-                "ml-2",
-                "group-hover:translate-x-1 transition-transform"
-              )} />
-            </Link>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-navy-900 mb-1">
+            Welcome back, {user.email?.split('@')[0]}
+          </h1>
+          <p className="text-navy-600">
+            Manage your regulatory intelligence reports and compliance analysis
+          </p>
+        </div>
+        
+        <Link
+          href="/generate"
+          className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-gold-600 to-gold-500 text-white font-semibold rounded-xl hover:from-gold-500 hover:to-gold-400 transition-all duration-300 hover:scale-105 shadow-lg shadow-gold-500/25 group"
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Generate New Report
+          <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+        </Link>
+      </div>
 
-          {/* Stats Grid */}
-          <div className={cn(
-            "grid grid-cols-2 md:grid-cols-4",
-            "gap-4",
-            "mt-8"
-          )}>
-            <div className={cn(
-              "bg-slate-50",
-              "rounded-xl p-4",
-              "border border-slate-200"
-            )}>
-              <div className={cn(
-                "flex items-center justify-between",
-                "mb-2"
-              )}>
-                <FileText className={cn("w-5 h-5", "text-navy-500")} />
-                <span className={cn(
-                  "text-2xl",
-                  "font-bold",
-                  "text-navy-900"
-                )}>{totalReports}</span>
-              </div>
-              <p className={cn("text-sm", "text-navy-600")}>Total Reports</p>
-            </div>
-            
-            <div className={cn(
-              "bg-slate-50",
-              "rounded-xl p-4",
-              "border border-slate-200"
-            )}>
-              <div className={cn(
-                "flex items-center justify-between",
-                "mb-2"
-              )}>
-                <Scale className={cn("w-5 h-5", "text-green-600")} />
-                <span className={cn(
-                  "text-2xl",
-                  "font-bold",
-                  "text-navy-900"
-                )}>{reportsThisMonth}</span>
-              </div>
-              <p className={cn("text-sm", "text-navy-600")}>This Month</p>
-            </div>
-            
-            <div className={cn(
-              "bg-slate-50",
-              "rounded-xl p-4",
-              "border border-slate-200"
-            )}>
-              <div className={cn(
-                "flex items-center justify-between",
-                "mb-2"
-              )}>
-                <CheckCircle className={cn("w-5 h-5", "text-blue-600")} />
-                <span className={cn(
-                  "text-2xl",
-                  "font-bold",
-                  "text-navy-900"
-                )}>{completedReports}</span>
-              </div>
-              <p className={cn("text-sm", "text-navy-600")}>Completed</p>
-            </div>
-            
-            <div className={cn(
-              "bg-slate-50",
-              "rounded-xl p-4",
-              "border border-slate-200"
-            )}>
-              <div className={cn(
-                "flex items-center justify-between",
-                "mb-2"
-              )}>
-                <Clock className={cn("w-5 h-5", "text-amber-600")} />
-                <span className={cn(
-                  "text-2xl",
-                  "font-bold",
-                  "text-navy-900"
-                )}>
-                  {totalReports - completedReports}
-                </span>
-              </div>
-              <p className={cn("text-sm", "text-navy-600")}>In Progress</p>
-            </div>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl p-4 border border-slate-200">
+          <div className="flex items-center justify-between mb-2">
+            <FileText className="w-5 h-5 text-navy-500" />
+            <span className="text-2xl font-bold text-navy-900">{totalReports}</span>
           </div>
+          <p className="text-sm text-navy-600">Total Reports</p>
+        </div>
+        
+        <div className="bg-white rounded-xl p-4 border border-slate-200">
+          <div className="flex items-center justify-between mb-2">
+            <Scale className="w-5 h-5 text-green-600" />
+            <span className="text-2xl font-bold text-navy-900">{reportsThisMonth}</span>
+          </div>
+          <p className="text-sm text-navy-600">This Month</p>
+        </div>
+        
+        <div className="bg-white rounded-xl p-4 border border-slate-200">
+          <div className="flex items-center justify-between mb-2">
+            <CheckCircle className="w-5 h-5 text-blue-600" />
+            <span className="text-2xl font-bold text-navy-900">{completedReports}</span>
+          </div>
+          <p className="text-sm text-navy-600">Completed</p>
+        </div>
+        
+        <div className="bg-white rounded-xl p-4 border border-slate-200">
+          <div className="flex items-center justify-between mb-2">
+            <Clock className="w-5 h-5 text-amber-600" />
+            <span className="text-2xl font-bold text-navy-900">
+              {totalReports - completedReports}
+            </span>
+          </div>
+          <p className="text-sm text-navy-600">In Progress</p>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className={cn("container-custom", "py-8")}>
+      {/* Reports Section */}
+      <div>
+        <h2 className="text-lg font-semibold text-navy-900 mb-4">Your Reports</h2>
         {error ? (
-          <div className={cn(
-            "bg-red-50",
-            "border border-red-200",
-            "rounded-xl p-6",
-            "text-center"
-          )}>
-            <AlertCircle className={cn(
-              "w-12 h-12",
-              "text-red-500",
-              "mx-auto mb-4"
-            )} />
-            <h3 className={cn(
-              "text-lg font-semibold",
-              "text-red-800",
-              "mb-2"
-            )}>Error Loading Dashboard</h3>
-            <p className={cn(
-              "text-red-600",
-              "mb-4"
-            )}>{error}</p>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Reports</h3>
+            <p className="text-red-600 mb-4">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className={cn(
-                "px-4 py-2",
-                "bg-red-600 text-white",
-                "rounded-lg",
-                "hover:bg-red-700"
-              )}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
             >
               Try Again
             </button>
