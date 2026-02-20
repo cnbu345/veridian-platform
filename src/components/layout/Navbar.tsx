@@ -1,4 +1,4 @@
-// src/components/layout/Navbar.tsx
+// src/components/layout/Navbar.tsx // Navbar
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -22,7 +22,8 @@ import {
   Sparkles,
   Scale,
   Landmark,
-  Briefcase
+  Briefcase,
+  Import
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { User } from '@supabase/supabase-js'
@@ -36,10 +37,28 @@ export default function Navbar({ initialUser }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false)
   const [user, setUser] = useState<User | null>(initialUser)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
+  const [isAdminRoute, setIsAdminRoute] = useState(false)
   
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+
+  // Check if current route is admin
+  useEffect(() => {
+    setIsAdminRoute(pathname?.startsWith('/admin') || false)
+  }, [pathname])
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [isOpen])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -99,6 +118,11 @@ export default function Navbar({ initialUser }: NavbarProps) {
     },
   ]
 
+  // DON'T RENDER ANYTHING on admin routes
+  if (isAdminRoute) {
+    return null
+  }
+
   return (
     <>
       <nav className={cn(
@@ -111,16 +135,13 @@ export default function Navbar({ initialUser }: NavbarProps) {
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-3 group">
-              <div className="relative">
-                <div className={cn(
-                  "w-10 h-10",
-                  "bg-gradient-to-br from-gold-500 to-gold-600",
-                  "rounded-lg shadow-lg shadow-gold-500/20",
-                  "group-hover:scale-110 transition-transform duration-300"
-                )}>
-                  <div className="absolute inset-0 bg-white/20 rounded-lg animate-pulse-slow" />
-                </div>
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-teal-500 rounded-full border-2 border-white" />
+              {/* Use the gold logo for the navbar - looks premium */}
+              <div className="relative w-10 h-10">
+                <img 
+                  src="/veridian-logo-gold-192X192.png" 
+                  alt="Veridian Group" 
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
                 <span className="text-xl font-display font-bold text-navy-900">
@@ -288,19 +309,37 @@ export default function Navbar({ initialUser }: NavbarProps) {
         </div>
       </nav>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu - FIXED SCROLLING ISSUE */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-x-0 top-20 z-40 lg:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-40 lg:hidden"
+            style={{ top: '80px' }} // Start below navbar
           >
-            <div className="bg-white border-t border-slate-200 shadow-premium">
+            {/* Backdrop */}
+            <div 
+              className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+              onClick={() => setIsOpen(false)}
+            />
+            
+            {/* Menu Panel - FIXED: Now scrollable to bottom */}
+            <motion.div
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="absolute inset-x-0 bg-white shadow-xl border-t border-slate-200"
+              style={{ 
+                maxHeight: 'calc(100vh - 80px)', // Take full height minus navbar
+                overflowY: 'auto' // Enable scrolling
+              }}
+            >
               <div className="container-custom py-6">
-                <div className="space-y-6">
+                <div className="space-y-6 pb-8"> {/* Added pb-8 for extra bottom padding */}
                   {/* Mobile Nav Links */}
                   {navLinks.map((item) => (
                     <div key={item.name} className="space-y-3">
@@ -335,7 +374,7 @@ export default function Navbar({ initialUser }: NavbarProps) {
                     </div>
                   ))}
 
-                  {/* Mobile Auth */}
+                  {/* Mobile Auth - Now you can scroll to see this! */}
                   <div className="pt-6 border-t border-slate-200">
                     {user ? (
                       <div className="space-y-3">
@@ -375,9 +414,12 @@ export default function Navbar({ initialUser }: NavbarProps) {
                       </div>
                     )}
                   </div>
+
+                  {/* Extra bottom padding for safety */}
+                  <div className="h-8" />
                 </div>
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

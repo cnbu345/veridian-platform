@@ -1,3 +1,4 @@
+// src/app/auth/page.tsx // Login Page
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -13,7 +14,8 @@ import {
   Chrome,
   ArrowRight,
   Building2,
-  History
+  History,
+  Shield
 } from 'lucide-react'
 
 export default function AuthPage() {
@@ -48,7 +50,7 @@ export default function AuthPage() {
 
     try {
       if (isSignUp) {
-        // Sign up
+        // SIGN UP FLOW
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -86,7 +88,7 @@ export default function AuthPage() {
         setFullName('')
         setCompanyName('')
       } else {
-        // Sign in
+        // SIGN IN FLOW
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -97,8 +99,8 @@ export default function AuthPage() {
         // Save last login method
         localStorage.setItem('lastLoginMethod', 'email')
         
-        // Check if user is admin for redirect
         if (data.user) {
+          // Check if user is admin
           const { data: profile } = await supabase
             .from('users')
             .select('is_admin')
@@ -114,10 +116,12 @@ export default function AuthPage() {
             })
             .eq('id', data.user.id)
           
-          // Redirect based on role
+          // IMPORTANT: Redirect based on role
           if (profile?.is_admin) {
+            // If admin, go to admin dashboard
             router.push('/admin')
           } else {
+            // If regular user, go to regular dashboard
             router.push('/dashboard')
           }
         }
@@ -434,6 +438,14 @@ export default function AuthPage() {
                   : 'Need an account? Sign Up'}
               </button>
             </div>
+
+            {/* Admin note - only shows if you're an admin (for testing) */}
+            {lastLoginMethod === 'email' && email.includes('admin') && (
+              <div className="mt-4 p-2 bg-gold-50 border border-gold-200 rounded-lg flex items-center gap-2">
+                <Shield className="w-4 h-4 text-gold-600" />
+                <span className="text-xs text-gold-700">Admin access available for authorized users</span>
+              </div>
+            )}
 
             {/* Terms */}
             <p className="mt-6 text-xs text-center text-navy-500">

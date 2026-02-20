@@ -5,7 +5,6 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
-  const next = requestUrl.searchParams.get('next') || '/dashboard'
 
   if (code) {
     const supabase = await createClient()
@@ -23,9 +22,6 @@ export async function GET(request: Request) {
         .select('*')
         .eq('id', session.user.id)
         .single()
-
-      // Get user's IP (you might need a service for this)
-      const ip = request.headers.get('x-forwarded-for') || 'unknown'
 
       if (!existingUser) {
         // Create user profile for social login
@@ -46,23 +42,26 @@ export async function GET(request: Request) {
         .from('users')
         .update({
           last_login: new Date().toISOString(),
-          last_login_method: provider,
-          last_login_ip: ip,
-          last_login_user_agent: request.headers.get('user-agent')
+          last_login_method: provider
         })
         .eq('id', session.user.id)
 
-      // Record login history
-      await supabase.from('login_history').insert({
-        user_id: session.user.id,
-        method: 'oauth',
-        provider: provider,
-        ip_address: ip,
-        user_agent: request.headers.get('user-agent')
-      })
+      // Check if user is admin for redirect
+      const { data: profile } = await supabase
+        .from('users')
+        .select('is_admin')
+        .eq('id', session.user.id)
+        .single()
+
+      // Redirect based on role
+      if (profile?.is_admin) {
+        return NextResponse.redirect(new URL('/admin', requestUrl.origin))
+      } else {
+        return NextResponse.redirect(new URL('/dashboard', requestUrl.origin))
+      }
     }
   }
 
-  // Redirect to dashboard or specified next URL
-  return NextResponse.redirect(new URL(next, requestUrl.origin))
+  // Default redirect to dashboard
+  return NextResponse.redirect(new URL('/dashboard', requestUrl.origin))
 }

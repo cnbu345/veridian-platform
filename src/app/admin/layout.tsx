@@ -15,7 +15,7 @@ export default async function AdminLayout({
     redirect('/auth')
   }
   
-  // Check if user is admin (you can add an is_admin column to users table)
+  // Check if user is admin
   const supabase = await createClient()
   const { data: profile } = await supabase
     .from('users')

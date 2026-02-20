@@ -3,6 +3,7 @@
 
 import { cn } from '@/lib/utils/utils'
 import Link from 'next/link'
+import Image from 'next/image'
 import { 
   Twitter, 
   Linkedin, 
@@ -69,7 +70,13 @@ export default function Footer() {
           {/* Brand Column */}
           <div className="col-span-2 lg:col-span-4">
             <Link href="/" className="flex items-center gap-2 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-gold-500 to-gold-600 rounded-lg" />
+              <div className="w-10 h-10">
+                <img 
+                  src="/veridian-logo-gold-192X192.png" 
+                  alt="Veridian Group" 
+                  className="w-full h-full object-contain"
+                />
+              </div>
               <div>
                 <span className="text-xl font-display font-bold text-white">
                   Veridian
