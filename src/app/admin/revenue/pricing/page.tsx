@@ -103,39 +103,45 @@ export default function PricingManagement() {
   }
   
   const handleSave = async () => {
-    setIsSaving(true)
-    try {
-      // Update Stripe prices
-      for (const tier of tiers) {
-        await fetch('/api/admin/pricing', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            tierId: tier.id,
-            price: tier.price,
-            stripePriceId: tier.stripePriceId
-          })
-        })
-      }
-      
-      // Update founder circle settings
-      await fetch('/api/admin/settings', {
+  setIsSaving(true)
+  try {
+    // Save founder circle setting
+    await fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        key: 'founder_circle_enabled',
+        value: String(founderCircleEnabled)
+      })
+    })
+    
+    // Save each pricing tier
+    for (const tier of tiers) {
+      await fetch('/api/admin/pricing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          key: 'founder_circle_enabled',
-          value: founderCircleEnabled
+          id: tier.id,
+          name: tier.name,
+          price: tier.price,
+          founderPrice: tier.founderPrice,
+          founderSpots: tier.founderSpots,
+          founderSpotsRemaining: tier.founderSpotsRemaining,
+          period: tier.period,
+          stripePriceId: tier.stripePriceId,
+          active: tier.active
         })
       })
-      
-      alert('Pricing updated successfully!')
-    } catch (error) {
-      console.error('Failed to update pricing:', error)
-      alert('Failed to update pricing. Check console for details.')
-    } finally {
-      setIsSaving(false)
     }
+    
+    alert('Pricing updated successfully!')
+  } catch (error) {
+    console.error('Failed to update pricing:', error)
+    alert('Failed to update pricing. Check console for details.')
+  } finally {
+    setIsSaving(false)
   }
+}
   
   return (
     <div className="space-y-6">

@@ -5,13 +5,13 @@ import { useState } from 'react'
 import { User } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 import { Shield, Scale } from 'lucide-react'
+import { cn } from '@/lib/utils/utils'
 import ProgressSteps from './components/ProgressSteps'
 import CompanyStep from './components/CompanyStep'
 import LocationStep from './components/LocationStep'
 import StrategyStep from './components/StrategyStep'
 import ReviewStep from './components/ReviewStep'
 import { CompanyFormData, LocationFormData, StrategyFormData } from '@/lib/reports/validation'
-import { ArrowRight } from 'lucide-react'
 
 interface GenerateClientProps {
   user: User
@@ -61,7 +61,6 @@ export default function GenerateClient({ user }: GenerateClientProps) {
   }
 
   const handleComplete = async () => {
-    // This will be handled in ReviewStep with payment
     router.push('/dashboard')
   }
 
@@ -123,10 +122,12 @@ export default function GenerateClient({ user }: GenerateClientProps) {
           )}
         </div>
 
-        {/* Trust Badge */}
+        {/* Trust Badge - Using cn() */}
         <div className="mt-8 text-center">
-          <div className="inline-flex items-center gap-2 bg-white px-6 py-3 
-                        rounded-full border border-slate-200 shadow-soft">
+          <div className={cn(
+            "inline-flex items-center gap-2 bg-white px-6 py-3",
+            "rounded-full border border-slate-200 shadow-soft"
+          )}>
             <Scale className="w-4 h-4 text-gold-600" />
             <span className="text-sm text-navy-600">
               Enterprise-grade encryption • SOC2 Type II compliant

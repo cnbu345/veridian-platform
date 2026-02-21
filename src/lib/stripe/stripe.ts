@@ -21,7 +21,7 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 
 // Price IDs from environment variables
 const PRICE_IDS = {
-  single: process.env.STRIPE_SINGLE_REPORT_PRICE_ID,
+  single: process.env.STRIPE_SINGLE_REPORT_ID,
   quarterly: process.env.STRIPE_QUARTERLY_PRICE_ID,
   monthly: process.env.STRIPE_MONTHLY_PRICE_ID,
   enterprise: process.env.STRIPE_ENTERPRISE_PRICE_ID,
@@ -37,14 +37,45 @@ export async function createCheckoutSession(
   try {
     const stripe = getStripe()
     
-    const priceId = PRICE_IDS[tier]
+    // Check if founder pricing should apply
+    const supabase = await createClient()
     
-    if (!priceId) {
+    // Get founder circle setting
+    const { data: founderSetting } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'founder_circle_enabled')
+      .maybeSingle()
+    
+    const founderCircleEnabled = founderSetting?.value === 'true'
+    
+    // Get pricing tiers to check founder spots
+    const { data: pricingSettings } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'pricing_tiers')
+      .maybeSingle()
+    
+    let useFounderPrice = false
+    let finalPriceId = PRICE_IDS[tier]
+    
+    // For single reports, check if founder pricing applies
+    if (tier === 'single' && founderCircleEnabled && pricingSettings?.value) {
+      const tiers = pricingSettings.value as any[]
+      const singleTier = tiers.find(t => t.id === 'single')
+      
+      if (singleTier && singleTier.founderSpotsRemaining > 0) {
+        useFounderPrice = true
+        // You might have a separate price ID for founder pricing
+        // If not, we'll use the same price ID and handle the price difference in metadata
+      }
+    }
+
+    if (!finalPriceId) {
       throw new Error(`No price ID configured for tier: ${tier}`)
     }
 
     // Get user's company name if available
-    const supabase = await createClient()
     const { data: user } = await supabase
       .from('users')
       .select('company_name, full_name')
@@ -57,17 +88,19 @@ export async function createCheckoutSession(
       payment_method_types: ['card'],
       line_items: [
         {
-          price: priceId,
+          price: finalPriceId,
           quantity: 1,
         },
       ],
       mode: tier === 'single' ? 'payment' : 'subscription',
-      success_url: `${process.env.NEXT_PUBLIC_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}&success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_URL}/pricing?canceled=true`,
+      success_url: `${process.env.NEXT_PUBLIC_URL}/reports/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_URL}/generate?canceled=true`,
       metadata: {
         userId,
         productType: tier,
         companyName: user?.company_name || '',
+        isFounderPrice: String(useFounderPrice),
+        tierId: tier,
         reportData: reportData ? JSON.stringify(reportData) : '',
         timestamp: new Date().toISOString()
       },
@@ -86,7 +119,8 @@ export async function createCheckoutSession(
       metadata: {
         sessionId: session.id,
         tier,
-        amount: getTierPrice(tier)
+        amount: getTierPrice(tier),
+        isFounderPrice: useFounderPrice
       }
     })
 

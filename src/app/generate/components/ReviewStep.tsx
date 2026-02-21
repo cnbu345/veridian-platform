@@ -120,78 +120,65 @@ export default function ReviewStep({
 
   // Handle report generation
   const handleGenerateReport = async () => {
-    setIsProcessing(true)
-    setError(null)
-    setStep('payment')
+  setIsProcessing(true)
+  setError(null)
+  setStep('payment')
 
-    try {
-      // Step 1: Create checkout session
-      const checkoutResponse = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: 'single',
-          price: 997,
-          regularPrice: 2497,
-          metadata: {
-            companyName: companyData.name,
-            userId: user.id
-          }
-        }),
-      })
-
-      const checkoutData = await checkoutResponse.json()
-
-      if (!checkoutResponse.ok) {
-        throw new Error(checkoutData.error || 'Failed to create checkout session')
+  try {
+    // Step 1: Create checkout session
+    console.log('Creating checkout session with data:', {
+      type: 'single',
+      metadata: {
+        companyName: companyData.name,
+        userId: user.id,
+        city: locationData.city,
+        state: locationData.state,
+        industry: companyData.industry,
+        concerns: strategyData.concerns,
+        goals: strategyData.goals
       }
+    })
 
-      // Step 2: Generate report
-      setStep('processing')
-      
-      const reportResponse = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+    const checkoutResponse = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        type: 'single',
+        metadata: {
           companyName: companyData.name,
-          industry: companyData.industry,
-          companySize: companyData.size,
-          budget: companyData.budget,
+          userId: user.id,
           city: locationData.city,
           state: locationData.state,
+          industry: companyData.industry,
           concerns: strategyData.concerns,
-          goals: strategyData.goals,
-          primaryFocus: strategyData.primary,
-          secondaryFocus: strategyData.secondary,
-          timeline: strategyData.timeline,
-          website: companyData.website,
-          description: companyData.description,
-          founded: companyData.founded,
-          stripePaymentId: checkoutData.paymentIntentId
-        }),
-      })
+          goals: strategyData.goals
+        }
+      }),
+    })
 
-      const reportData = await reportResponse.json()
+    const checkoutData = await checkoutResponse.json()
 
-      if (!reportResponse.ok) {
-        throw new Error(reportData.error || 'Failed to generate report')
-      }
-
-      // Step 3: Redirect to report page
-      router.push(`/reports/${reportData.reportId}`)
-      onComplete()
-
-    } catch (err: any) {
-      console.error('Generation error:', err)
-      setError(err.message || 'Failed to generate report. Please try again.')
-      setIsProcessing(false)
-      setStep('review')
+    if (!checkoutResponse.ok) {
+      console.error('Checkout response error:', checkoutData)
+      throw new Error(checkoutData.error || 'Failed to create checkout session')
     }
+
+    // Step 2: Redirect to Stripe checkout
+    if (checkoutData.url) {
+      window.location.href = checkoutData.url
+    } else {
+      throw new Error('No checkout URL received')
+    }
+
+  } catch (err: any) {
+    console.error('Generation error:', err)
+    setError(err.message || 'Failed to generate report. Please try again.')
+    setIsProcessing(false)
+    setStep('review')
   }
+}
 
   // Loading state for payment processing
   if (step === 'payment' || step === 'processing') {

@@ -1,3 +1,5 @@
+
+// src/app/generate/components/LocationStep.tsx
 'use client'
 
 import { useState, useEffect } from 'react'

@@ -1,3 +1,4 @@
+// src/app/generate/page.tsx
 import { createClient, getServerUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import GenerateClient from './GenerateClient'
