@@ -93,7 +93,7 @@ export async function createCheckoutSession(
         },
       ],
       mode: tier === 'single' ? 'payment' : 'subscription',
-      success_url: `${process.env.NEXT_PUBLIC_URL}/reports/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${process.env.NEXT_PUBLIC_URL}/report/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_URL}/generate?canceled=true`,
       metadata: {
         userId,

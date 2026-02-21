@@ -1,4 +1,4 @@
-// src/app/reports/success/page.tsx
+// src/app/report/success/page.tsx
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -7,16 +7,18 @@ import { CheckCircle, ArrowRight, Mail, Clock } from 'lucide-react'
 export default async function SuccessPage({
   searchParams,
 }: {
-  searchParams: { session_id: string }
+  searchParams: Promise<{ session_id: string }>
 }) {
+  // Await the searchParams
+  const params = await searchParams
+  const sessionId = params.session_id
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {
     redirect('/auth')
   }
-
-  const sessionId = searchParams.session_id
 
   // Get the most recent report for this user
   const { data: report } = await supabase
