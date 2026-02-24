@@ -47,21 +47,18 @@ export default function ProfileForm({ user, profile }: ProfileFormProps) {
         throw new Error(`Auth update failed: ${authError.message}`)
       }
 
-      // Then update users table - use upsert with proper error handling
+      // IMPORTANT: Use UPDATE instead of UPSERT to preserve existing data
+      // This only changes the specified columns
       const { error: dbError } = await supabase
         .from('users')
-        .upsert({
-          id: user.id,
-          email: user.email,
+        .update({
           full_name: formData.full_name,
           company_name: formData.company_name,
           company_size: formData.company_size,
           industry: formData.industry,
           updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'id',
-          ignoreDuplicates: false
         })
+        .eq('id', user.id)
 
       if (dbError) {
         throw new Error(`Database update failed: ${dbError.message}`)
@@ -80,6 +77,7 @@ export default function ProfileForm({ user, profile }: ProfileFormProps) {
     }
   }
 
+  // Rest of your component remains the same...
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Email (read-only) */}

@@ -1,4 +1,4 @@
-// src/app/reports/[id]/ReportViewClient.tsx
+// src/app/report/[id]/ReportViewClient.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -15,15 +15,12 @@ import {
   Clock,
   AlertCircle,
   Printer,
-  Share2,
-  MoreVertical,
   Loader2,
   Scale,
   Gavel,
   Landmark,
   Shield,
   AlertTriangle,
-  ExternalLink,
   Copy,
   Check
 } from 'lucide-react'
@@ -39,10 +36,23 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
   const [isDownloading, setIsDownloading] = useState(false)
   const [activeTab, setActiveTab] = useState('executive-summary')
   const [copied, setCopied] = useState(false)
+  const [refreshCount, setRefreshCount] = useState(0)
 
   const reportContent = report.report_content || {}
   const createdAt = new Date(report.created_at)
-  const status = reportContent.status || report.status || 'ready'
+  const status = report.status || 'pending'
+
+  // Auto-refresh while generating
+  useEffect(() => {
+    if (status === 'generating' || status === 'pending') {
+      const interval = setInterval(() => {
+        router.refresh()
+        setRefreshCount(prev => prev + 1)
+      }, 5000) // Refresh every 5 seconds
+      
+      return () => clearInterval(interval)
+    }
+  }, [status, router])
 
   const tabs = [
     { id: 'executive-summary', label: 'Executive Summary', icon: FileText },
@@ -54,14 +64,25 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
   ]
 
   const handleDownloadPDF = async () => {
-    try {
-      setIsDownloading(true)
-      await downloadReportPDF(report)
-    } catch (error) {
-      console.error('Download failed:', error)
-      alert('Failed to download PDF. Please try again.')
-    } finally {
-      setIsDownloading(false)
+    if (report.pdf_url) {
+      // If PDF exists, download it
+      window.open(report.pdf_url, '_blank')
+    } else {
+      // If not, generate on-demand
+      try {
+        setIsDownloading(true)
+        const blob = await downloadReportPDF(report)
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${report.company_name.replace(/[^a-zA-Z0-9]/g, '_')}_Regulatory_Report.pdf`
+        a.click()
+      } catch (error) {
+        console.error('Download failed:', error)
+        alert('Failed to download PDF. Please try again.')
+      } finally {
+        setIsDownloading(false)
+      }
     }
   }
 
@@ -87,11 +108,11 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
     
     const sectionRegex = new RegExp(`## ${sectionTitle}[\\s\\S]*?(?=##|$)`, 'i')
     const match = fullReportContent.match(sectionRegex)
-    return match ? match[0] : ''
+    return match ? match[0].trim() : ''
   }
 
   // Loading state
-  if (status === 'generating') {
+  if (status === 'generating' || status === 'pending') {
     return (
       <div className="min-h-screen bg-slate-50 pt-20 pb-32">
         <div className="container-custom max-w-6xl text-center py-20">
@@ -111,7 +132,7 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
           
           <p className="text-navy-600 mb-8 max-w-md mx-auto">
             Our AI compliance engine is analyzing {report.state} regulations and 
-            generating your comprehensive report. This page will refresh automatically.
+            generating your comprehensive report. This page refreshes automatically.
           </p>
 
           <div className="w-64 h-2 bg-slate-200 rounded-full mx-auto overflow-hidden">
@@ -133,6 +154,10 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
               Generating compliance recommendations
             </p>
           </div>
+
+          <p className="mt-8 text-sm text-navy-400">
+            Refreshed {refreshCount} times • This usually takes 2-3 minutes
+          </p>
         </div>
       </div>
     )
@@ -266,22 +291,15 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
             </div>
           </div>
 
-          {/* Regulatory Badge */}
-          <div className="flex items-center gap-2">
-            <span className={`px-3 py-1 rounded-lg text-xs font-medium
-              ${report.location_tier === 'major' ? 'bg-blue-100 text-blue-800' : ''}
-              ${report.location_tier === 'suburban' ? 'bg-purple-100 text-purple-800' : ''}
-              ${report.location_tier === 'rural' ? 'bg-green-100 text-green-800' : ''}
-            `}>
-              {report.location_tier === 'major' ? 'Major Market' : 
-               report.location_tier === 'suburban' ? 'Suburban Market' : 'Rural Market'}
-            </span>
-            {report.nearest_major_city && (
-              <span className="text-sm text-navy-500">
-                Compliance hub access via {report.nearest_major_city}
-              </span>
-            )}
-          </div>
+          {/* PDF Download Link */}
+          {report.pdf_url && (
+            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800 flex items-center gap-2">
+                <CheckCircle className="w-4 h-4" />
+                PDF version available for download
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Tab Navigation */}
@@ -318,41 +336,14 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
               
               {fullReportContent ? (
                 <div className="whitespace-pre-wrap font-sans text-navy-700">
-                  {extractSection('1. EXECUTIVE SUMMARY') || fullReportContent}
+                  {extractSection('1. EXECUTIVE SUMMARY') || fullReportContent.slice(0, 1000)}
                 </div>
               ) : (
-                <div className="space-y-6">
-                  <p className="text-navy-700 leading-relaxed">
+                <div className="space-y-4">
+                  <p className="text-navy-700">
                     {reportContent.executive_summary || 
-                      `This regulatory intelligence report provides a comprehensive compliance 
-                       analysis for ${report.company_name} based in ${report.city}, ${report.state}. 
-                       Our analysis identifies key regulatory requirements, licensing obligations, 
-                       and compliance risks across your operating jurisdictions.`}
+                      `This regulatory intelligence report provides compliance analysis for ${report.company_name} in ${report.city}, ${report.state}.`}
                   </p>
-                  
-                  <div className="bg-navy-50 p-6 rounded-xl">
-                    <h3 className="font-semibold text-navy-900 mb-3">Key Compliance Insights</h3>
-                    <ul className="space-y-2">
-                      <li className="flex items-start gap-2">
-                        <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-                        <span className="text-navy-700">
-                          Regulatory climate: {reportContent.regulatory_climate || 'Moderate'} in {report.state}
-                        </span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-                        <span className="text-navy-700">
-                          Primary focus: {reportContent.primary_focus || 'Regulatory compliance'}
-                        </span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-                        <span className="text-navy-700">
-                          Implementation timeline: {reportContent.timeline || '90-180 days'}
-                        </span>
-                      </li>
-                    </ul>
-                  </div>
                 </div>
               )}
             </div>
@@ -367,42 +358,10 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
               
               {fullReportContent ? (
                 <div className="whitespace-pre-wrap font-sans text-navy-700">
-                  {extractSection('2. STATE REGULATORY ANALYSIS')}
+                  {extractSection('2. STATE REGULATORY ANALYSIS') || 'Analysis content coming soon...'}
                 </div>
               ) : (
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="bg-navy-50 p-6 rounded-xl">
-                    <h3 className="font-semibold text-navy-900 mb-4 flex items-center gap-2">
-                      <Gavel className="w-5 h-5" />
-                      Regulatory Climate
-                    </h3>
-                    <p className="text-lg font-semibold text-navy-900 mb-2">
-                      {report.state === 'NY' && 'Strict - BitLicense Required'}
-                      {report.state === 'CA' && 'Strict - DFPI Oversight'}
-                      {report.state === 'TX' && 'Friendly - Business First'}
-                      {report.state === 'WY' && 'Most Friendly - DAO Structure'}
-                      {!['NY','CA','TX','WY'].includes(report.state) && 'Moderate - Standard Requirements'}
-                    </p>
-                    <p className="text-sm text-navy-600 mt-2">
-                      {report.state === 'NY' && 'BitLicense required for virtual currency business activity. NYDFS maintains strict oversight and regular examinations.'}
-                      {report.state === 'CA' && 'Money transmitter licensing through DFPI required. Active enforcement and pending comprehensive crypto legislation.'}
-                      {report.state === 'TX' && 'No specific money transmission license for crypto. Texas Department of Banking has issued favorable guidance.'}
-                      {report.state === 'WY' && 'Most comprehensive digital asset laws, including DAO LLC structures and special purpose depository institutions.'}
-                    </p>
-                  </div>
-                  <div className="bg-navy-50 p-6 rounded-xl">
-                    <h3 className="font-semibold text-navy-900 mb-4 flex items-center gap-2">
-                      <Shield className="w-5 h-5" />
-                      Key Requirements
-                    </h3>
-                    <ul className="space-y-2">
-                      <li className="text-sm text-navy-700">• Money transmitter license: {report.state === 'TX' ? 'Not required' : 'Required'}</li>
-                      <li className="text-sm text-navy-700">• Bonding requirements: $25,000 - $500,000</li>
-                      <li className="text-sm text-navy-700">• Annual reporting: Required</li>
-                      <li className="text-sm text-navy-700">• Regular examinations: {report.state === 'NY' ? 'Annual' : 'Biennial'}</li>
-                    </ul>
-                  </div>
-                </div>
+                <p className="text-navy-600">Regulatory analysis will appear here once generated.</p>
               )}
             </div>
           )}
@@ -416,49 +375,10 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
               
               {fullReportContent ? (
                 <div className="whitespace-pre-wrap font-sans text-navy-700">
-                  {extractSection('3. MULTI-STATE LICENSING MATRIX')}
+                  {extractSection('3. MULTI-STATE LICENSING MATRIX') || 'Licensing information coming soon...'}
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-navy-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-navy-900">License Type</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-navy-900">Required</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-navy-900">Timeline</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-navy-900">Bonding</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-navy-900">Fee</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      <tr>
-                        <td className="px-4 py-3 text-sm text-navy-700">Money Transmitter</td>
-                        <td className="px-4 py-3 text-sm text-navy-700">{report.state === 'TX' ? 'Not Required' : 'Required'}</td>
-                        <td className="px-4 py-3 text-sm text-navy-700">4-8 months</td>
-                        <td className="px-4 py-3 text-sm text-navy-700">$25k-$500k</td>
-                        <td className="px-4 py-3 text-sm text-navy-700">$1k-$5k</td>
-                      </tr>
-                      {report.state === 'NY' && (
-                        <tr>
-                          <td className="px-4 py-3 text-sm text-navy-700">BitLicense</td>
-                          <td className="px-4 py-3 text-sm text-navy-700">Required</td>
-                          <td className="px-4 py-3 text-sm text-navy-700">6-12 months</td>
-                          <td className="px-4 py-3 text-sm text-navy-700">$50k-$500k</td>
-                          <td className="px-4 py-3 text-sm text-navy-700">$5,000</td>
-                        </tr>
-                      )}
-                      {report.state === 'CA' && (
-                        <tr>
-                          <td className="px-4 py-3 text-sm text-navy-700">DFPI License</td>
-                          <td className="px-4 py-3 text-sm text-navy-700">Required</td>
-                          <td className="px-4 py-3 text-sm text-navy-700">4-8 months</td>
-                          <td className="px-4 py-3 text-sm text-navy-700">$25k-$500k</td>
-                          <td className="px-4 py-3 text-sm text-navy-700">$1k-$5k</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                <p className="text-navy-600">Licensing matrix will appear here once generated.</p>
               )}
             </div>
           )}
@@ -472,45 +392,10 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
               
               {fullReportContent ? (
                 <div className="whitespace-pre-wrap font-sans text-navy-700">
-                  {extractSection('5. COMPLIANCE IMPLEMENTATION ROADMAP')}
+                  {extractSection('5. COMPLIANCE IMPLEMENTATION ROADMAP') || 'Roadmap information coming soon...'}
                 </div>
               ) : (
-                <div className="space-y-6">
-                  <div className="bg-navy-50 p-6 rounded-xl">
-                    <h3 className="font-semibold text-navy-900 mb-4">Days 1-30: Foundation & Legal Setup</h3>
-                    <ul className="space-y-2">
-                      <li className="flex items-center gap-2 text-sm text-navy-700">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                        Engage qualified legal counsel
-                      </li>
-                      <li className="flex items-center gap-2 text-sm text-navy-700">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                        Determine license requirements
-                      </li>
-                      <li className="flex items-center gap-2 text-sm text-navy-700">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                        Begin license applications
-                      </li>
-                    </ul>
-                  </div>
-                  <div className="bg-navy-50 p-6 rounded-xl">
-                    <h3 className="font-semibold text-navy-900 mb-4">Days 31-60: Policy Development</h3>
-                    <ul className="space-y-2">
-                      <li className="flex items-center gap-2 text-sm text-navy-700">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                        Submit all license applications
-                      </li>
-                      <li className="flex items-center gap-2 text-sm text-navy-700">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                        Finalize compliance policies
-                      </li>
-                      <li className="flex items-center gap-2 text-sm text-navy-700">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                        Select compliance technology
-                      </li>
-                    </ul>
-                  </div>
-                </div>
+                <p className="text-navy-600">Compliance roadmap will appear here once generated.</p>
               )}
             </div>
           )}
@@ -524,54 +409,10 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
               
               {fullReportContent ? (
                 <div className="whitespace-pre-wrap font-sans text-navy-700">
-                  {extractSection('6. REGULATORY RESOURCES')}
+                  {extractSection('6. REGULATORY RESOURCES') || 'Resources coming soon...'}
                 </div>
               ) : (
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="bg-navy-50 p-6 rounded-xl">
-                    <h3 className="font-semibold text-navy-900 mb-4">State Regulator</h3>
-                    {report.state === 'NY' && (
-                      <>
-                        <p className="font-medium">NYDFS</p>
-                        <p className="text-sm text-navy-600">(212) 709-3500</p>
-                        <p className="text-sm text-navy-600">licensing@dfs.ny.gov</p>
-                      </>
-                    )}
-                    {report.state === 'CA' && (
-                      <>
-                        <p className="font-medium">DFPI</p>
-                        <p className="text-sm text-navy-600">(866) 275-2677</p>
-                        <p className="text-sm text-navy-600">licensing@dfpi.ca.gov</p>
-                      </>
-                    )}
-                    {report.state === 'TX' && (
-                      <>
-                        <p className="font-medium">Texas Department of Banking</p>
-                        <p className="text-sm text-navy-600">(877) 276-5554</p>
-                        <p className="text-sm text-navy-600">info@dob.texas.gov</p>
-                      </>
-                    )}
-                  </div>
-                  <div className="bg-navy-50 p-6 rounded-xl">
-                    <h3 className="font-semibold text-navy-900 mb-4">Legal Counsel</h3>
-                    {report.state === 'NY' && (
-                      <>
-                        <p className="font-medium">Perkins Coie LLP</p>
-                        <p className="text-sm text-navy-600">Blockchain & Crypto</p>
-                        <p className="font-medium mt-2">Sullivan & Cromwell</p>
-                        <p className="text-sm text-navy-600">FinTech Practice</p>
-                      </>
-                    )}
-                    {report.state === 'CA' && (
-                      <>
-                        <p className="font-medium">Cooley LLP</p>
-                        <p className="text-sm text-navy-600">Digital Assets</p>
-                        <p className="font-medium mt-2">Fenwick & West</p>
-                        <p className="text-sm text-navy-600">Crypto Compliance</p>
-                      </>
-                    )}
-                  </div>
-                </div>
+                <p className="text-navy-600">Regulatory resources will appear here once generated.</p>
               )}
             </div>
           )}
@@ -585,34 +426,10 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
               
               {fullReportContent ? (
                 <div className="whitespace-pre-wrap font-sans text-navy-700">
-                  {extractSection('7. RISK ASSESSMENT')}
+                  {extractSection('7. RISK ASSESSMENT') || 'Risk assessment coming soon...'}
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="bg-amber-50 p-6 rounded-xl border border-amber-200">
-                    <h3 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
-                      <AlertTriangle className="w-5 h-5" />
-                      High Priority Risks
-                    </h3>
-                    <ul className="space-y-2">
-                      <li className="text-sm text-amber-700">• Regulatory changes in {report.state}</li>
-                      <li className="text-sm text-amber-700">• Multi-state licensing requirements</li>
-                      <li className="text-sm text-amber-700">• Recent enforcement trends</li>
-                    </ul>
-                  </div>
-                  <div className="bg-green-50 p-6 rounded-xl border border-green-200">
-                    <h3 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
-                      <Shield className="w-5 h-5" />
-                      Mitigation Strategies
-                    </h3>
-                    <ul className="space-y-2">
-                      <li className="text-sm text-green-700">• Quarterly legal compliance reviews</li>
-                      <li className="text-sm text-green-700">• Regulatory monitoring subscription</li>
-                      <li className="text-sm text-green-700">• Regular compliance audits</li>
-                      <li className="text-sm text-green-700">• Document all compliance activities</li>
-                    </ul>
-                  </div>
-                </div>
+                <p className="text-navy-600">Risk assessment will appear here once generated.</p>
               )}
             </div>
           )}

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { User } from '@supabase/supabase-js'
+import QueueInitializer from '@/components/providers/QueueInitializer'
 
 interface RootLayoutClientProps {
   children: React.ReactNode
@@ -25,7 +26,7 @@ export default function RootLayoutClient({ children, initialUser }: RootLayoutCl
   return (
     <>
       {showNavbarAndFooter && <Navbar initialUser={initialUser} />}
-      
+      <QueueInitializer />
       {/* Main content - NO PADDING HERE */}
       <main className={!showNavbarAndFooter ? '' : ''}>
         {children}

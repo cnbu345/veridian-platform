@@ -13,9 +13,12 @@ import {
   CheckCircle,
   AlertCircle,
   ArrowRight,
-  Scale
+  Scale,
+  Building2, // ✅ Added missing icon
+  Calendar   // ✅ Added missing icon
 } from 'lucide-react'
-import ReportsList from './components/ReportsList'
+// Remove ReportsList import since we're rendering inline now
+// import ReportsList from './components/ReportsList'
 import EmptyState from './components/EmptyState'
 import Settings from '@/app/dashboard/settings/'
 
@@ -123,7 +126,54 @@ export default function DashboardClient({
         ) : reports.length === 0 ? (
           <EmptyState />
         ) : (
-          <ReportsList reports={reports} />
+          /* ✅ REPLACED: ReportsList component with inline rendering */
+          <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-200">
+            {reports.map((report) => (
+              <Link
+                key={report.id}
+                href={`/report/${report.id}`}
+                className="block hover:bg-slate-50 transition-colors"
+              >
+                <div className="px-6 py-4 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-navy-100 rounded-lg flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-navy-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-navy-900">{report.company_name}</h3>
+                      <div className="flex items-center gap-3 text-sm text-navy-500">
+                        <span className="flex items-center gap-1">
+                          <Building2 className="w-3 h-3" />
+                          {report.city}, {report.state}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {new Date(report.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      report.status === 'ready' ? 'bg-green-100 text-green-800' :
+                      report.status === 'generating' ? 'bg-yellow-100 text-yellow-800' :
+                      report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      report.status === 'failed' ? 'bg-red-100 text-red-800' :
+                      'bg-slate-100 text-slate-800'
+                    }`}>
+                      {report.status === 'ready' ? 'Ready' :
+                       report.status === 'generating' ? 'Generating...' :
+                       report.status === 'pending' ? 'Generating...' :
+                       report.status === 'failed' ? 'Failed' :
+                       report.status}
+                    </span>
+                    <ArrowRight className="w-4 h-4 text-navy-400" />
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
         )}
       </div>
     </div>

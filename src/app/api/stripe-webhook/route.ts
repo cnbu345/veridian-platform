@@ -15,64 +15,85 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: Request) {
-  const body = await req.text()
-  const headersList = headers()
-  const signature = headersList.get('stripe-signature')
-
-  if (!signature) {
-    return NextResponse.json(
-      { error: 'No stripe signature provided' },
-      { status: 400 }
-    )
-  }
-
-  let event: Stripe.Event
-
+  console.log('\n🔔🔔🔔 WEBHOOK POST STARTED 🔔🔔🔔')
+  console.log('Time:', new Date().toISOString())
+  
   try {
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
-    if (!webhookSecret) {
-      throw new Error('STRIPE_WEBHOOK_SECRET is not set')
+    // Get the raw body text
+    const body = await req.text()
+    console.log('Raw body preview:', body.substring(0, 200))
+    
+    // Get headers - IMPORTANT: await the headers() function
+    const headersList = await headers()
+    const signature = headersList.get('stripe-signature')
+    console.log('Stripe signature:', signature ? 'Present' : 'Missing')
+
+    if (!signature) {
+      console.log('❌ No stripe signature provided')
+      return NextResponse.json(
+        { error: 'No stripe signature provided' },
+        { status: 400 }
+      )
     }
 
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
-  } catch (error) {
-    console.error('Webhook signature verification failed:', error)
-    return NextResponse.json(
-      { error: 'Webhook signature verification failed' },
-      { status: 400 }
-    )
-  }
+    let event: Stripe.Event
 
-  try {
+    try {
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+      console.log('Webhook secret exists:', !!webhookSecret)
+      
+      if (!webhookSecret) {
+        throw new Error('STRIPE_WEBHOOK_SECRET is not set')
+      }
+
+      console.log('Attempting to construct event...')
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
+      console.log('✅ Event constructed successfully. Type:', event.type)
+    } catch (error) {
+      console.error('❌ Webhook signature verification failed:', error)
+      return NextResponse.json(
+        { error: 'Webhook signature verification failed' },
+        { status: 400 }
+      )
+    }
+
+    console.log('Processing event type:', event.type)
+    
     // Handle the different event types
     switch (event.type) {
       case 'checkout.session.completed':
+        console.log('🎯 Handling checkout.session.completed')
         await handleCheckoutCompleted(event.data.object)
         break
         
       case 'invoice.paid':
+        console.log('🎯 Handling invoice.paid')
         await handleInvoicePaid(event.data.object)
         break
         
       case 'customer.subscription.updated':
+        console.log('🎯 Handling customer.subscription.updated')
         await handleSubscriptionUpdated(event.data.object)
         break
         
       case 'customer.subscription.deleted':
+        console.log('🎯 Handling customer.subscription.deleted')
         await handleSubscriptionDeleted(event.data.object)
         break
         
       case 'payment_intent.payment_failed':
+        console.log('🎯 Handling payment_intent.payment_failed')
         await handlePaymentFailed(event.data.object)
         break
         
       default:
-        console.log(`Unhandled event type: ${event.type}`)
+        console.log(`📋 Unhandled event type: ${event.type}`)
     }
 
+    console.log('✅ Webhook processed successfully')
     return NextResponse.json({ received: true })
   } catch (error) {
-    console.error('Webhook processing error:', error)
+    console.error('❌ Webhook processing error:', error)
     return NextResponse.json(
       { error: 'Webhook processing failed' },
       { status: 500 }
@@ -86,7 +107,12 @@ export async function POST(req: Request) {
 
 // Handle successful checkout (when customer pays)
 async function handleCheckoutCompleted(session: any) {
-  console.log('Processing checkout completed:', session.id)
+  console.log('💰 handleCheckoutCompleted called with session:', session.id)
+  console.log('\n' + '='.repeat(80))
+  console.log('💰💰💰 HANDLE CHECKOUT COMPLETED STARTED 💰💰💰')
+  console.log('='.repeat(80))
+  console.log('Session ID:', session.id)
+  console.log('Session metadata:', JSON.stringify(session.metadata, null, 2))
   
   const supabase = await createClient()
   const { 
@@ -98,25 +124,28 @@ async function handleCheckoutCompleted(session: any) {
     reportData 
   } = session.metadata || {}
   
+  console.log('📦 Session metadata:', { userId, productType, companyName, hasReportData: !!reportData })
+  
   if (!userId) {
-    console.error('No userId in session metadata')
+    console.error('❌ No userId in session metadata')
     return
   }
 
   try {
     // STEP 1: If this was a founder price purchase, decrement the spots
     if (isFounderPrice === 'true' && tierId) {
-      console.log(`Decrementing founder spots for tier: ${tierId}`)
-      await decrementFounderSpots(tierId)  // UPDATED: Using the pricing service
+      console.log(`📉 Decrementing founder spots for tier: ${tierId}`)
+      await decrementFounderSpots(tierId)
     }
 
     // STEP 2: Create payment record
+    console.log('💰 Recording payment...')
     const { error: paymentError } = await supabase
       .from('payments')
       .insert({
         user_id: userId,
         stripe_payment_id: session.payment_intent || session.id,
-        amount: session.amount_total / 100, // Convert from cents to dollars
+        amount: session.amount_total / 100,
         tier: productType || 'single',
         status: 'succeeded',
         metadata: {
@@ -129,16 +158,27 @@ async function handleCheckoutCompleted(session: any) {
       })
 
     if (paymentError) {
-      console.error('Error recording payment:', paymentError)
+      console.error('❌ Error recording payment:', paymentError)
     } else {
-      console.log('Payment recorded successfully')
+      console.log('✅ Payment recorded successfully')
     }
 
     // STEP 3: If this was a single report purchase, create a report record
     if (productType === 'single' && reportData) {
+      console.log('📝 Processing single report purchase...')
+      console.log('📊 Raw reportData:', reportData)
+      
       try {
         const reportParams = JSON.parse(reportData)
+        console.log('✅ Parsed report params:', {
+          companyName: reportParams.companyName,
+          city: reportParams.city,
+          state: reportParams.state,
+          industry: reportParams.industry
+        })
         
+        // Create report record
+        console.log('📝 Creating report record in database...')
         const { data: report, error: reportError } = await supabase
           .from('reports')
           .insert({
@@ -147,6 +187,7 @@ async function handleCheckoutCompleted(session: any) {
             industry: reportParams.industry || '',
             city: reportParams.city || '',
             state: reportParams.state || '',
+            location_tier: reportParams.locationTier || 'unknown',
             status: 'pending',
             stripe_payment_id: session.payment_intent || session.id,
             created_at: new Date().toISOString()
@@ -155,46 +196,58 @@ async function handleCheckoutCompleted(session: any) {
           .single()
 
         if (reportError) {
-          console.error('Error creating report:', reportError)
+          console.error('❌ Error creating report:', reportError)
         } else {
-          console.log('Report created with ID:', report.id)
+          console.log('✅ Report created with ID:', report.id)
+          
+          // Add to generation queue
+          console.log('📝 Adding report to generation queue...')
+          const { reportQueue } = await import('@/lib/queue/reportQueue')
+          await reportQueue.addToQueue(
+            report.id,
+            userId,
+            {
+              companyName: reportParams.companyName || companyName,
+              industry: reportParams.industry || '',
+              companySize: reportParams.companySize || '',
+              budget: reportParams.budget || '',
+              city: reportParams.city || '',
+              state: reportParams.state || '',
+              locationTier: reportParams.locationTier || 'unknown',
+              nearestRegulatoryHub: reportParams.nearestRegulatoryHub,
+              primaryFocus: reportParams.primaryFocus || 'compliance',
+              secondaryFocus: reportParams.secondaryFocus || [],
+              timeline: reportParams.timeline || '6-months',
+              concerns: reportParams.concerns || '',
+              goals: reportParams.goals || ''
+            },
+            1 // High priority for paid reports
+          )
+          console.log('✅ Report added to queue successfully')
         }
       } catch (e) {
-        console.error('Error parsing report data:', e)
+        console.error('❌ Error parsing report data:', e)
       }
+    } else {
+      console.log('⚠️ Not a single report purchase or no reportData:', { productType, hasReportData: !!reportData })
     }
 
     // STEP 4: Send confirmation email
+    console.log('📧 Sending confirmation email to:', session.customer_email)
     try {
-      await resend.emails.send({
-        from: 'Veridian Group <billing@veridiangroup.com>',
-        to: session.customer_email,
-        subject: 'Payment Confirmation - Your Report is Being Generated',
-        html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #0A1A2F;">Thank You for Your Purchase!</h1>
-            <p>Hello ${companyName || 'Valued Client'},</p>
-            <p>We've received your payment of <strong>$${session.amount_total / 100}</strong>.</p>
-            ${productType === 'single' 
-              ? '<p>Your regulatory intelligence report is being generated and will be ready within 24 hours.</p>' 
-              : '<p>Your subscription is now active. You can start generating reports immediately.</p>'
-            }
-            <p>You can access your account here:</p>
-            <p><a href="${process.env.NEXT_PUBLIC_URL}/dashboard" style="background: #C6A13B; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block; margin: 20px 0;">View Dashboard</a></p>
-            <hr style="border: 1px solid #E2E8F0; margin: 30px 0;" />
-            <p style="color: #64748B; font-size: 14px;">
-              Need help? Contact us at support@veridiangroup.com<br />
-              Veridian Group - Regulatory Intelligence for Digital Assets
-            </p>
-          </div>
-        `
-      })
-      console.log('Confirmation email sent')
+      await sendPaymentConfirmationEmail(
+        session.customer_email,
+        companyName || 'Valued Client',
+        productType,
+        session.amount_total / 100
+      )
+      console.log('✅ Confirmation email sent')
     } catch (emailError) {
-      console.error('Failed to send email:', emailError)
+      console.error('❌ Failed to send email:', emailError)
     }
 
     // STEP 5: Log the successful payment
+    console.log('📊 Logging to audit_log...')
     await supabase
       .from('audit_log')
       .insert({
@@ -210,10 +263,10 @@ async function handleCheckoutCompleted(session: any) {
         created_at: new Date().toISOString()
       })
 
-    console.log(`Checkout completed successfully for user ${userId}`)
+    console.log(`✅ Checkout completed successfully for user ${userId}`)
 
   } catch (error) {
-    console.error('Error in handleCheckoutCompleted:', error)
+    console.error('❌ Error in handleCheckoutCompleted:', error)
     
     // Log the error
     await supabase
@@ -244,7 +297,7 @@ async function handleInvoicePaid(invoice: any) {
       .from('users')
       .select('id, email, company_name, subscription_tier')
       .eq('stripe_customer_id', customerId)
-      .single()
+      .maybeSingle()
 
     if (!user) {
       console.error(`No user found for customer ${customerId}`)
@@ -269,35 +322,6 @@ async function handleInvoicePaid(invoice: any) {
         created_at: new Date().toISOString()
       })
 
-    // Update subscription period
-    await supabase
-      .from('users')
-      .update({
-        subscription_period_start: new Date(invoice.period_start * 1000).toISOString(),
-        subscription_period_end: new Date(invoice.period_end * 1000).toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', user.id)
-
-    // Send receipt email
-    await resend.emails.send({
-      from: 'Veridian Group <billing@veridiangroup.com>',
-      to: user.email,
-      subject: 'Your Receipt - Veridian Group',
-      html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #0A1A2F;">Payment Receipt</h1>
-          <p>Hello ${user.company_name || user.email},</p>
-          <p>Your ${user.subscription_tier} subscription payment of <strong>$${invoice.amount_paid / 100}</strong> has been processed.</p>
-          <p>Your subscription is active until: <strong>${new Date(invoice.period_end * 1000).toLocaleDateString()}</strong></p>
-          <hr style="border: 1px solid #E2E8F0; margin: 30px 0;" />
-          <p style="color: #64748B; font-size: 14px;">
-            Need help? Contact us at support@veridiangroup.com
-          </p>
-        </div>
-      `
-    })
-
     console.log(`Invoice paid for user ${user.id}`)
 
   } catch (error) {
@@ -318,74 +342,28 @@ async function handleSubscriptionUpdated(subscription: any) {
       .from('users')
       .select('id, email, company_name, subscription_tier')
       .eq('stripe_customer_id', customerId)
-      .single()
+      .maybeSingle()
 
     if (!user) {
       console.error(`No user found for customer ${customerId}`)
       return
     }
 
-    // Map price ID to tier (you'll need to add your actual price IDs)
-    const priceId = subscription.items.data[0].price.id
-    let newTier = 'free'
-    
-    // TODO: Add your actual Stripe Price IDs here
-    if (priceId === 'price_quarterly') newTier = 'quarterly'
-    else if (priceId === 'price_monthly') newTier = 'monthly'
-    else if (priceId === 'price_enterprise') newTier = 'enterprise'
-
-    const oldTier = user.subscription_tier
-
-    // Update user's subscription
+    // Log the update
     await supabase
-      .from('users')
-      .update({
-        subscription_tier: newTier,
-        subscription_status: subscription.status,
-        subscription_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-        subscription_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-        cancel_at_period_end: subscription.cancel_at_period_end,
-        updated_at: new Date().toISOString()
+      .from('audit_log')
+      .insert({
+        user_id: user.id,
+        action: 'subscription_updated',
+        entity_type: 'subscription',
+        metadata: {
+          subscriptionId: subscription.id,
+          status: subscription.status
+        },
+        created_at: new Date().toISOString()
       })
-      .eq('id', user.id)
 
-    // Log the change if tier changed
-    if (oldTier !== newTier) {
-      await supabase
-        .from('audit_log')
-        .insert({
-          user_id: user.id,
-          action: 'subscription_changed',
-          entity_type: 'subscription',
-          metadata: {
-            oldTier,
-            newTier,
-            subscriptionId: subscription.id
-          },
-          created_at: new Date().toISOString()
-        })
-
-      // Send email about tier change
-      await resend.emails.send({
-        from: 'Veridian Group <billing@veridiangroup.com>',
-        to: user.email,
-        subject: 'Subscription Updated - Veridian Group',
-        html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #0A1A2F;">Subscription Updated</h1>
-            <p>Hello ${user.company_name || user.email},</p>
-            <p>Your subscription has been updated from <strong>${oldTier}</strong> to <strong>${newTier}</strong>.</p>
-            <p>You can view your new plan details in your dashboard.</p>
-            <hr style="border: 1px solid #E2E8F0; margin: 30px 0;" />
-            <p style="color: #64748B; font-size: 14px;">
-              Questions? Contact us at support@veridiangroup.com
-            </p>
-          </div>
-        `
-      })
-    }
-
-    console.log(`Subscription updated for user ${user.id} to ${newTier}`)
+    console.log(`Subscription updated for user ${user.id}`)
 
   } catch (error) {
     console.error('Error handling subscription update:', error)
@@ -405,7 +383,7 @@ async function handleSubscriptionDeleted(subscription: any) {
       .from('users')
       .select('id, email, company_name')
       .eq('stripe_customer_id', customerId)
-      .single()
+      .maybeSingle()
 
     if (!user) {
       console.error(`No user found for customer ${customerId}`)
@@ -421,39 +399,6 @@ async function handleSubscriptionDeleted(subscription: any) {
         updated_at: new Date().toISOString()
       })
       .eq('id', user.id)
-
-    // Log cancellation
-    await supabase
-      .from('audit_log')
-      .insert({
-        user_id: user.id,
-        action: 'subscription_canceled',
-        entity_type: 'subscription',
-        metadata: {
-          subscriptionId: subscription.id
-        },
-        created_at: new Date().toISOString()
-      })
-
-    // Send cancellation email
-    await resend.emails.send({
-      from: 'Veridian Group <billing@veridiangroup.com>',
-      to: user.email,
-      subject: 'Subscription Cancellation - Veridian Group',
-      html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #0A1A2F;">Subscription Cancellation</h1>
-          <p>Hello ${user.company_name || user.email},</p>
-          <p>Your subscription has been canceled and will end on <strong>${new Date(subscription.current_period_end * 1000).toLocaleDateString()}</strong>.</p>
-          <p>You'll continue to have access until this date.</p>
-          <p>We're sorry to see you go! If you'd like to reactivate, you can do so anytime.</p>
-          <hr style="border: 1px solid #E2E8F0; margin: 30px 0;" />
-          <p style="color: #64748B; font-size: 14px;">
-            Questions? Contact us at support@veridiangroup.com
-          </p>
-        </div>
-      `
-    })
 
     console.log(`Subscription canceled for user ${user.id}`)
 
@@ -475,7 +420,7 @@ async function handlePaymentFailed(paymentIntent: any) {
       .from('users')
       .select('id, email, company_name')
       .eq('stripe_customer_id', customerId)
-      .single()
+      .maybeSingle()
 
     if (!user) {
       console.error(`No user found for customer ${customerId}`)
@@ -496,29 +441,112 @@ async function handlePaymentFailed(paymentIntent: any) {
         created_at: new Date().toISOString()
       })
 
-    // Send notification email
-    await resend.emails.send({
-      from: 'Veridian Group <billing@veridiangroup.com>',
-      to: user.email,
-      subject: 'Payment Failed - Veridian Group',
-      html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #0A1A2F;">Payment Failed</h1>
-          <p>Hello ${user.company_name || user.email},</p>
-          <p>Your recent payment of <strong>$${paymentIntent.amount / 100}</strong> failed.</p>
-          <p>Please update your payment information to continue your subscription.</p>
-          <p><a href="${process.env.NEXT_PUBLIC_URL}/account/billing" style="background: #C6A13B; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block; margin: 20px 0;">Update Payment Method</a></p>
-          <hr style="border: 1px solid #E2E8F0; margin: 30px 0;" />
-          <p style="color: #64748B; font-size: 14px;">
-            Need help? Contact us at support@veridiangroup.com
-          </p>
-        </div>
-      `
-    })
-
     console.log(`Payment failed logged for user ${user.id}`)
 
   } catch (error) {
     console.error('Error handling payment failure:', error)
   }
+}
+
+// Email helper functions
+async function sendPaymentConfirmationEmail(
+  email: string,
+  name: string,
+  tier: string,
+  amount: number
+) {
+  await resend.emails.send({
+    from: 'Veridian Group <billing@veridiangroup.com>',
+    to: email,
+    subject: 'Payment Confirmation - Veridian Group',
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #0A1A2F;">Thank You for Your Purchase!</h1>
+        <p>Hello ${name},</p>
+        <p>We've received your payment of <strong>$${amount.toLocaleString()}</strong> for the ${tier} plan.</p>
+        ${tier === 'single' ? '<p>Your regulatory intelligence report is being generated and will be ready within 24 hours.</p>' : ''}
+        <p>You can access your account at: <a href="${process.env.NEXT_PUBLIC_URL}/dashboard">${process.env.NEXT_PUBLIC_URL}/dashboard</a></p>
+        <hr style="border: 1px solid #E2E8F0; margin: 30px 0;" />
+        <p style="color: #64748B; font-size: 14px;">
+          Need help? Contact us at support@veridiangroup.com
+        </p>
+      </div>
+    `
+  })
+}
+
+async function sendPaymentReceiptEmail(
+  email: string,
+  name: string,
+  tier: string,
+  amount: number,
+  periodEnd: Date
+) {
+  await resend.emails.send({
+    from: 'Veridian Group <billing@veridiangroup.com>',
+    to: email,
+    subject: 'Your Receipt - Veridian Group',
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #0A1A2F;">Payment Receipt</h1>
+        <p>Hello ${name},</p>
+        <p>Your ${tier} subscription payment of <strong>$${amount.toLocaleString()}</strong> has been processed.</p>
+        <p>Your subscription is active until: <strong>${periodEnd.toLocaleDateString()}</strong></p>
+        <hr style="border: 1px solid #E2E8F0; margin: 30px 0;" />
+        <p style="color: #64748B; font-size: 14px;">
+          Need help? Contact us at support@veridiangroup.com
+        </p>
+      </div>
+    `
+  })
+}
+
+async function sendSubscriptionChangeEmail(
+  email: string,
+  name: string,
+  oldTier: string,
+  newTier: string
+) {
+  await resend.emails.send({
+    from: 'Veridian Group <billing@veridiangroup.com>',
+    to: email,
+    subject: 'Subscription Updated - Veridian Group',
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #0A1A2F;">Subscription Updated</h1>
+        <p>Hello ${name},</p>
+        <p>Your subscription has been updated from <strong>${oldTier}</strong> to <strong>${newTier}</strong>.</p>
+        <p>You can view your new plan details in your dashboard.</p>
+        <hr style="border: 1px solid #E2E8F0; margin: 30px 0;" />
+        <p style="color: #64748B; font-size: 14px;">
+          Questions? Contact us at support@veridiangroup.com
+        </p>
+      </div>
+    `
+  })
+}
+
+async function sendCancellationEmail(
+  email: string,
+  name: string,
+  effectiveEnd: Date
+) {
+  await resend.emails.send({
+    from: 'Veridian Group <billing@veridiangroup.com>',
+    to: email,
+    subject: 'Subscription Cancellation - Veridian Group',
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #0A1A2F;">Subscription Cancellation</h1>
+        <p>Hello ${name},</p>
+        <p>Your subscription has been canceled and will end on <strong>${effectiveEnd.toLocaleDateString()}</strong>.</p>
+        <p>You'll continue to have access until this date.</p>
+        <p>We're sorry to see you go! If you'd like to reactivate, you can do so anytime.</p>
+        <hr style="border: 1px solid #E2E8F0; margin: 30px 0;" />
+        <p style="color: #64748B; font-size: 14px;">
+          Questions? Contact us at support@veridiangroup.com
+        </p>
+      </div>
+    `
+  })
 }

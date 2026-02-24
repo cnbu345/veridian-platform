@@ -144,16 +144,21 @@ function getTierPrice(tier: string): number {
 
 // Handle successful checkout (webhook)
 export async function handleCheckoutCompleted(session: any) {
+  console.log('💰 handleCheckoutCompleted called with session:', session.id)
+  
   const supabase = await createClient()
   const { userId, productType, reportData, companyName } = session.metadata || {}
   
+  console.log('📦 Session metadata:', { userId, productType, companyName, hasReportData: !!reportData })
+  
   if (!userId) {
-    console.error('No userId in session metadata')
+    console.error('❌ No userId in session metadata')
     return
   }
 
   try {
     // 1. Get or create user profile
+    console.log('👤 Checking for existing user profile...')
     const { data: user } = await supabase
       .from('users')
       .select('*')
@@ -161,7 +166,7 @@ export async function handleCheckoutCompleted(session: any) {
       .single()
 
     if (!user) {
-      // Create user profile if doesn't exist
+      console.log('📝 Creating new user profile...')
       await supabase.from('users').insert({
         id: userId,
         email: session.customer_email,
@@ -170,8 +175,9 @@ export async function handleCheckoutCompleted(session: any) {
         stripe_customer_id: session.customer,
         updated_at: new Date().toISOString()
       })
+      console.log('✅ User profile created')
     } else {
-      // Update existing user
+      console.log('📝 Updating existing user profile...')
       await supabase
         .from('users')
         .update({
@@ -180,9 +186,11 @@ export async function handleCheckoutCompleted(session: any) {
           updated_at: new Date().toISOString()
         })
         .eq('id', userId)
+      console.log('✅ User profile updated')
     }
 
     // 2. Record payment
+    console.log('💰 Recording payment...')
     const { data: payment } = await supabase
       .from('payments')
       .insert({
@@ -200,13 +208,24 @@ export async function handleCheckoutCompleted(session: any) {
       })
       .select()
       .single()
+    console.log('✅ Payment recorded with ID:', payment?.id)
 
     // 3. Handle single report purchase
     if (productType === 'single' && reportData) {
+      console.log('📝 Processing single report purchase...')
+      console.log('📊 Raw reportData:', reportData)
+      
       const reportParams = JSON.parse(reportData)
+      console.log('✅ Parsed report params:', {
+        companyName: reportParams.companyName,
+        city: reportParams.city,
+        state: reportParams.state,
+        industry: reportParams.industry
+      })
       
       // Create report record
-      const { data: report } = await supabase
+      console.log('📝 Creating report record in database...')
+      const { data: report, error: reportError } = await supabase
         .from('reports')
         .insert({
           user_id: userId,
@@ -222,7 +241,15 @@ export async function handleCheckoutCompleted(session: any) {
         .select()
         .single()
 
+      if (reportError) {
+        console.error('❌ Error creating report:', reportError)
+        throw reportError
+      }
+
+      console.log('✅ Report created with ID:', report.id)
+
       if (report) {
+        console.log('📝 Adding report to generation queue...')
         // Add to generation queue
         await reportQueue.addToQueue(
           report.id,
@@ -244,18 +271,24 @@ export async function handleCheckoutCompleted(session: any) {
           },
           1 // High priority for paid reports
         )
+        console.log('✅ Report added to queue successfully')
       }
+    } else {
+      console.log('⚠️ Not a single report purchase or no reportData:', { productType, hasReportData: !!reportData })
     }
 
     // 4. Send confirmation email
+    console.log('📧 Sending confirmation email to:', session.customer_email)
     await sendPaymentConfirmationEmail(
       session.customer_email,
       companyName || 'Valued Client',
       productType,
       session.amount_total / 100
     )
+    console.log('✅ Confirmation email sent')
 
     // 5. Update analytics
+    console.log('📊 Updating analytics...')
     await supabase.from('audit_log').insert({
       user_id: userId,
       action: 'payment_succeeded',
@@ -267,11 +300,12 @@ export async function handleCheckoutCompleted(session: any) {
         sessionId: session.id
       }
     })
+    console.log('✅ Analytics updated')
 
-    console.log(`Checkout completed successfully for user ${userId}, product: ${productType}`)
+    console.log(`✅ Checkout completed successfully for user ${userId}, product: ${productType}`)
 
   } catch (error) {
-    console.error('Error handling checkout completed:', error)
+    console.error('❌ Error handling checkout completed:', error)
     
     // Log error
     await supabase.from('audit_log').insert({

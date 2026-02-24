@@ -2,7 +2,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { CheckCircle, ArrowRight, Mail, Clock } from 'lucide-react'
+import { CheckCircle, ArrowRight, Mail, Clock, Loader2 } from 'lucide-react'
 
 export default async function SuccessPage({
   searchParams,
@@ -111,7 +111,7 @@ export default async function SuccessPage({
             </div>
             <p className="text-sm text-navy-600">
               {report.status === 'pending' 
-                ? 'Your report is being generated. You can check its status in your dashboard.'
+                ? 'Your report is being generated. You will be redirected automatically when ready.'
                 : 'Your report is ready to view!'}
             </p>
           </div>
@@ -129,13 +129,23 @@ export default async function SuccessPage({
           
           {report && report.status === 'ready' && (
             <Link
-              href={`/dashboard/reports`}
+              href={`/report/${report.id}`}
               className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-navy-900 font-semibold rounded-xl border border-slate-200 hover:border-gold-500 transition-colors"
             >
-              View All Reports
+              View Report
             </Link>
           )}
         </div>
+
+        {/* Auto-redirect message */}
+        {report && report.status === 'pending' && (
+          <div className="mt-6 text-center">
+            <div className="inline-flex items-center gap-2 text-sm text-navy-500">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Redirecting to report page in 5 seconds...</span>
+            </div>
+          </div>
+        )}
 
         {/* Email Note */}
         <div className="mt-8 text-center">
@@ -152,6 +162,17 @@ export default async function SuccessPage({
           </p>
         )}
       </div>
+
+      {/* Auto-redirect script */}
+      {report && report.status === 'pending' && (
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            setTimeout(function() {
+              window.location.href = '/report/${report.id}';
+            }, 5000);
+          `
+        }} />
+      )}
     </div>
   )
 }
