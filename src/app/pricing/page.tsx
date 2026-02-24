@@ -86,9 +86,9 @@ export default function PricingPage() {
               Popular
             </div>
             <div className="p-8">
-              <h3 className="text-lg font-semibold text-navy-900 mb-2">Quarterly</h3>
+              <h3 className="text-lg font-semibold text-navy-900 mb-2">Quarterly Intelligence</h3>
               <div className="mb-4">
-                <span className="text-3xl font-bold text-navy-900">$3,997</span>
+                <span className="text-3xl font-bold text-navy-900">$5,997</span>
                 <span className="text-sm text-navy-500 ml-2">/year</span>
               </div>
               <p className="text-sm text-navy-600 mb-6">
@@ -126,9 +126,9 @@ export default function PricingPage() {
           {/* Tier 3: Monthly Subscription */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-soft hover:shadow-premium transition-all duration-300 overflow-hidden">
             <div className="p-8">
-              <h3 className="text-lg font-semibold text-navy-900 mb-2">Monthly</h3>
+              <h3 className="text-lg font-semibold text-navy-900 mb-2">Enterprise Suite</h3>
               <div className="mb-4">
-                <span className="text-3xl font-bold text-navy-900">$7,997</span>
+                <span className="text-3xl font-bold text-navy-900">$14,997</span>
                 <span className="text-sm text-navy-500 ml-2">/year</span>
               </div>
               <p className="text-sm text-navy-600 mb-6">
@@ -146,11 +146,19 @@ export default function PricingPage() {
                 </li>
                 <li className="flex items-start gap-2 text-sm">
                   <Check className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                  <span>Team access (up to 5 users)</span>
+                  <span>Team access (up to 10 users)</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm">
                   <Check className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                  <span>API access (coming soon)</span>
+                  <span>API access</span>
+                </li>
+                <li className="flex items-start gap-2 text-sm">
+                  <Check className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                  <span>Quarterly strategy calls (60 min each)</span>
+                </li>
+                <li className="flex items-start gap-2 text-sm">
+                  <Check className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                  <span>White-label option for client reports</span>
                 </li>
               </ul>
 
@@ -158,7 +166,7 @@ export default function PricingPage() {
                 href="/generate?tier=monthly"
                 className="block w-full py-3 px-4 text-center bg-navy-900 text-white font-semibold rounded-xl hover:bg-navy-800 transition-colors"
               >
-                Subscribe Monthly
+                Subscribe Year
               </Link>
             </div>
           </div>
@@ -166,11 +174,11 @@ export default function PricingPage() {
           {/* Tier 4: Enterprise */}
           <div className="bg-gradient-to-br from-navy-900 to-navy-800 rounded-2xl shadow-soft hover:shadow-premium transition-all duration-300 overflow-hidden">
             <div className="p-8">
-              <h3 className="text-lg font-semibold text-white mb-2">Enterprise</h3>
-              <div className="mb-4">
-                <span className="text-3xl font-bold text-white">$15K+</span>
-                <span className="text-sm text-navy-300 ml-2">/year</span>
-              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Custom Enterprise</h3>
+              {/*<div className="mb-4">
+                  <span className="text-3xl font-bold text-white">$25,000</span>
+                  <span className="text-sm text-navy-300 ml-2">/year</span>
+              </div>*/}
               <p className="text-sm text-navy-300 mb-6">
                 Custom solutions for large institutions
               </p>

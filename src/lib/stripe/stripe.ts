@@ -22,16 +22,16 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 // Price IDs from environment variables
 const PRICE_IDS = {
   single: process.env.STRIPE_SINGLE_REPORT_ID,
-  quarterly: process.env.STRIPE_QUARTERLY_PRICE_ID,
-  monthly: process.env.STRIPE_MONTHLY_PRICE_ID,
-  enterprise: process.env.STRIPE_ENTERPRISE_PRICE_ID,
+  quarterly: process.env.STRIPE_QUARTERLY_ID,
+  monthly: process.env.STRIPE_MONTHLY_ID,
+  custom: process.env.STRIPE_CUSTOM_ENTERPRISE_ID,
 }
 
 // Create checkout session
 export async function createCheckoutSession(
   userId: string,
   userEmail: string,
-  tier: 'single' | 'quarterly' | 'monthly' | 'enterprise' = 'single',
+  tier: 'single' | 'quarterly' | 'monthly' | 'enterprise' | 'custom' = 'single',
   reportData?: any
 ) {
   try {
@@ -49,46 +49,97 @@ export async function createCheckoutSession(
     
     const founderCircleEnabled = founderSetting?.value === 'true'
     
-    // Get pricing tiers to check founder spots
-    const { data: pricingSettings } = await supabase
-      .from('settings')
-      .select('value')
-      .eq('key', 'pricing_tiers')
-      .maybeSingle()
-    
+    // Get pricing tier from the pricing_tiers table
+    const { data: pricingTier, error: pricingError } = await supabase
+      .from('pricing_tiers')
+      .select('*')
+      .eq('id', tier)
+      .eq('active', true)
+      .single()
+
+    if (pricingError || !pricingTier) {
+      console.error('Error fetching pricing tier:', pricingError)
+      throw new Error(`Pricing tier ${tier} not found or inactive`)
+    }
+
     let useFounderPrice = false
-    let finalPriceId = PRICE_IDS[tier]
     
-    // For single reports, check if founder pricing applies
-    if (tier === 'single' && founderCircleEnabled && pricingSettings?.value) {
-      const tiers = pricingSettings.value as any[]
-      const singleTier = tiers.find(t => t.id === 'single')
-      
-      if (singleTier && singleTier.founderSpotsRemaining > 0) {
+    // For single reports only, check if founder pricing applies
+    if (tier === 'single' && founderCircleEnabled) {
+      if (pricingTier.founder_spots_remaining > 0) {
         useFounderPrice = true
-        // You might have a separate price ID for founder pricing
-        // If not, we'll use the same price ID and handle the price difference in metadata
       }
     }
 
-    if (!finalPriceId) {
-      throw new Error(`No price ID configured for tier: ${tier}`)
-    }
+    // Determine the correct price amount
+    const priceAmount = useFounderPrice && pricingTier.founder_price 
+      ? pricingTier.founder_price 
+      : pricingTier.price
+
+    // Calculate savings for display
+    const savingsAmount = useFounderPrice && pricingTier.founder_price 
+      ? pricingTier.price - pricingTier.founder_price 
+      : 0
+
+    console.log('Pricing Debug:', {
+      tier,
+      founderCircleEnabled,
+      useFounderPrice,
+      regularPrice: pricingTier.price,
+      founderPrice: pricingTier.founder_price,
+      finalAmount: priceAmount,
+      savings: savingsAmount,
+      spotsRemaining: pricingTier.founder_spots_remaining
+    })
 
     // Get user's company name if available
     const { data: user } = await supabase
       .from('users')
       .select('company_name, full_name')
       .eq('id', userId)
-      .single()
+      .maybeSingle()
 
-    // Create checkout session
+    // Create product name and description based on tier
+    let productName = pricingTier.name
+    let productDescription = ''
+
+    switch (tier) {
+      case 'single':
+        productDescription = useFounderPrice
+          ? `Founder's Circle Exclusive: Standard price $2,497. One-time purchase includes complete location-intelligent report, state-specific regulatory analysis, 90-day action plan, and 30-minute consultation.`
+          : 'Complete location-intelligent report with state-specific regulatory analysis, license requirement matrix, 90-day compliance action plan, and 30-minute consultation call.'
+        break
+      case 'quarterly':
+        productDescription = 'Annual subscription includes 4 quarterly reports, real-time email alerts for state law changes, priority support, and access to new features. Perfect for compliance monitoring and annual planning.'
+        break
+      case 'monthly':
+        productDescription = 'Annual subscription includes 12 reports, multi-state analysis capability (compare up to 3 states per report), team access for up to 5 users, API access, and monthly strategy updates.'
+        break
+      case 'custom':
+        productDescription = 'Custom enterprise solution with unlimited reports, dedicated account manager, SLA guarantees, and direct consultation as needed. Contact our team for details.'
+        break
+    }
+
+    // Create checkout session with price_data (dynamic pricing)
     const session = await stripe.checkout.sessions.create({
       customer_email: userEmail,
       payment_method_types: ['card'],
       line_items: [
         {
-          price: finalPriceId,
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: productName,
+              description: productDescription,
+              metadata: {
+                tier_id: tier,
+                is_founder: String(useFounderPrice),
+                regular_price: String(pricingTier.price),
+                savings_amount: String(savingsAmount)
+              }
+            },
+            unit_amount: priceAmount * 100, // Convert to cents
+          },
           quantity: 1,
         },
       ],
@@ -101,6 +152,9 @@ export async function createCheckoutSession(
         companyName: user?.company_name || '',
         isFounderPrice: String(useFounderPrice),
         tierId: tier,
+        priceAmount: String(priceAmount),
+        regularPrice: String(pricingTier.price),
+        savingsAmount: String(savingsAmount),
         reportData: reportData ? JSON.stringify(reportData) : '',
         timestamp: new Date().toISOString()
       },
@@ -119,7 +173,7 @@ export async function createCheckoutSession(
       metadata: {
         sessionId: session.id,
         tier,
-        amount: getTierPrice(tier),
+        amount: priceAmount,
         isFounderPrice: useFounderPrice
       }
     })
@@ -135,38 +189,88 @@ export async function createCheckoutSession(
 function getTierPrice(tier: string): number {
   const prices = {
     single: 2497,
-    quarterly: 3997,
-    monthly: 7997,
-    enterprise: 15000
+    quarterly: 5997,
+    monthly: 14997,
+    custom: 25000
   }
   return prices[tier as keyof typeof prices] || 0
 }
 
 // Handle successful checkout (webhook)
 export async function handleCheckoutCompleted(session: any) {
-  console.log('💰 handleCheckoutCompleted called with session:', session.id)
+  console.log('\n' + '='.repeat(80))
+  console.log('HANDLE CHECKOUT COMPLETED STARTED')
+  console.log('='.repeat(80))
+  console.log('Session ID:', session.id)
+  console.log('Session metadata:', JSON.stringify(session.metadata, null, 2))
   
   const supabase = await createClient()
-  const { userId, productType, reportData, companyName } = session.metadata || {}
+  const { 
+    userId, 
+    productType, 
+    companyName, 
+    isFounderPrice, 
+    tierId,
+    reportData,
+    priceAmount
+  } = session.metadata || {}
   
-  console.log('📦 Session metadata:', { userId, productType, companyName, hasReportData: !!reportData })
+  console.log('Extracted values:', {
+    userId,
+    productType,
+    companyName,
+    isFounderPrice,
+    tierId,
+    priceAmount,
+    hasReportData: !!reportData,
+    reportDataLength: reportData?.length
+  })
   
   if (!userId) {
-    console.error('❌ No userId in session metadata')
+    console.error('No userId in session metadata')
     return
   }
 
   try {
-    // 1. Get or create user profile
-    console.log('👤 Checking for existing user profile...')
+    // STEP 1: If this was a founder price purchase, decrement the spots
+    if (isFounderPrice === 'true' && tierId === 'single') {
+      console.log(`Decrementing founder spots for tier: ${tierId}`)
+      
+      // Get current spots from pricing_tiers
+      const { data: tier } = await supabase
+        .from('pricing_tiers')
+        .select('founder_spots_remaining')
+        .eq('id', tierId)
+        .single()
+      
+      if (tier && tier.founder_spots_remaining > 0) {
+        // Decrement by 1
+        const { error: updateError } = await supabase
+          .from('pricing_tiers')
+          .update({ 
+            founder_spots_remaining: tier.founder_spots_remaining - 1,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', tierId)
+        
+        if (updateError) {
+          console.error('Error updating founder spots:', updateError)
+        } else {
+          console.log(`Founder spots remaining now: ${tier.founder_spots_remaining - 1}`)
+        }
+      }
+    }
+
+    // STEP 2: Get or create user profile
+    console.log('Checking for existing user profile...')
     const { data: user } = await supabase
       .from('users')
       .select('*')
       .eq('id', userId)
-      .single()
+      .maybeSingle()
 
     if (!user) {
-      console.log('📝 Creating new user profile...')
+      console.log('Creating new user profile...')
       await supabase.from('users').insert({
         id: userId,
         email: session.customer_email,
@@ -175,9 +279,9 @@ export async function handleCheckoutCompleted(session: any) {
         stripe_customer_id: session.customer,
         updated_at: new Date().toISOString()
       })
-      console.log('✅ User profile created')
+      console.log('User profile created')
     } else {
-      console.log('📝 Updating existing user profile...')
+      console.log('Updating existing user profile...')
       await supabase
         .from('users')
         .update({
@@ -186,50 +290,105 @@ export async function handleCheckoutCompleted(session: any) {
           updated_at: new Date().toISOString()
         })
         .eq('id', userId)
-      console.log('✅ User profile updated')
+      console.log('User profile updated')
     }
 
-    // 2. Record payment
-    console.log('💰 Recording payment...')
-    const { data: payment } = await supabase
+    // STEP 3: Record payment
+    console.log('Recording payment...')
+    const { data: payment, error: paymentError } = await supabase
       .from('payments')
       .insert({
         user_id: userId,
         stripe_payment_id: session.payment_intent || session.id,
-        amount: session.amount_total / 100, // Convert from cents
+        amount: session.amount_total / 100,
         tier: productType,
         status: 'succeeded',
         metadata: {
           sessionId: session.id,
           customerId: session.customer,
-          productType
+          productType,
+          isFounderPrice: isFounderPrice === 'true'
         },
         created_at: new Date().toISOString()
       })
       .select()
       .single()
-    console.log('✅ Payment recorded with ID:', payment?.id)
 
-    // 3. Handle single report purchase
-    if (productType === 'single' && reportData) {
-      console.log('📝 Processing single report purchase...')
-      console.log('📊 Raw reportData:', reportData)
+    if (paymentError) {
+      console.error('Error recording payment:', paymentError)
+    } else {
+      console.log('Payment recorded with ID:', payment?.id)
+    }
+
+    // STEP 4: For subscriptions, record in user_subscriptions table
+    if (productType !== 'single') {
+      console.log('Recording subscription in user_subscriptions...')
       
-      const reportParams = JSON.parse(reportData)
-      console.log('✅ Parsed report params:', {
-        companyName: reportParams.companyName,
-        city: reportParams.city,
-        state: reportParams.state,
-        industry: reportParams.industry
+      // Get subscription details from Stripe
+      const stripe = getStripe()
+      const subscription = await stripe.subscriptions.retrieve(session.subscription)
+      
+      const { error: subError } = await supabase.from('user_subscriptions').insert({
+        user_id: userId,
+        tier_id: productType,
+        stripe_subscription_id: session.subscription,
+        stripe_customer_id: session.customer,
+        status: 'active',
+        current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        cancel_at_period_end: false,
+        is_founder: isFounderPrice === 'true',
+        metadata: {
+          price: priceAmount,
+          interval: subscription.items.data[0].price.recurring?.interval
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+
+      if (subError) {
+        console.error('Error recording subscription:', subError)
+      } else {
+        console.log('Subscription recorded successfully')
+      }
+      
+      // Record subscription event
+      await supabase.from('subscription_events').insert({
+        subscription_id: session.subscription,
+        user_id: userId,
+        event_type: 'subscription_created',
+        new_status: 'active',
+        metadata: {
+          tier_id: productType,
+          price: priceAmount,
+          is_founder: isFounderPrice === 'true'
+        },
+        created_at: new Date().toISOString()
       })
       
-      // Create report record
-      console.log('📝 Creating report record in database...')
-      const { data: report, error: reportError } = await supabase
-        .from('reports')
-        .insert({
+      // Update subscription metrics
+      await updateSubscriptionMetrics(productType, isFounderPrice === 'true')
+    }
+
+    // STEP 5: Handle single report purchase
+    if (productType === 'single' && reportData) {
+      console.log('Processing single report purchase...')
+      console.log('Raw reportData:', reportData)
+      
+      try {
+        const reportParams = JSON.parse(reportData)
+        console.log('Parsed report params:', {
+          companyName: reportParams.companyName,
+          city: reportParams.city,
+          state: reportParams.state,
+          industry: reportParams.industry
+        })
+        
+        // Create report record
+        console.log('Creating report record in database...')
+        const reportInsert = {
           user_id: userId,
-          company_name: reportParams.companyName || companyName,
+          company_name: reportParams.companyName || companyName || 'Unknown Company',
           industry: reportParams.industry || '',
           city: reportParams.city || '',
           state: reportParams.state || '',
@@ -237,25 +396,26 @@ export async function handleCheckoutCompleted(session: any) {
           status: 'pending',
           stripe_payment_id: session.payment_intent || session.id,
           created_at: new Date().toISOString()
-        })
-        .select()
-        .single()
+        }
+        console.log('Report insert data:', reportInsert)
+        
+        const { data: report, error: reportError } = await supabase
+          .from('reports')
+          .insert(reportInsert)
+          .select()
+          .single()
 
-      if (reportError) {
-        console.error('❌ Error creating report:', reportError)
-        throw reportError
-      }
-
-      console.log('✅ Report created with ID:', report.id)
-
-      if (report) {
-        console.log('📝 Adding report to generation queue...')
-        // Add to generation queue
-        await reportQueue.addToQueue(
-          report.id,
-          userId,
-          {
-            companyName: reportParams.companyName || companyName,
+        if (reportError) {
+          console.error('Error creating report:', reportError)
+          console.error('Error details:', JSON.stringify(reportError, null, 2))
+        } else {
+          console.log('Report created successfully with ID:', report.id)
+          
+          // Add to generation queue
+          console.log('Adding report to generation queue...')
+          
+          const queueParams = {
+            companyName: reportParams.companyName || companyName || 'Unknown Company',
             industry: reportParams.industry || '',
             companySize: reportParams.companySize || '',
             budget: reportParams.budget || '',
@@ -268,57 +428,116 @@ export async function handleCheckoutCompleted(session: any) {
             timeline: reportParams.timeline || '6-months',
             concerns: reportParams.concerns || '',
             goals: reportParams.goals || ''
-          },
-          1 // High priority for paid reports
-        )
-        console.log('✅ Report added to queue successfully')
+          }
+          console.log('Queue params:', queueParams)
+          
+          await reportQueue.addToQueue(
+            report.id,
+            userId,
+            queueParams,
+            1
+          )
+          console.log('Report added to queue successfully')
+        }
+      } catch (e) {
+        console.error('Error parsing report data:', e)
+        console.error('Error stack:', e instanceof Error ? e.stack : 'No stack')
       }
-    } else {
-      console.log('⚠️ Not a single report purchase or no reportData:', { productType, hasReportData: !!reportData })
     }
 
-    // 4. Send confirmation email
-    console.log('📧 Sending confirmation email to:', session.customer_email)
-    await sendPaymentConfirmationEmail(
-      session.customer_email,
-      companyName || 'Valued Client',
-      productType,
-      session.amount_total / 100
-    )
-    console.log('✅ Confirmation email sent')
+    // STEP 6: Send confirmation email
+    console.log('Sending confirmation email to:', session.customer_email)
+    try {
+      await sendPaymentConfirmationEmail(
+        session.customer_email,
+        companyName || 'Valued Client',
+        productType,
+        session.amount_total / 100
+      )
+      console.log('Confirmation email sent')
+    } catch (emailError) {
+      console.error('Failed to send email:', emailError)
+    }
 
-    // 5. Update analytics
-    console.log('📊 Updating analytics...')
-    await supabase.from('audit_log').insert({
-      user_id: userId,
-      action: 'payment_succeeded',
-      entity_type: 'payment',
-      entity_id: payment?.id,
-      metadata: {
-        tier: productType,
-        amount: session.amount_total / 100,
-        sessionId: session.id
-      }
-    })
-    console.log('✅ Analytics updated')
+    // STEP 7: Log the successful payment
+    console.log('Logging to audit_log...')
+    const { error: auditError } = await supabase
+      .from('audit_log')
+      .insert({
+        user_id: userId,
+        action: 'payment_succeeded',
+        entity_type: 'payment',
+        entity_id: session.payment_intent || session.id,
+        metadata: {
+          amount: session.amount_total / 100,
+          productType,
+          isFounderPrice: isFounderPrice === 'true'
+        },
+        created_at: new Date().toISOString()
+      })
 
-    console.log(`✅ Checkout completed successfully for user ${userId}, product: ${productType}`)
+    if (auditError) {
+      console.error('Audit log error:', auditError)
+    } else {
+      console.log('Audit log created')
+    }
+
+    console.log('Checkout completed successfully for user', userId)
+    console.log('='.repeat(80) + '\n')
 
   } catch (error) {
-    console.error('❌ Error handling checkout completed:', error)
+    console.error('Error in handleCheckoutCompleted:', error)
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack')
     
-    // Log error
-    await supabase.from('audit_log').insert({
-      user_id: userId,
-      action: 'payment_processing_error',
-      entity_type: 'payment',
-      metadata: {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        sessionId: session.id
-      }
-    })
-    
-    throw error
+    await supabase
+      .from('audit_log')
+      .insert({
+        user_id: userId,
+        action: 'payment_processing_error',
+        entity_type: 'payment',
+        metadata: {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          sessionId: session.id,
+          stack: error instanceof Error ? error.stack : null
+        },
+        created_at: new Date().toISOString()
+      })
+  }
+}
+
+// Helper function to update subscription metrics
+async function updateSubscriptionMetrics(tierId: string, isFounder: boolean) {
+  const supabase = await createClient()
+  const now = new Date()
+  const month = new Date(now.getFullYear(), now.getMonth(), 1)
+  
+  const { data: metrics } = await supabase
+    .from('subscription_metrics')
+    .select('*')
+    .eq('month', month.toISOString())
+    .eq('tier_id', tierId)
+    .maybeSingle()
+  
+  if (metrics) {
+    await supabase
+      .from('subscription_metrics')
+      .update({
+        new_subscriptions: metrics.new_subscriptions + 1,
+        founder_subscriptions: isFounder ? metrics.founder_subscriptions + 1 : metrics.founder_subscriptions,
+        active_count: metrics.active_count + 1
+      })
+      .eq('id', metrics.id)
+  } else {
+    await supabase
+      .from('subscription_metrics')
+      .insert({
+        month: month.toISOString(),
+        tier_id: tierId,
+        new_subscriptions: 1,
+        founder_subscriptions: isFounder ? 1 : 0,
+        active_count: 1,
+        canceled_count: 0
+      })
   }
 }
 
@@ -333,14 +552,14 @@ export async function handleInvoicePaid(invoice: any) {
       .from('users')
       .select('id, email, company_name, subscription_tier')
       .eq('stripe_customer_id', customerId)
-      .single()
+      .maybeSingle()
 
     if (!user) {
       console.error(`No user found for customer ${customerId}`)
       return
     }
 
-    // 1. Record payment
+    // Record payment
     await supabase
       .from('payments')
       .insert({
@@ -358,17 +577,30 @@ export async function handleInvoicePaid(invoice: any) {
         created_at: new Date().toISOString()
       })
 
-    // 2. Update subscription period
+    // Update subscription period in user_subscriptions
     await supabase
-      .from('users')
+      .from('user_subscriptions')
       .update({
-        subscription_period_start: new Date(invoice.period_start * 1000).toISOString(),
-        subscription_period_end: new Date(invoice.period_end * 1000).toISOString(),
+        current_period_start: new Date(invoice.period_start * 1000).toISOString(),
+        current_period_end: new Date(invoice.period_end * 1000).toISOString(),
         updated_at: new Date().toISOString()
       })
-      .eq('id', user.id)
+      .eq('stripe_subscription_id', invoice.subscription)
 
-    // 3. Send receipt email
+    // Record subscription event
+    await supabase.from('subscription_events').insert({
+      subscription_id: invoice.subscription,
+      user_id: user.id,
+      event_type: 'invoice_paid',
+      metadata: {
+        amount: invoice.amount_paid / 100,
+        period_start: new Date(invoice.period_start * 1000).toISOString(),
+        period_end: new Date(invoice.period_end * 1000).toISOString()
+      },
+      created_at: new Date().toISOString()
+    })
+
+    // Send receipt email
     await sendPaymentReceiptEmail(
       user.email,
       user.company_name || user.email,
@@ -396,7 +628,7 @@ export async function handleSubscriptionUpdated(subscription: any) {
       .from('users')
       .select('id, email, company_name, subscription_tier')
       .eq('stripe_customer_id', customerId)
-      .single()
+      .maybeSingle()
 
     if (!user) {
       console.error(`No user found for customer ${customerId}`)
@@ -405,42 +637,59 @@ export async function handleSubscriptionUpdated(subscription: any) {
 
     // Determine new tier from price ID
     const priceId = subscription.items.data[0].price.id
-    let newTier = 'free'
+    let newTier = user.subscription_tier
     
     if (priceId === PRICE_IDS.single) newTier = 'single'
     else if (priceId === PRICE_IDS.quarterly) newTier = 'quarterly'
     else if (priceId === PRICE_IDS.monthly) newTier = 'monthly'
     else if (priceId === PRICE_IDS.enterprise) newTier = 'enterprise'
+    else if (priceId === PRICE_IDS.custom) newTier = 'custom'
 
     const oldTier = user.subscription_tier
 
-    // 1. Update user's subscription tier
+    // Update user's subscription tier
     await supabase
       .from('users')
       .update({
         subscription_tier: newTier,
-        subscription_status: subscription.status,
-        subscription_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-        subscription_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-        cancel_at_period_end: subscription.cancel_at_period_end,
         updated_at: new Date().toISOString()
       })
       .eq('id', user.id)
 
-    // 2. Handle upgrades/downgrades
-    if (oldTier !== newTier) {
-      await supabase.from('audit_log').insert({
-        user_id: user.id,
-        action: 'subscription_changed',
-        entity_type: 'subscription',
-        metadata: {
-          oldTier,
-          newTier,
-          subscriptionId: subscription.id,
-          timestamp: new Date().toISOString()
-        }
+    // Update user_subscriptions
+    await supabase
+      .from('user_subscriptions')
+      .update({
+        tier_id: newTier,
+        status: subscription.status,
+        current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        updated_at: new Date().toISOString()
       })
+      .eq('stripe_subscription_id', subscription.id)
 
+    // Record subscription event
+    await supabase.from('subscription_events').insert({
+      subscription_id: subscription.id,
+      user_id: user.id,
+      event_type: 'subscription_updated',
+      old_status: oldTier,
+      new_status: newTier,
+      metadata: {
+        cancel_at_period_end: subscription.cancel_at_period_end
+      },
+      created_at: new Date().toISOString()
+    })
+
+    // Handle cancellation
+    if (subscription.cancel_at_period_end) {
+      await sendCancellationEmail(
+        user.email,
+        user.company_name || user.email,
+        new Date(subscription.current_period_end * 1000)
+      )
+    } else if (oldTier !== newTier) {
       // Send upgrade/downgrade email
       await sendSubscriptionChangeEmail(
         user.email,
@@ -450,31 +699,120 @@ export async function handleSubscriptionUpdated(subscription: any) {
       )
     }
 
-    // 3. Handle cancellation
-    if (subscription.cancel_at_period_end) {
-      await supabase.from('audit_log').insert({
-        user_id: user.id,
-        action: 'subscription_canceling',
-        entity_type: 'subscription',
-        metadata: {
-          subscriptionId: subscription.id,
-          effectiveEnd: new Date(subscription.current_period_end * 1000).toISOString()
-        }
-      })
-
-      // Send cancellation confirmation email
-      await sendCancellationEmail(
-        user.email,
-        user.company_name || user.email,
-        new Date(subscription.current_period_end * 1000)
-      )
-    }
-
     console.log(`Subscription updated for customer ${customerId}, user ${user.id}, tier: ${newTier}`)
 
   } catch (error) {
     console.error('Error handling subscription update:', error)
     throw error
+  }
+}
+
+// Handle subscription deletion/cancellation
+export async function handleSubscriptionDeleted(subscription: any) {
+  const supabase = await createClient()
+  const customerId = subscription.customer
+
+  try {
+    // Find user by Stripe customer ID
+    const { data: user } = await supabase
+      .from('users')
+      .select('id, email, company_name')
+      .eq('stripe_customer_id', customerId)
+      .maybeSingle()
+
+    if (!user) {
+      console.error(`No user found for customer ${customerId}`)
+      return
+    }
+
+    // Update user_subscriptions
+    await supabase
+      .from('user_subscriptions')
+      .update({
+        status: 'canceled',
+        canceled_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('stripe_subscription_id', subscription.id)
+
+    // Update user's subscription tier to free
+    await supabase
+      .from('users')
+      .update({
+        subscription_tier: 'free',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', user.id)
+
+    // Record subscription event
+    await supabase.from('subscription_events').insert({
+      subscription_id: subscription.id,
+      user_id: user.id,
+      event_type: 'subscription_canceled',
+      metadata: {
+        effective_end: new Date(subscription.current_period_end * 1000).toISOString()
+      },
+      created_at: new Date().toISOString()
+    })
+
+    console.log(`Subscription canceled for user ${user.id}`)
+
+  } catch (error) {
+    console.error('Error handling subscription deletion:', error)
+    throw error
+  }
+}
+
+// Handle failed payments
+export async function handlePaymentFailed(paymentIntent: any) {
+  const supabase = await createClient()
+  const customerId = paymentIntent.customer
+
+  try {
+    // Find user by Stripe customer ID
+    const { data: user } = await supabase
+      .from('users')
+      .select('id, email, company_name')
+      .eq('stripe_customer_id', customerId)
+      .maybeSingle()
+
+    if (!user) {
+      console.error(`No user found for customer ${customerId}`)
+      return
+    }
+
+    // Log failed payment
+    await supabase
+      .from('audit_log')
+      .insert({
+        user_id: user.id,
+        action: 'payment_failed',
+        entity_type: 'payment',
+        metadata: {
+          paymentIntentId: paymentIntent.id,
+          amount: paymentIntent.amount / 100
+        },
+        created_at: new Date().toISOString()
+      })
+
+    // Record in subscription_events if related to subscription
+    if (paymentIntent.invoice) {
+      await supabase.from('subscription_events').insert({
+        user_id: user.id,
+        event_type: 'payment_failed',
+        metadata: {
+          paymentIntentId: paymentIntent.id,
+          amount: paymentIntent.amount / 100,
+          invoiceId: paymentIntent.invoice
+        },
+        created_at: new Date().toISOString()
+      })
+    }
+
+    console.log(`Payment failed logged for user ${user.id}`)
+
+  } catch (error) {
+    console.error('Error handling payment failure:', error)
   }
 }
 
@@ -491,17 +829,21 @@ async function sendPaymentConfirmationEmail(
       to: email,
       subject: 'Payment Confirmation - Veridian Group',
       html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #0A1A2F;">Thank You for Your Purchase!</h1>
-          <p>Hello ${name},</p>
-          <p>We've received your payment of <strong>$${amount.toLocaleString()}</strong> for the ${tier} plan.</p>
-          ${tier === 'single' ? '<p>Your regulatory intelligence report is being generated and will be ready within 24 hours.</p>' : ''}
-          <p>You can access your account at: <a href="${process.env.NEXT_PUBLIC_URL}/dashboard">${process.env.NEXT_PUBLIC_URL}/dashboard</a></p>
-          <hr style="border: 1px solid #E2E8F0; margin: 30px 0;" />
-          <p style="color: #64748B; font-size: 14px;">
-            Need help? Contact us at support@veridiangroup.com<br />
-            Veridian Group - Regulatory Intelligence for Digital Assets
-          </p>
+        <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #0A1A2F 0%, #1E3A5F 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
+            <h1 style="color: #D4AF37; margin: 0; font-size: 28px; font-weight: 500; letter-spacing: -0.5px;">Veridian Group</h1>
+          </div>
+          <div style="background: #FFFFFF; padding: 40px 30px; border: 1px solid #E2E8F0; border-top: none; border-radius: 0 0 12px 12px;">
+            <h2 style="color: #0A1A2F; font-size: 22px; font-weight: 500; margin-top: 0; margin-bottom: 20px;">Payment Confirmation</h2>
+            <p style="color: #1E3A5F; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">Dear ${name},</p>
+            <p style="color: #1E3A5F; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">We have received your payment of <strong style="color: #D4AF37; font-size: 18px;">$${amount.toLocaleString()}</strong> for the ${tier} plan. Thank you for choosing Veridian Group.</p>
+            ${tier === 'single' ? '<p style="color: #1E3A5F; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">Your regulatory intelligence report is being generated and will be available within 24 hours. You will receive a notification when it is ready.</p>' : ''}
+            <div style="background: #F8FAFC; padding: 20px; border-radius: 8px; margin: 30px 0;">
+              <p style="color: #0A1A2F; font-size: 14px; margin: 0; line-height: 1.5;">Access your account at: <a href="${process.env.NEXT_PUBLIC_URL}/dashboard" style="color: #D4AF37; text-decoration: none; font-weight: 500;">${process.env.NEXT_PUBLIC_URL}/dashboard</a></p>
+            </div>
+            <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 30px 0;" />
+            <p style="color: #64748B; font-size: 14px; line-height: 1.5; margin: 0;">For questions or assistance, please contact us at <a href="mailto:support@veridiangroup.com" style="color: #D4AF37; text-decoration: none;">support@veridiangroup.com</a></p>
+          </div>
         </div>
       `
     })
@@ -521,17 +863,22 @@ async function sendPaymentReceiptEmail(
     await resend.emails.send({
       from: 'Veridian Group <billing@veridiangroup.com>',
       to: email,
-      subject: 'Your Receipt - Veridian Group',
+      subject: 'Payment Receipt - Veridian Group',
       html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #0A1A2F;">Payment Receipt</h1>
-          <p>Hello ${name},</p>
-          <p>Your ${tier} subscription payment of <strong>$${amount.toLocaleString()}</strong> has been processed.</p>
-          <p>Your subscription is active until: <strong>${periodEnd.toLocaleDateString()}</strong></p>
-          <hr style="border: 1px solid #E2E8F0; margin: 30px 0;" />
-          <p style="color: #64748B; font-size: 14px;">
-            Need help? Contact us at support@veridiangroup.com
-          </p>
+        <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #0A1A2F 0%, #1E3A5F 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
+            <h1 style="color: #D4AF37; margin: 0; font-size: 28px; font-weight: 500; letter-spacing: -0.5px;">Veridian Group</h1>
+          </div>
+          <div style="background: #FFFFFF; padding: 40px 30px; border: 1px solid #E2E8F0; border-top: none; border-radius: 0 0 12px 12px;">
+            <h2 style="color: #0A1A2F; font-size: 22px; font-weight: 500; margin-top: 0; margin-bottom: 20px;">Payment Receipt</h2>
+            <p style="color: #1E3A5F; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">Dear ${name},</p>
+            <p style="color: #1E3A5F; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">Your ${tier} subscription payment of <strong style="color: #D4AF37;">$${amount.toLocaleString()}</strong> has been processed.</p>
+            <div style="background: #F8FAFC; padding: 20px; border-radius: 8px; margin: 30px 0;">
+              <p style="color: #0A1A2F; font-size: 14px; margin: 0; line-height: 1.5;">Your subscription is active until: <strong>${periodEnd.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong></p>
+            </div>
+            <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 30px 0;" />
+            <p style="color: #64748B; font-size: 14px; line-height: 1.5; margin: 0;">For questions, contact <a href="mailto:support@veridiangroup.com" style="color: #D4AF37; text-decoration: none;">support@veridiangroup.com</a></p>
+          </div>
         </div>
       `
     })
@@ -552,15 +899,18 @@ async function sendSubscriptionChangeEmail(
       to: email,
       subject: 'Subscription Updated - Veridian Group',
       html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #0A1A2F;">Subscription Updated</h1>
-          <p>Hello ${name},</p>
-          <p>Your subscription has been updated from <strong>${oldTier}</strong> to <strong>${newTier}</strong>.</p>
-          <p>You can view your new plan details in your dashboard.</p>
-          <hr style="border: 1px solid #E2E8F0; margin: 30px 0;" />
-          <p style="color: #64748B; font-size: 14px;">
-            Questions? Contact us at support@veridiangroup.com
-          </p>
+        <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #0A1A2F 0%, #1E3A5F 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
+            <h1 style="color: #D4AF37; margin: 0; font-size: 28px; font-weight: 500; letter-spacing: -0.5px;">Veridian Group</h1>
+          </div>
+          <div style="background: #FFFFFF; padding: 40px 30px; border: 1px solid #E2E8F0; border-top: none; border-radius: 0 0 12px 12px;">
+            <h2 style="color: #0A1A2F; font-size: 22px; font-weight: 500; margin-top: 0; margin-bottom: 20px;">Subscription Updated</h2>
+            <p style="color: #1E3A5F; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">Dear ${name},</p>
+            <p style="color: #1E3A5F; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">Your subscription has been updated from <strong>${oldTier}</strong> to <strong>${newTier}</strong>.</p>
+            <p style="color: #1E3A5F; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">You can view your updated plan details in your dashboard.</p>
+            <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 30px 0;" />
+            <p style="color: #64748B; font-size: 14px; line-height: 1.5; margin: 0;">Questions? Contact us at <a href="mailto:support@veridiangroup.com" style="color: #D4AF37; text-decoration: none;">support@veridiangroup.com</a></p>
+          </div>
         </div>
       `
     })
@@ -580,16 +930,18 @@ async function sendCancellationEmail(
       to: email,
       subject: 'Subscription Cancellation - Veridian Group',
       html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #0A1A2F;">Subscription Cancellation</h1>
-          <p>Hello ${name},</p>
-          <p>Your subscription has been canceled and will end on <strong>${effectiveEnd.toLocaleDateString()}</strong>.</p>
-          <p>You'll continue to have access until this date.</p>
-          <p>We're sorry to see you go! If you'd like to reactivate, you can do so anytime.</p>
-          <hr style="border: 1px solid #E2E8F0; margin: 30px 0;" />
-          <p style="color: #64748F; font-size: 14px;">
-            Questions? Contact us at support@veridiangroup.com
-          </p>
+        <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #0A1A2F 0%, #1E3A5F 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
+            <h1 style="color: #D4AF37; margin: 0; font-size: 28px; font-weight: 500; letter-spacing: -0.5px;">Veridian Group</h1>
+          </div>
+          <div style="background: #FFFFFF; padding: 40px 30px; border: 1px solid #E2E8F0; border-top: none; border-radius: 0 0 12px 12px;">
+            <h2 style="color: #0A1A2F; font-size: 22px; font-weight: 500; margin-top: 0; margin-bottom: 20px;">Subscription Cancellation</h2>
+            <p style="color: #1E3A5F; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">Dear ${name},</p>
+            <p style="color: #1E3A5F; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">Your subscription has been canceled and will end on <strong>${effectiveEnd.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong>.</p>
+            <p style="color: #1E3A5F; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">You will continue to have access until this date. If you wish to reactivate your subscription, you can do so at any time through your account dashboard.</p>
+            <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 30px 0;" />
+            <p style="color: #64748B; font-size: 14px; line-height: 1.5; margin: 0;">Questions? Contact us at <a href="mailto:support@veridiangroup.com" style="color: #D4AF37; text-decoration: none;">support@veridiangroup.com</a></p>
+          </div>
         </div>
       `
     })

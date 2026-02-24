@@ -1,9 +1,8 @@
-// src/app/admin/revenue/pricing/page.tsx
-// Pricing Management
+// src/app/admin/revenue/pricing/page.tsx // Admin Price Management
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Save, DollarSign, Percent, Calendar, Users, Building2 } from 'lucide-react'
+import { useState } from 'react'
+import { Save, DollarSign, Users, Building2 } from 'lucide-react'
 
 interface PricingTier {
   id: string
@@ -28,9 +27,10 @@ export default function PricingManagement() {
       founderSpots: 50,
       founderSpotsRemaining: 38,
       period: 'one-time',
-      stripePriceId: 'price_123456',
+      stripePriceId: 'price_single_regular',
       active: true,
       features: [
+        'Complete location-intelligent report',
         'State-specific regulatory analysis',
         'License requirement matrix',
         '90-day compliance action plan',
@@ -39,44 +39,47 @@ export default function PricingManagement() {
     },
     {
       id: 'quarterly',
-      name: 'Quarterly Subscription',
-      price: 3997,
+      name: 'Quarterly Intelligence',
+      price: 5997,
       period: 'yearly',
-      stripePriceId: 'price_123457',
+      stripePriceId: 'price_quarterly',
       active: true,
       features: [
-        '4 reports per year',
-        'Email alerts for state law changes',
+        '4 reports per year (quarterly updates)',
+        'Email alerts when state laws change (real-time)',
         'Priority support',
         'Access to new features'
       ]
     },
     {
       id: 'monthly',
-      name: 'Monthly Subscription',
-      price: 7997,
+      name: 'Enterprise Suite',
+      price: 14997,
       period: 'yearly',
-      stripePriceId: 'price_123458',
+      stripePriceId: 'price_enterprise_suite',
       active: true,
       features: [
         '12 reports per year',
-        'Multi-state analysis capability',
-        'Team access (up to 5 users)',
-        'API access (coming soon)'
+        'Multi-state analysis capability (compare up to 3 states per report)',
+        'Team access (up to 10 users)',
+        'API access (coming soon)',
+        'Quarterly strategy calls (60 min each)',
+        'White-label option for client reports'
       ]
     },
     {
-      id: 'enterprise',
-      name: 'Enterprise',
-      price: 15000,
+      id: 'custom',
+      name: 'Custom Enterprise',
+      price: 25000,
       period: 'yearly',
-      stripePriceId: 'price_123459',
+      stripePriceId: 'price_custom_enterprise',
       active: true,
       features: [
+        'Unlimited reports',
         'Custom industry deep-dives',
-        'White-labeled reports',
-        'Direct compliance consultation',
-        'Early access to new features'
+        'Direct consultation as needed',
+        'Dedicated account manager',
+        'SLA guarantees'
       ]
     }
   ])
@@ -103,45 +106,46 @@ export default function PricingManagement() {
   }
   
   const handleSave = async () => {
-  setIsSaving(true)
-  try {
-    // Save founder circle setting
-    await fetch('/api/admin/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        key: 'founder_circle_enabled',
-        value: String(founderCircleEnabled)
-      })
-    })
-    
-    // Save each pricing tier
-    for (const tier of tiers) {
-      await fetch('/api/admin/pricing', {
+    setIsSaving(true)
+    try {
+      // Save founder circle setting
+      await fetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: tier.id,
-          name: tier.name,
-          price: tier.price,
-          founderPrice: tier.founderPrice,
-          founderSpots: tier.founderSpots,
-          founderSpotsRemaining: tier.founderSpotsRemaining,
-          period: tier.period,
-          stripePriceId: tier.stripePriceId,
-          active: tier.active
+          key: 'founder_circle_enabled',
+          value: String(founderCircleEnabled)
         })
       })
+      
+      // Save each pricing tier
+      for (const tier of tiers) {
+        await fetch('/api/admin/pricing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: tier.id,
+            name: tier.name,
+            price: tier.price,
+            founderPrice: tier.founderPrice,
+            founderSpots: tier.founderSpots,
+            founderSpotsRemaining: tier.founderSpotsRemaining,
+            period: tier.period,
+            stripePriceId: tier.stripePriceId,
+            active: tier.active,
+            features: tier.features
+          })
+        })
+      }
+      
+      alert('Pricing updated successfully!')
+    } catch (error) {
+      console.error('Failed to update pricing:', error)
+      alert('Failed to update pricing. Check console for details.')
+    } finally {
+      setIsSaving(false)
     }
-    
-    alert('Pricing updated successfully!')
-  } catch (error) {
-    console.error('Failed to update pricing:', error)
-    alert('Failed to update pricing. Check console for details.')
-  } finally {
-    setIsSaving(false)
   }
-}
   
   return (
     <div className="space-y-6">
@@ -215,7 +219,7 @@ export default function PricingManagement() {
               </div>
             </div>
             
-            {founderCircleEnabled && tier.founderPrice && (
+            {tier.id === 'single' && founderCircleEnabled && (
               <>
                 <div>
                   <label className="block text-sm text-navy-500 mb-1">Founder's Price</label>
@@ -244,7 +248,19 @@ export default function PricingManagement() {
             )}
           </div>
           
-          <div className="text-xs text-navy-400">
+          <div className="mt-4">
+            <h4 className="text-sm font-medium text-navy-700 mb-2">Features</h4>
+            <ul className="space-y-1">
+              {tier.features.map((feature, index) => (
+                <li key={index} className="text-xs text-navy-600 flex items-start gap-2">
+                  <span className="text-gold-600">•</span>
+                  {feature}
+                </li>
+              ))}
+            </ul>
+          </div>
+          
+          <div className="text-xs text-navy-400 mt-4">
             Stripe Price ID: <code className="bg-slate-100 px-2 py-1 rounded">{tier.stripePriceId}</code>
           </div>
         </div>
