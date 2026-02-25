@@ -1,4 +1,4 @@
-// src/app/report/[id]/page.tsx
+// src/app/report/[id]/page.tsx // Individual report page
 import { createClient, getServerUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getReport } from '@/lib/reports/storage'

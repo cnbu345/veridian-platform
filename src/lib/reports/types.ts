@@ -1,4 +1,4 @@
-// src/lib/reports/types.ts
+// src/lib/reports/types.ts // Report type definitions
 // Company information
 export interface CompanyData {
   name: string

@@ -1,4 +1,4 @@
-// src/lib/reports/storage.ts
+// src/lib/reports/storage.ts // Report database operations
 import { createClient } from '@/lib/supabase/server'
 import { GeneratedReport, ReportRequest } from './types'
 

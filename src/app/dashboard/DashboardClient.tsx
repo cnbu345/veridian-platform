@@ -1,4 +1,4 @@
-// src/app/dashboard/DashboardClient.tsx
+// src/app/dashboard/DashboardClient.tsx // Dashboard client component
 'use client'
 
 import { cn } from '@/lib/utils/utils'

@@ -1,4 +1,4 @@
-// src/lib/ai/service.ts
+// src/lib/ai/service.ts // AI provider selection (local-llama, etc.)
 import { ReportGenerationParams } from '../openai/openai';
 import { getActiveProvider, AIProviderConfig } from './config';
 

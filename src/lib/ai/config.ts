@@ -1,4 +1,4 @@
-// src/lib/ai/config.ts
+// src/lib/ai/config.ts // AI configuration
 export type AIProvider = 'ollama-cloud' | 'deepseek' | 'local-llama';
 
 export interface AIProviderConfig {

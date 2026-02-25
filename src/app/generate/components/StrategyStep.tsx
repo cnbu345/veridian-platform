@@ -1,4 +1,4 @@
-// src/app/generate/components/StrategyStep.tsx
+// src/app/generate/components/StrategyStep.tsx // Compliance strategy form
 'use client'
 
 import { useState } from 'react'

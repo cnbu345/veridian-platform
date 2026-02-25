@@ -1,5 +1,5 @@
-// src/lib/openai/openai.ts
-// Use local LLAMA and Cloud LLAMA for free testing, fallback to DeepSeek API
+// src/lib/openai/openai.ts // Main AI generation function
+
 import { generateWithAI } from '../ai/service';
 import { generateMockRegulatoryReport } from './mockData';
 import { getRegulatoryReportPrompt } from './prompts';

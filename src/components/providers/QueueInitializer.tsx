@@ -1,4 +1,4 @@
-// src/components/providers/QueueInitializer.tsx
+// src/components/providers/QueueInitializer.tsx // Starts queue on client
 'use client'
 
 import { useEffect } from 'react'

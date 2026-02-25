@@ -1,5 +1,4 @@
-// src/lib/queue/reportQueue.ts
-// Background job queue for report generation to prevent timeouts
+// src/lib/queue/reportQueue.ts // Manages report generation queue
 
 import { createClient } from '@/lib/supabase/server'
 import { generateRegulatoryReport } from '@/lib/openai/openai'

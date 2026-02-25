@@ -1,4 +1,4 @@
-// src/lib/pdf/generator.tsx
+// src/lib/pdf/generator.tsx // Main PDF generation
 import React from 'react'
 import { pdf, Document, Page, View, Text, StyleSheet, Font } from '@react-pdf/renderer'
 import { saveAs } from 'file-saver'

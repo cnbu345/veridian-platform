@@ -1,4 +1,4 @@
-// src/app/generate/components/ReviewStep.tsx
+// src/app/generate/components/ReviewStep.tsx // Review and payment initiation
 'use client'
 
 import { useState } from 'react'
@@ -119,25 +119,55 @@ export default function ReviewStep({
   }
 
   // Handle report generation
-  const handleGenerateReport = async () => {
+const handleGenerateReport = async () => {
   setIsProcessing(true)
   setError(null)
   setStep('payment')
 
   try {
-    // Step 1: Create checkout session
-    console.log('Creating checkout session with data:', {
-      type: 'single',
-      metadata: {
-        companyName: companyData.name,
-        userId: user.id,
-        city: locationData.city,
-        state: locationData.state,
-        industry: companyData.industry,
-        concerns: strategyData.concerns,
-        goals: strategyData.goals
-      }
-    })
+    // CRITICAL: Truncate long fields to stay under Stripe's 500 char limit
+    const concerns = strategyData.concerns || ''
+    const goals = strategyData.goals || ''
+    
+    // Truncate to 200 characters each to be safe
+    const truncatedConcerns = concerns.length > 200 
+      ? concerns.substring(0, 197) + '...' 
+      : concerns
+      
+    const truncatedGoals = goals.length > 200 
+      ? goals.substring(0, 197) + '...' 
+      : goals
+
+    // Structure the metadata with ALL fields at the top level
+    // DO NOT include a 'reportData' field
+    const reportMetadata = {
+      // User info
+      userId: user.id,
+      productType: 'single',
+      
+      // Company info
+      companyName: companyData.name,
+      industry: companyData.industry,
+      companySize: companyData.size,
+      budget: companyData.budget,
+      
+      // Location info
+      city: locationData.city,
+      state: locationData.state,
+      locationTier: 'unknown',
+      
+      // Strategy info
+      primaryFocus: strategyData.primary,
+      secondaryFocus: strategyData.secondary.join(','), // Convert array to comma string
+      timeline: strategyData.timeline,
+      concerns: truncatedConcerns,
+      goals: truncatedGoals,
+      
+      // Metadata
+      timestamp: new Date().toISOString()
+    }
+
+    console.log('📤 Sending to checkout API (ALL FIELDS TOP-LEVEL):', reportMetadata)
 
     const checkoutResponse = await fetch('/api/checkout', {
       method: 'POST',
@@ -146,26 +176,18 @@ export default function ReviewStep({
       },
       body: JSON.stringify({
         type: 'single',
-        metadata: {
-          companyName: companyData.name,
-          userId: user.id,
-          city: locationData.city,
-          state: locationData.state,
-          industry: companyData.industry,
-          concerns: strategyData.concerns,
-          goals: strategyData.goals
-        }
+        metadata: reportMetadata // This passes ALL fields directly
       }),
     })
 
     const checkoutData = await checkoutResponse.json()
 
     if (!checkoutResponse.ok) {
-      console.error('Checkout response error:', checkoutData)
+      console.error('❌ Checkout response error:', checkoutData)
       throw new Error(checkoutData.error || 'Failed to create checkout session')
     }
 
-    // Step 2: Redirect to Stripe checkout
+    // Redirect to Stripe checkout
     if (checkoutData.url) {
       window.location.href = checkoutData.url
     } else {
@@ -173,7 +195,7 @@ export default function ReviewStep({
     }
 
   } catch (err: any) {
-    console.error('Generation error:', err)
+    console.error('❌ Generation error:', err)
     setError(err.message || 'Failed to generate report. Please try again.')
     setIsProcessing(false)
     setStep('review')

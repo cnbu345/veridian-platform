@@ -1,4 +1,4 @@
-// src/app/report/[id]/ReportViewClient.tsx
+// src/app/report/[id]/ReportViewClient.tsx // Report viewer
 'use client'
 
 import { useState, useEffect } from 'react'

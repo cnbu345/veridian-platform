@@ -1,4 +1,4 @@
-// src/app/api/queue/debug/route.ts
+// src/app/api/queue/debug/route.ts // Queue debug endpoint
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 

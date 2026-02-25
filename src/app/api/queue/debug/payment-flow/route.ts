@@ -1,4 +1,4 @@
-// src/app/api/debug/payment-flow/route.ts
+// src/app/api/debug/payment-flow/route.ts // Payment flow debug
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 

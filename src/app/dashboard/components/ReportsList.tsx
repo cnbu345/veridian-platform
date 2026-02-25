@@ -1,3 +1,4 @@
+// src/app/dashboard/components/ReportsList.tsx // Lists user reports
 'use client'
 
 import { useState } from 'react'

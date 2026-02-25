@@ -1,4 +1,4 @@
-// src/lib/location/analyzer.ts
+// src/lib/location/analyzer.ts // Location analysis
 import { MAJOR_CITIES, REGULATORY_HUBS, MSAS } from './cities'
 import { getStateRegulation } from './regulations'
 

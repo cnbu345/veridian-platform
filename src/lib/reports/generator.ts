@@ -1,4 +1,4 @@
-// src/lib/reports/generator.ts
+// src/lib/reports/generator.ts // Generate Report
 import { CompanyFormData } from './validation'
 import { LocationAnalysis } from '../location/analyzer'
 import { StrategyFormData } from './validation'

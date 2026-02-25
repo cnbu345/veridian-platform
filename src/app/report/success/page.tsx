@@ -1,4 +1,4 @@
-// src/app/report/success/page.tsx
+// src/app/report/success/page.tsx // Post-payment success page
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'

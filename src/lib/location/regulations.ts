@@ -1,4 +1,4 @@
-// State regulatory data for Web3/crypto businesses
+// State regulatory data for Web3/crypto businesses // State regulation data
 export const STATE_REGULATIONS = {
   'AL': {
     name: 'Alabama',

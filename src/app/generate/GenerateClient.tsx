@@ -1,4 +1,4 @@
-// src/app/generate/GenerateClient.tsx
+// src/app/generate/GenerateClient.tsx // Main client component with form steps
 'use client'
 
 import { useState } from 'react'

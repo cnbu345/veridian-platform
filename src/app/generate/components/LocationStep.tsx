@@ -1,5 +1,5 @@
 
-// src/app/generate/components/LocationStep.tsx
+// src/app/generate/components/LocationStep.tsx // Location Form
 'use client'
 
 import { useState, useEffect } from 'react'

@@ -1,4 +1,4 @@
-// src/app/api/queue/process/route.ts
+// src/app/api/queue/process/route.ts // Manual queue process
 import { NextResponse } from 'next/server'
 import { reportQueue } from '@/lib/queue/reportQueue'
 

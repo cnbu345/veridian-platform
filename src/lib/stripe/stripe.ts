@@ -1,4 +1,4 @@
-// src/lib/stripe/stripe.ts
+// src/lib/stripe/stripe.ts // Core Stripe functions
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
 import { reportQueue } from '@/lib/queue/reportQueue'
@@ -27,15 +27,28 @@ const PRICE_IDS = {
   custom: process.env.STRIPE_CUSTOM_ENTERPRISE_ID,
 }
 
-// Create checkout session
+// Create checkout session - UPDATED to ensure metadata is passed correctly
 export async function createCheckoutSession(
   userId: string,
   userEmail: string,
   tier: 'single' | 'quarterly' | 'monthly' | 'enterprise' | 'custom' = 'single',
-  reportData?: any
+  reportData?: any // This contains all the form data from ReviewStep
 ) {
   try {
     const stripe = getStripe()
+    
+    console.log('\n💰 CREATING STRIPE CHECKOUT SESSION')
+    console.log('='.repeat(50))
+    console.log('User ID:', userId)
+    console.log('User Email:', userEmail)
+    console.log('Tier:', tier)
+    console.log('Report Data received:', reportData ? 'YES' : 'NO')
+    
+    if (reportData) {
+      console.log('Report Data keys:', Object.keys(reportData))
+      console.log('Company Name:', reportData.companyName)
+      console.log('City/State:', reportData.city, reportData.state)
+    }
     
     // Check if founder pricing should apply
     const supabase = await createClient()
@@ -120,6 +133,48 @@ export async function createCheckoutSession(
         break
     }
 
+    // CRITICAL: Prepare metadata for Stripe
+    // This must include ALL the data needed by the webhook to create a report
+    const metadata: any = {
+      userId: userId,
+      productType: tier,
+      companyName: reportData?.companyName || user?.company_name || '',
+      isFounderPrice: String(useFounderPrice),
+      tierId: tier,
+      priceAmount: String(priceAmount),
+      regularPrice: String(pricingTier.price),
+      savingsAmount: String(savingsAmount),
+      timestamp: new Date().toISOString()
+    }
+
+    // Add all report data to metadata if it exists
+    if (reportData) {
+      // Check if secondaryFocus is already a string (from our truncation) or array
+      const secondaryFocus = Array.isArray(reportData.secondaryFocus) 
+        ? reportData.secondaryFocus.join(',') 
+        : reportData.secondaryFocus || ''
+      
+      // Build metadata with truncated values
+      metadata.city = reportData.city || ''
+      metadata.state = reportData.state || ''
+      metadata.industry = reportData.industry || ''
+      metadata.companySize = reportData.companySize || ''
+      metadata.budget = reportData.budget || ''
+      metadata.primaryFocus = reportData.primaryFocus || ''
+      metadata.secondaryFocus = secondaryFocus
+      metadata.timeline = reportData.timeline || ''
+      metadata.concerns = reportData.concerns || ''
+      metadata.goals = reportData.goals || ''
+      metadata.locationTier = reportData.locationTier || 'unknown'
+      
+      console.log('📦 Added individual fields to metadata (reportData NOT included)')
+      console.log('📦 Metadata fields added:', Object.keys(metadata).join(', '))
+    }
+
+    console.log('\n📋 FINAL METADATA BEING SENT TO STRIPE:')
+    console.log(JSON.stringify(metadata, null, 2))
+    console.log('='.repeat(50) + '\n')
+
     // Create checkout session with price_data (dynamic pricing)
     const session = await stripe.checkout.sessions.create({
       customer_email: userEmail,
@@ -146,24 +201,17 @@ export async function createCheckoutSession(
       mode: tier === 'single' ? 'payment' : 'subscription',
       success_url: `${process.env.NEXT_PUBLIC_URL}/report/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_URL}/generate?canceled=true`,
-      metadata: {
-        userId,
-        productType: tier,
-        companyName: user?.company_name || '',
-        isFounderPrice: String(useFounderPrice),
-        tierId: tier,
-        priceAmount: String(priceAmount),
-        regularPrice: String(pricingTier.price),
-        savingsAmount: String(savingsAmount),
-        reportData: reportData ? JSON.stringify(reportData) : '',
-        timestamp: new Date().toISOString()
-      },
+      metadata: metadata, // THIS IS CRITICAL - attaching all metadata here
       allow_promotion_codes: true,
       billing_address_collection: 'required',
       tax_id_collection: {
         enabled: true,
       },
     })
+
+    console.log('✅ STRIPE SESSION CREATED SUCCESSFULLY')
+    console.log('Session ID:', session.id)
+    console.log('Metadata in session:', JSON.stringify(session.metadata, null, 2))
 
     // Log session creation
     await supabase.from('audit_log').insert({
@@ -180,7 +228,7 @@ export async function createCheckoutSession(
 
     return session
   } catch (error) {
-    console.error('Stripe session creation error:', error)
+    console.error('❌ Stripe session creation error:', error)
     throw error
   }
 }
@@ -196,7 +244,7 @@ function getTierPrice(tier: string): number {
   return prices[tier as keyof typeof prices] || 0
 }
 
-// Handle successful checkout (webhook)
+// Handle successful checkout (webhook) - KEEP YOUR EXISTING IMPLEMENTATION
 export async function handleCheckoutCompleted(session: any) {
   console.log('\n' + '='.repeat(80))
   console.log('HANDLE CHECKOUT COMPLETED STARTED')

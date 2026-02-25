@@ -1,4 +1,4 @@
-// src/lib/queue/init.ts
+// src/lib/queue/init.ts // Initializes queue processor
 import { reportQueue, initializeQueueProcessor } from './reportQueue'
 
 // This file ensures the queue processor is initialized when the app starts

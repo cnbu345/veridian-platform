@@ -1,4 +1,4 @@
-// src/app/api/queue/start/route.ts
+// src/app/api/queue/start/route.ts // Manual queue start
 import { NextResponse } from 'next/server'
 import { startQueueProcessor } from '@/lib/queue/init'
 

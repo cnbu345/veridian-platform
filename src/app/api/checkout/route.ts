@@ -1,4 +1,4 @@
-// src/app/api/checkout/route.ts
+// src/app/api/checkout/route.ts // // Creates Stripe checkout session
 import { NextRequest, NextResponse } from 'next/server'
 import { createCheckoutSession } from '@/lib/stripe/stripe'
 import { createClient } from '@/lib/supabase/server'
@@ -20,7 +20,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { type, metadata } = body
 
-    console.log('Checkout request:', { type, metadata, userId: user.id })
+    console.log('📝 Checkout request received:', { 
+      type, 
+      userId: user.id,
+      hasMetadata: !!metadata,
+      metadataKeys: metadata ? Object.keys(metadata) : []
+    })
 
     if (!type) {
       return NextResponse.json(
@@ -29,50 +34,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Map the type to tier (they're the same in your case)
-    const tier = type as 'single' | 'quarterly' | 'monthly' | 'enterprise'
-    
-    // Validate tier
-    const validTiers = ['single', 'quarterly', 'monthly', 'enterprise']
-    if (!validTiers.includes(tier)) {
-      return NextResponse.json(
-        { error: 'Invalid product type' },
-        { status: 400 }
-      )
+    // CRITICAL: Ensure metadata is properly formatted
+    const enhancedMetadata = {
+      userId: user.id,
+      productType: type,
+      ...metadata, // This should contain companyName, reportData, etc.
+      timestamp: new Date().toISOString()
     }
 
-    // Use your existing createCheckoutSession function
+    console.log('📦 Enhanced metadata being sent to Stripe:', JSON.stringify(enhancedMetadata, null, 2))
+
+    // Create checkout session with metadata
     const session = await createCheckoutSession(
       user.id,
       user.email!,
-      tier,
-      metadata // This will be passed as reportData
+      type as 'single' | 'quarterly' | 'monthly' | 'enterprise',
+      enhancedMetadata // Pass the enhanced metadata
     )
 
     return NextResponse.json({ 
       url: session.url,
-      sessionId: session.id,
-      tier: type
+      sessionId: session.id
     })
 
   } catch (error: any) {
-    console.error('Checkout error:', error)
-    
+    console.error('❌ Checkout error:', error)
     return NextResponse.json(
-      { 
-        error: error.message || 'Failed to create checkout session'
-      },
+      { error: error.message || 'Failed to create checkout session' },
       { status: 500 }
     )
   }
-}
-
-export async function GET() {
-  return NextResponse.json({ 
-    status: 'ok', 
-    message: 'Checkout API is working',
-    endpoints: {
-      post: '/api/checkout - Create checkout session (type: single, quarterly, monthly, enterprise)'
-    }
-  })
 }
