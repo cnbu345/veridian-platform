@@ -4,7 +4,14 @@ import { redirect } from 'next/navigation'
 import { getReport } from '@/lib/reports/storage'
 import ReportViewClient from './ReportViewClient'
 
-export default async function ReportPage({ params }: { params: { id: string } }) {
+export default async function ReportPage({ 
+  params 
+}: { 
+  params: Promise<{ id: string }> 
+}) {
+  // Await the params
+  const { id } = await params
+  
   const user = await getServerUser()
   
   if (!user) {
@@ -12,7 +19,7 @@ export default async function ReportPage({ params }: { params: { id: string } })
   }
 
   try {
-    const report = await getReport(params.id, user.id)
+    const report = await getReport(id, user.id)
     
     if (!report) {
       redirect('/dashboard')

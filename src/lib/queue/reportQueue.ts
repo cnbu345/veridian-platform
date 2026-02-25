@@ -60,7 +60,7 @@ class ReportQueue {
     
     console.log('🔄 Starting queue processor with interval:', intervalMs, 'ms')
     this.processorInterval = setInterval(() => {
-      console.log('⏰ Queue processor tick - checking for jobs...')
+      //console.log('⏰ Queue processor tick - checking for jobs...')
       this.processQueue().catch(error => {
         console.error('❌ Error in queue processor:', error)
       })
@@ -125,30 +125,30 @@ class ReportQueue {
 
   // Process the queue
   async processQueue(): Promise<void> {
-    console.log('🔍 processQueue called - Current state:', {
-      processing: this.processing,
-      activeJobs: this.activeJobs,
-      maxConcurrent: this.maxConcurrent
-    })
+   // console.log('🔍 processQueue called - Current state:', {
+    //  processing: this.processing,
+    //  activeJobs: this.activeJobs,
+    //  maxConcurrent: this.maxConcurrent
+    //})
 
     if (this.processing) {
-      console.log('⏳ Queue processor already running, skipping...')
+     // console.log('⏳ Queue processor already running, skipping...')
       return
     }
 
     if (this.activeJobs >= this.maxConcurrent) {
-      console.log(`⏳ Already at max concurrent jobs (${this.activeJobs}/${this.maxConcurrent})`)
+      //console.log(`⏳ Already at max concurrent jobs (${this.activeJobs}/${this.maxConcurrent})`)
       return
     }
 
     this.processing = true
-    console.log('🔍 Checking for queued jobs...')
+    //console.log('🔍 Checking for queued jobs...')
 
     try {
       const supabase = await createClient()
 
       // Get next jobs from queue
-      console.log('📡 Querying database for queued jobs...')
+     // console.log('📡 Querying database for queued jobs...')
       const { data: jobs, error } = await supabase
         .from('report_generation_queue')
         .select('*')
@@ -162,18 +162,18 @@ class ReportQueue {
         throw error
       }
 
-      console.log('📊 Queue query result:', { 
-        jobsFound: jobs?.length || 0,
-        jobsData: jobs?.map(j => ({ 
-          id: j.id, 
-          reportId: j.report_id, 
-          status: j.status,
-          createdAt: j.created_at 
-        }))
-      })
+      //console.log('📊 Queue query result:', { 
+       //jobsFound: jobs?.length || 0,
+       // jobsData: jobs?.map(j => ({ 
+        //  id: j.id, 
+         // reportId: j.report_id, 
+         // status: j.status,
+         // createdAt: j.created_at 
+        //}))
+      //})
 
       if (!jobs || jobs.length === 0) {
-        console.log('📭 No queued jobs found')
+        //console.log('📭 No queued jobs found')
         return
       }
 
@@ -196,11 +196,11 @@ class ReportQueue {
       console.error('❌ Queue processing error:', error)
     } finally {
       this.processing = false
-      console.log('🔓 Queue processor unlocked')
+      //console.log('🔓 Queue processor unlocked')
       
       // If there are more jobs and capacity, continue processing
       if (this.activeJobs < this.maxConcurrent) {
-        console.log('⏱️ Scheduling next queue check in 1 second...')
+        //console.log('⏱️ Scheduling next queue check in 1 second...')
         setTimeout(() => this.processQueue(), 1000)
       }
     }

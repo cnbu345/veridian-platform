@@ -1,36 +1,42 @@
-// src/app/api/stripe-webhook/route.ts - COMPLETE REPLACEMENT FILE
-console.log('\n🚨🚨🚨 WEBHOOK FILE IS BEING EXECUTED 🚨🚨🚨')
+// src/app/api/stripe-webhook/route.ts - COMPLETE FIXED VERSION
+console.log('\n' + '='.repeat(80))
+console.log('🚨🚨🚨 WEBHOOK FILE LOADED/RELOADED 🚨🚨🚨')
 console.log('Time:', new Date().toISOString())
 console.log('File path:', __filename)
-console.log('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨\n')
+console.log('='.repeat(80) + '\n')
 
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
 import { reportQueue } from '@/lib/queue/reportQueue'
+import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
+
+console.log('✅ Imports completed')
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
 })
+console.log('✅ Stripe initialized')
 
 export async function POST(req: Request) {
-  // ULTRA DEBUG - Write EVERYTHING to console
-  console.log('\n' + '🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴')
-  console.log('🔴 WEBHOOK RECEIVED AT:', new Date().toISOString())
-  console.log('🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴\n')
+  console.log('\n' + '🔴'.repeat(50))
+  console.log('🔴 WEBHOOK POST FUNCTION CALLED at:', new Date().toISOString())
+  console.log('🔴'.repeat(50) + '\n')
   
   try {
     // Get the raw body
+    console.log('📦 Getting raw body...')
     const body = await req.text()
     console.log('📦 Raw body length:', body.length)
-    console.log('📦 First 200 chars of body:', body.substring(0, 200))
+    console.log('📦 First 100 chars:', body.substring(0, 100))
     
     // Get headers
+    console.log('📋 Getting headers...')
     const headersList = await headers()
     const signature = headersList.get('stripe-signature')
-    console.log('🔑 Signature present:', !!signature)
+    console.log('📋 Signature present:', !!signature)
     
     if (!signature) {
       console.log('❌ No signature - returning 400')
@@ -41,6 +47,7 @@ export async function POST(req: Request) {
     }
 
     // Construct event
+    console.log('🔐 Constructing event with webhook secret...')
     let event: Stripe.Event
     try {
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
@@ -54,6 +61,7 @@ export async function POST(req: Request) {
       console.log('✅ Event constructed successfully')
       console.log('📋 Event type:', event.type)
       console.log('📋 Event ID:', event.id)
+      console.log('📋 Event API version:', event.api_version)
     } catch (err) {
       console.error('❌ Webhook construction failed:', err)
       return NextResponse.json(
@@ -62,60 +70,53 @@ export async function POST(req: Request) {
       )
     }
 
-    // Handle checkout.session.completed ONLY
+    // Handle checkout.session.completed
     if (event.type === 'checkout.session.completed') {
-      console.log('\n' + '🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢')
-      console.log('🟢 CHECKOUT COMPLETED - PROCESSING')
-      console.log('🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢\n')
+      console.log('\n' + '🟢'.repeat(50))
+      console.log('🟢 PROCESSING CHECKOUT.COMPLETED')
+      console.log('🟢'.repeat(50) + '\n')
       
       const session = event.data.object as any
       
-      // Log EVERYTHING about the session
-      console.log('💰 SESSION DATA:')
-      console.log('- ID:', session.id)
-      console.log('- Customer:', session.customer)
-      console.log('- Customer Email:', session.customer_email)
-      console.log('- Payment Intent:', session.payment_intent)
-      console.log('- Amount Total:', session.amount_total)
-      console.log('- Mode:', session.mode)
+      console.log('💰 Session ID:', session.id)
+      console.log('💰 Customer:', session.customer)
+      console.log('💰 Customer Email:', session.customer_email)
+      console.log('💰 Amount Total:', session.amount_total)
       
       console.log('\n📋 METADATA:')
       console.log(JSON.stringify(session.metadata, null, 2))
       
-      // Extract metadata - now we have individual fields, not one big reportData string
+      // Extract metadata
       const metadata = session.metadata || {}
       
-      console.log('\n🔍 EXTRACTED METADATA FIELDS:')
+      console.log('\n🔍 EXTRACTED VALUES:')
       console.log('- userId:', metadata.userId)
       console.log('- productType:', metadata.productType)
       console.log('- companyName:', metadata.companyName)
       console.log('- city:', metadata.city)
       console.log('- state:', metadata.state)
-      console.log('- industry:', metadata.industry)
-      console.log('- primaryFocus:', metadata.primaryFocus)
-      console.log('- has secondaryFocus:', !!metadata.secondaryFocus)
-      console.log('- timeline:', metadata.timeline)
-      console.log('- concerns (truncated):', metadata.concerns?.substring(0, 50) + '...')
-      console.log('- goals (truncated):', metadata.goals?.substring(0, 50) + '...')
       
       if (!metadata.userId) {
-        console.log('❌ CRITICAL: No userId in metadata!')
-        return NextResponse.json({ received: true }) // Still return 200 to Stripe
+        console.log('❌ No userId in metadata!')
+        return NextResponse.json({ received: true })
       }
       
-      // Now process with extreme debugging - pass the entire metadata object
-      await debugHandleCheckout(session, metadata)
+      // Process the checkout
+      console.log('\n🚀 Calling debugHandleCheckout...')
+      const result = await debugHandleCheckout(session, metadata)
+      console.log('🚀 debugHandleCheckout completed:', result)
+      
     } else {
       console.log('ℹ️ Ignoring event type:', event.type)
     }
 
-    console.log('\n✅ Webhook processed successfully - returning 200\n')
+    console.log('\n✅ Webhook returning 200\n')
     return NextResponse.json({ received: true })
     
   } catch (error) {
     console.error('\n❌❌❌ WEBHOOK ERROR ❌❌❌')
     console.error(error)
-    console.error('❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌\n')
+    console.error('❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌\n')
     return NextResponse.json(
       { error: 'Webhook failed' },
       { status: 500 }
@@ -123,7 +124,6 @@ export async function POST(req: Request) {
   }
 }
 
-// DEBUG VERSION - UPDATED to handle individual metadata fields
 async function debugHandleCheckout(session: any, metadata: any) {
   console.log('\n' + '='.repeat(60))
   console.log('🔍 DEBUG HANDLE CHECKOUT STARTED')
@@ -152,32 +152,35 @@ async function debugHandleCheckout(session: any, metadata: any) {
     companyName,
     city,
     state,
-    industry,
-    companySize,
-    budget,
-    primaryFocus,
-    secondaryFocus: secondaryFocus ? secondaryFocus.substring(0, 50) : 'none',
-    timeline,
-    concernsLength: concerns?.length || 0,
-    goalsLength: goals?.length || 0,
-    locationTier
+    industry
   })
   
   // Create Supabase client
-  console.log('\n📡 STEP 1: Creating Supabase client...')
-  const supabase = await createClient()
-  console.log('✅ Supabase client created')
+  console.log('\n📡 STEP 1: Creating Supabase admin client...')
+  console.log('URL exists:', !!process.env.NEXT_PUBLIC_SUPABASE_URL)
+  console.log('Service key exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY)
   
-  // STEP 1: Test database connection
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.log('❌ Missing Supabase credentials')
+    return { success: false, error: 'Missing credentials' }
+  }
+  
+  const supabase = createSupabaseAdmin(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+  console.log('✅ Supabase admin client created')
+  
+  // Test database connection
   console.log('\n📡 STEP 2: Testing database connection...')
   try {
-    const { data: testData, error: testError } = await supabase
-      .from('users')
+    const { data, error } = await supabase
+      .from('reports')
       .select('count')
       .limit(1)
     
-    if (testError) {
-      console.log('❌ Database connection FAILED:', testError)
+    if (error) {
+      console.log('❌ Database connection FAILED:', error.message)
     } else {
       console.log('✅ Database connection successful')
     }
@@ -185,7 +188,7 @@ async function debugHandleCheckout(session: any, metadata: any) {
     console.log('❌ Database connection EXCEPTION:', dbError)
   }
   
-  // STEP 2: Get or create user profile
+  // STEP 3: Get or create user profile
   console.log('\n👤 STEP 3: Checking user profile...')
   let user = null
   try {
@@ -224,7 +227,6 @@ async function debugHandleCheckout(session: any, metadata: any) {
       
       if (createError) {
         console.log('❌ Failed to create user:', createError)
-        console.log('❌ Error details:', JSON.stringify(createError, null, 2))
       } else {
         console.log('✅ User created successfully')
       }
@@ -253,7 +255,7 @@ async function debugHandleCheckout(session: any, metadata: any) {
     }
   }
   
-  // STEP 3: Record payment
+  // STEP 4: Record payment
   console.log('\n💰 STEP 4: Recording payment...')
   let paymentId = null
   try {
@@ -279,9 +281,6 @@ async function debugHandleCheckout(session: any, metadata: any) {
     
     if (paymentError) {
       console.log('❌ Failed to record payment:', paymentError)
-      console.log('❌ Error code:', paymentError.code)
-      console.log('❌ Error message:', paymentError.message)
-      console.log('❌ Error details:', paymentError.details)
     } else {
       paymentId = payment?.id
       console.log('✅ Payment recorded with ID:', paymentId)
@@ -290,13 +289,21 @@ async function debugHandleCheckout(session: any, metadata: any) {
     console.log('❌ Exception recording payment:', paymentException)
   }
   
-  // STEP 4: Create report (USING INDIVIDUAL FIELDS, NOT PARSED JSON)
+  // STEP 5: Create report
   console.log('\n📄 STEP 5: Creating report record...')
   let reportId = null
   
   if (productType === 'single') {
     try {
-      // Process secondaryFocus - convert from comma-separated string back to array if needed
+      // Determine valid location_tier
+      const validTiers = ['major', 'suburban', 'rural']
+      let tierValue = 'rural' // Default to 'rural'
+      
+      if (locationTier && validTiers.includes(locationTier)) {
+        tierValue = locationTier
+      }
+      
+      // Process secondaryFocus - convert from comma-separated string to array
       let secondaryFocusArray = []
       if (secondaryFocus) {
         if (typeof secondaryFocus === 'string') {
@@ -306,108 +313,94 @@ async function debugHandleCheckout(session: any, metadata: any) {
         }
       }
       
-      // Prepare report data using individual fields from metadata
+      // Prepare report insert with validated values
       const reportInsert = {
         user_id: userId,
         company_name: companyName || 'Unknown Company',
         industry: industry || '',
         city: city || '',
         state: state || '',
-        location_tier: locationTier || 'unknown',
+        location_tier: tierValue,
+        report_content: {
+          companyName: companyName,
+          industry: industry,
+          city: city,
+          state: state,
+          concerns: concerns,
+          goals: goals,
+          primaryFocus: primaryFocus,
+          secondaryFocus: secondaryFocusArray,
+          timeline: timeline,
+          companySize: companySize,
+          budget: budget,
+          locationTier: tierValue,
+          status: 'pending',
+          created_at: new Date().toISOString()
+        },
         status: 'pending',
         stripe_payment_id: session.payment_intent || session.id,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
       
-      console.log('Report insert data:', JSON.stringify(reportInsert, null, 2))
+      console.log('📦 Report insert data:', JSON.stringify(reportInsert, null, 2))
       
-      // TRY CATCH specifically for the insert
-      try {
-        const { data: report, error: reportError } = await supabase
-          .from('reports')
-          .insert(reportInsert)
-          .select()
-          .single()
+      const { data: report, error: reportError } = await supabase
+        .from('reports')
+        .insert(reportInsert)
+        .select()
+        .single()
+      
+      if (reportError) {
+        console.log('❌❌❌ REPORT INSERT FAILED ❌❌❌')
+        console.log('Error code:', reportError.code)
+        console.log('Error message:', reportError.message)
+        console.log('Error details:', reportError.details)
+        console.log('Error hint:', reportError.hint)
+      } else {
+        reportId = report?.id
+        console.log('✅✅✅ REPORT CREATED SUCCESSFULLY with ID:', reportId)
         
-        if (reportError) {
-          console.log('❌❌❌ REPORT INSERT FAILED ❌❌❌')
-          console.log('Error code:', reportError.code)
-          console.log('Error message:', reportError.message)
-          console.log('Error details:', reportError.details)
-          console.log('Error hint:', reportError.hint)
-          
-          // Log the actual SQL error
-          if (reportError.details) {
-            console.log('SQL Details:', reportError.details)
-          }
-        } else {
-          reportId = report?.id
-          console.log('✅✅✅ REPORT CREATED SUCCESSFULLY with ID:', reportId)
-          console.log('Report data:', JSON.stringify(report, null, 2))
+        // STEP 6: Add to queue
+        console.log('\n⏱️ STEP 6: Adding to queue...')
+        
+        const queueParams = {
+          companyName: companyName || 'Unknown Company',
+          industry: industry || '',
+          companySize: companySize || '',
+          budget: budget || '',
+          city: city || '',
+          state: state || '',
+          locationTier: tierValue,
+          nearestRegulatoryHub: '',
+          primaryFocus: primaryFocus || 'compliance',
+          secondaryFocus: secondaryFocusArray,
+          timeline: timeline || '6-months',
+          concerns: concerns || '',
+          goals: goals || ''
         }
-      } catch (insertError: any) {
-        console.log('❌❌❌ EXCEPTION DURING INSERT ❌❌❌')
-        console.log('Exception:', insertError)
-        console.log('Message:', insertError?.message)
-        console.log('Stack:', insertError?.stack)
+        
+        console.log('Queue params:', JSON.stringify(queueParams, null, 2))
+        
+        await reportQueue.addToQueue(
+          report.id,
+          userId,
+          queueParams,
+          1
+        )
+        console.log('✅ Queue add completed')
       }
       
-    } catch (outerError) {
-      console.log('❌ Outer error in report creation:', outerError)
+    } catch (insertError) {
+      console.log('❌❌❌ EXCEPTION DURING INSERT ❌❌❌')
+      console.log('Exception:', insertError)
+      if (insertError instanceof Error) {
+        console.log('Message:', insertError.message)
+        console.log('Stack:', insertError.stack)
+      }
     }
   } else {
     console.log('⚠️ Not creating report: productType=', productType)
-  }
-  
-  // STEP 5: Add to queue
-  console.log('\n⏱️ STEP 6: Adding to queue...')
-  
-  if (reportId && productType === 'single') {
-    try {
-      // Process secondaryFocus for queue
-      let secondaryFocusArray = []
-      if (secondaryFocus) {
-        if (typeof secondaryFocus === 'string') {
-          secondaryFocusArray = secondaryFocus.split(',').filter(Boolean)
-        } else if (Array.isArray(secondaryFocus)) {
-          secondaryFocusArray = secondaryFocus
-        }
-      }
-      
-      const queueParams = {
-        companyName: companyName || 'Unknown Company',
-        industry: industry || '',
-        companySize: companySize || '',
-        budget: budget || '',
-        city: city || '',
-        state: state || '',
-        locationTier: locationTier || 'unknown',
-        nearestRegulatoryHub: '',
-        primaryFocus: primaryFocus || 'compliance',
-        secondaryFocus: secondaryFocusArray,
-        timeline: timeline || '6-months',
-        concerns: concerns || '',
-        goals: goals || ''
-      }
-      
-      console.log('Queue params:', JSON.stringify(queueParams, null, 2))
-      
-      console.log('Calling reportQueue.addToQueue...')
-      await reportQueue.addToQueue(
-        reportId,
-        userId,
-        queueParams,
-        1
-      )
-      console.log('✅ Queue add completed (no error thrown)')
-      
-    } catch (queueError) {
-      console.log('❌❌❌ QUEUE ADD FAILED ❌❌❌')
-      console.log('Queue error:', queueError)
-    }
-  } else {
-    console.log('⚠️ Not adding to queue: reportId=', reportId, 'productType=', productType)
   }
   
   // FINAL SUMMARY
@@ -416,6 +409,8 @@ async function debugHandleCheckout(session: any, metadata: any) {
   console.log('Report Created:', reportId ? 'YES - ' + reportId : 'NO')
   console.log('Payment Recorded:', paymentId ? 'YES' : 'NO')
   console.log('='.repeat(60) + '\n')
+  
+  return { success: !!reportId, reportId }
 }
 
 export async function GET() {
