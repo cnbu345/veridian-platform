@@ -1,4 +1,4 @@
-// src/app/dashboard/components/ReportCard.tsx
+// src/app/dashboard/components/ReportCard.tsx - COMPLETE FIXED VERSION
 'use client'
 
 import { useState } from 'react'
@@ -6,272 +6,192 @@ import Link from 'next/link'
 import { 
   FileText, 
   Download, 
-  Eye, 
-  MoreVertical,
+  ChevronDown, 
+  ChevronUp,
   Building2,
   MapPin,
   Calendar,
   CheckCircle,
   Clock,
   AlertCircle,
-  ChevronDown,
-  ChevronUp,
-  Loader2,
-  Shield,
-  Scale
+  Loader2
 } from 'lucide-react'
-import { downloadReportPDF } from '@/lib/pdf/generator'
+import ReportSummary from './ReportSummary'
+import { downloadReportPDF } from '@/lib/pdf/generator' // IMPORTANT: Add this import
 
 interface ReportCardProps {
   report: any
 }
 
 export default function ReportCard({ report }: ReportCardProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
-  const [isDownloading, setIsDownloading] = useState(false)
-  
-  const status = report.report_content?.status || report.status || 'generating'
-  const createdAt = new Date(report.created_at).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  })
+  const [showDetails, setShowDetails] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false) // IMPORTANT: Add this state
 
-  const getStatusIcon = () => {
-    switch (status) {
-      case 'ready':
-        return <CheckCircle className="w-5 h-5 text-green-600" />
-      case 'generating':
-        return <Clock className="w-5 h-5 text-amber-600 animate-spin" />
-      case 'failed':
-        return <AlertCircle className="w-5 h-5 text-red-600" />
-      default:
-        return <Clock className="w-5 h-5 text-amber-600" />
+  const status = report.status || 'pending'
+  const createdAt = new Date(report.created_at)
+  const reportContent = report.report_content || {}
+
+  // Get values from report content
+  const industry = report.industry || reportContent.industry || 'Not specified'
+  const budget = report.budget || reportContent.budget || 'Not specified'
+  const primaryFocus = report.primaryFocus || reportContent.primaryFocus || 'Not specified'
+  const locationTier = report.location_tier || reportContent.locationTier || 'Not specified'
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    if (status !== 'ready') {
+      alert('Report is not ready for download yet')
+      return
     }
-  }
-
-  const getStatusText = () => {
-    switch (status) {
-      case 'ready':
-        return 'Report Ready'
-      case 'generating':
-        return 'Analyzing...'
-      case 'failed':
-        return 'Generation Failed'
-      default:
-        return 'Processing'
-    }
-  }
-
-  const getStatusColor = () => {
-    switch (status) {
-      case 'ready':
-        return 'bg-green-100 text-green-800'
-      case 'generating':
-        return 'bg-amber-100 text-amber-800'
-      case 'failed':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-slate-100 text-slate-800'
-    }
-  }
-
-  const handleDownloadPDF = async () => {
+    
     try {
       setIsDownloading(true)
-      await downloadReportPDF(report)
+      console.log('📥 Downloading PDF for report:', report.id)
+      
+      const blob = await downloadReportPDF(report)
+      
+      if (!blob || blob.size === 0) {
+        throw new Error('Generated PDF is empty')
+      }
+      
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${report.company_name.replace(/[^a-zA-Z0-9]/g, '_')}_Regulatory_Report.pdf`
+      document.body.appendChild(a)
+      a.click()
+      
+      // Cleanup
+      setTimeout(() => {
+        document.body.removeChild(a)
+        window.URL.revokeObjectURL(url)
+      }, 100)
+      
+      console.log('✅ PDF downloaded successfully')
+      
     } catch (error) {
-      console.error('Download failed:', error)
-      alert('Failed to download PDF. Please try again.')
+      console.error('❌ Download failed:', error)
+      alert('Failed to download PDF. Please try again or contact support.')
     } finally {
       setIsDownloading(false)
     }
   }
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden 
-                    hover:border-gold-200 transition-all duration-300 hover:shadow-md">
-      {/* Main Content */}
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
       <div className="p-6">
+        {/* Header */}
         <div className="flex items-start justify-between mb-4">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-navy-50 rounded-xl flex items-center justify-center">
-              <Scale className="w-6 h-6 text-navy-700" />
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-navy-100 rounded-xl flex items-center justify-center">
+              <FileText className="w-6 h-6 text-navy-600" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-navy-900 mb-1">
-                {report.company_name}
-              </h3>
-              <div className="flex flex-wrap items-center gap-3 text-sm">
-                <span className="flex items-center gap-1 text-navy-600">
-                  <Building2 className="w-4 h-4" />
-                  {report.industry}
+              <h3 className="text-lg font-semibold text-navy-900">{report.company_name}</h3>
+              <div className="flex items-center gap-3 text-sm text-navy-500 mt-1">
+                <span className="flex items-center gap-1">
+                  <Building2 className="w-3 h-3" />
+                  {industry}
                 </span>
-                <span className="flex items-center gap-1 text-navy-600">
-                  <MapPin className="w-4 h-4" />
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />
                   {report.city}, {report.state}
                 </span>
-                <span className="flex items-center gap-1 text-navy-600">
-                  <Calendar className="w-4 h-4" />
-                  {createdAt}
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  {createdAt.toLocaleDateString()}
                 </span>
               </div>
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
-            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor()}`}>
-              <span className="flex items-center gap-1.5">
-                {getStatusIcon()}
-                {getStatusText()}
-              </span>
+          <div className="flex items-center gap-2">
+            <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${
+              status === 'ready' ? 'bg-green-100 text-green-800' :
+              status === 'generating' ? 'bg-yellow-100 text-yellow-800' :
+              status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+              status === 'failed' ? 'bg-red-100 text-red-800' :
+              'bg-slate-100 text-slate-800'
+            }`}>
+              {status === 'ready' && <CheckCircle className="w-3 h-3" />}
+              {status === 'generating' && <Clock className="w-3 h-3 animate-spin" />}
+              {status === 'pending' && <Clock className="w-3 h-3 animate-spin" />}
+              {status === 'failed' && <AlertCircle className="w-3 h-3" />}
+              {status === 'ready' ? 'Ready' :
+               status === 'generating' ? 'Generating...' :
+               status === 'pending' ? 'Generating...' :
+               status === 'failed' ? 'Failed' :
+               status}
             </span>
             
-            <div className="relative">
-              <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-                <MoreVertical className="w-5 h-5 text-navy-500" />
-              </button>
-            </div>
+            <button
+              onClick={() => setShowDetails(!showDetails)}
+              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              {showDetails ? (
+                <ChevronUp className="w-4 h-4 text-navy-500" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-navy-500" />
+              )}
+            </button>
           </div>
         </div>
 
-        {/* Location Tier Badge */}
-        <div className="flex items-center gap-2 mb-4">
-          <span className={`px-2 py-1 rounded-lg text-xs font-medium
-            ${report.location_tier === 'major' ? 'bg-blue-100 text-blue-800' : ''}
-            ${report.location_tier === 'suburban' ? 'bg-purple-100 text-purple-800' : ''}
-            ${report.location_tier === 'rural' ? 'bg-green-100 text-green-800' : ''}
-          `}>
-            {report.location_tier === 'major' ? 'Major Market' : 
-             report.location_tier === 'suburban' ? 'Suburban Market' : 'Rural Market'}
+        {/* Market Tier Badge */}
+        <div className="mb-4">
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+            locationTier === 'major' ? 'bg-purple-100 text-purple-800' :
+            locationTier === 'suburban' ? 'bg-blue-100 text-blue-800' :
+            'bg-slate-100 text-slate-800'
+          }`}>
+            <MapPin className="w-3 h-3 mr-1" />
+            {locationTier === 'major' ? 'Major Market' :
+             locationTier === 'suburban' ? 'Suburban Market' :
+             'Rural Market'}
           </span>
-          
-          {report.nearest_major_city && (
-            <span className="text-xs text-navy-500">
-              Near {report.nearest_major_city}
-            </span>
-          )}
         </div>
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3">
-          {status === 'ready' ? (
-            <>
-              <Link
-                href={`/report/${report.id}`}
-                className="flex items-center gap-2 px-4 py-2 bg-navy-900 
-                         text-white text-sm font-medium rounded-lg
-                         hover:bg-navy-800 transition-colors"
-              >
-                <Eye className="w-4 h-4" />
-                View Report
-              </Link>
-              <button
-                onClick={handleDownloadPDF}
-                disabled={isDownloading}
-                className="flex items-center gap-2 px-4 py-2 border border-slate-200 
-                         text-navy-700 text-sm font-medium rounded-lg
-                         hover:bg-slate-50 transition-colors disabled:opacity-50"
-              >
-                {isDownloading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Generating PDF...
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4" />
-                    Download PDF
-                  </>
-                )}
-              </button>
-            </>
-          ) : status === 'generating' ? (
-            <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 
-                          text-amber-700 text-sm font-medium rounded-lg">
-              <Clock className="w-4 h-4 animate-spin" />
-              Analyzing regulatory data... (2-3 minutes)
-            </div>
-          ) : (
-            <button
-              className="flex items-center gap-2 px-4 py-2 bg-red-50 
-                       text-red-700 text-sm font-medium rounded-lg
-                       hover:bg-red-100 transition-colors"
-            >
-              <AlertCircle className="w-4 h-4" />
-              Retry Generation
-            </button>
-          )}
-          
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-1 px-4 py-2 text-sm text-navy-600 
-                     hover:text-navy-900 transition-colors"
+          <Link
+            href={`/report/${report.id}`}
+            className="flex-1 px-4 py-2 bg-gold-600 text-white text-sm font-medium rounded-lg hover:bg-gold-500 transition-colors text-center"
           >
-            {isExpanded ? (
+            View Report
+          </Link>
+          <button
+            onClick={handleDownload}
+            disabled={status !== 'ready' || isDownloading}
+            className="px-4 py-2 border border-slate-300 text-navy-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isDownloading ? (
               <>
-                Show Less
-                <ChevronUp className="w-4 h-4" />
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Generating...
               </>
             ) : (
               <>
-                Show Details
-                <ChevronDown className="w-4 h-4" />
+                <Download className="w-4 h-4" />
+                PDF
               </>
             )}
           </button>
         </div>
-      </div>
 
-      {/* Expanded Details */}
-      {isExpanded && (
-        <div className="border-t border-slate-200 bg-slate-50 p-6">
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="text-sm font-semibold text-navy-900 mb-3">
-                Report Summary
-              </h4>
-              <div className="space-y-2 text-sm">
-                <p className="text-navy-600">
-                  <span className="font-medium">Institution Type:</span>{' '}
-                  {report.report_content?.company?.size || 'Not specified'}
-                </p>
-                <p className="text-navy-600">
-                  <span className="font-medium">Annual Budget:</span>{' '}
-                  {report.report_content?.company?.budget || 'Not specified'}
-                </p>
-                <p className="text-navy-600">
-                  <span className="font-medium">Primary Concern:</span>{' '}
-                  {report.report_content?.strategy?.primary || 'Not specified'}
-                </p>
-              </div>
-            </div>
-            
-            <div>
-              <h4 className="text-sm font-semibold text-navy-900 mb-3">
-                Regulatory Analysis
-              </h4>
-              <div className="space-y-2 text-sm">
-                <p className="text-navy-600">
-                  <span className="font-medium">Market Tier:</span>{' '}
-                  {report.location_tier === 'major' ? 'Major Market' : 
-                   report.location_tier === 'suburban' ? 'Suburban Market' : 'Rural Market'}
-                </p>
-                {report.nearest_major_city && (
-                  <p className="text-navy-600">
-                    <span className="font-medium">Nearest Major Market:</span>{' '}
-                    {report.nearest_major_city}
-                  </p>
-                )}
-                <p className="text-navy-600">
-                  <span className="font-medium">Report ID:</span>{' '}
-                  <span className="font-mono text-xs">{report.id.slice(0, 8)}...</span>
-                </p>
-              </div>
-            </div>
+        {/* Expanded Details */}
+        {showDetails && (
+          <div className="mt-6 pt-6 border-t border-slate-200">
+            <ReportSummary
+              institutionType={industry}
+              annualBudget={budget}
+              primaryConcern={primaryFocus}
+              marketTier={locationTier}
+            />
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

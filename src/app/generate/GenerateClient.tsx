@@ -39,9 +39,18 @@ export default function GenerateClient({ user }: GenerateClientProps) {
     description: ''
   })
 
-  const [locationData, setLocationData] = useState<LocationFormData>({
+  const [locationData, setLocationData] = useState<LocationFormData & {
+    tier?: string;
+    nearestRegulatoryHub?: string;
+    regulatoryClimate?: string;
+    licenseRequired?: string;
+  }>({
     city: '',
-    state: ''
+    state: '',
+    tier: 'unknown',
+    nearestRegulatoryHub: '',
+    regulatoryClimate: '',
+    licenseRequired: ''
   })
 
   const [strategyData, setStrategyData] = useState<StrategyFormData>({

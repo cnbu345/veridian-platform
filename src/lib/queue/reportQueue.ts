@@ -1,4 +1,4 @@
-// src/lib/queue/reportQueue.ts // Manages report generation queue
+// src/lib/queue/reportQueue.ts - Manages report generation queue
 
 import { createClient } from '@/lib/supabase/server'
 import { generateRegulatoryReport } from '@/lib/openai/openai'
@@ -60,7 +60,6 @@ class ReportQueue {
     
     console.log('🔄 Starting queue processor with interval:', intervalMs, 'ms')
     this.processorInterval = setInterval(() => {
-      //console.log('⏰ Queue processor tick - checking for jobs...')
       this.processQueue().catch(error => {
         console.error('❌ Error in queue processor:', error)
       })
@@ -88,13 +87,20 @@ class ReportQueue {
     priority: number = 0
   ): Promise<void> {
     console.log(`📝 Adding report ${reportId} to queue for user ${userId}...`)
-    console.log('📊 Report params:', {
-      companyName: params.companyName,
-      state: params.state,
-      primaryFocus: params.primaryFocus
-    })
 
     const supabase = await createClient()
+
+    // First check if this report is already in the queue
+    const { data: existing } = await supabase
+      .from('report_generation_queue')
+      .select('id, status')
+      .eq('report_id', reportId)
+      .maybeSingle()
+
+    if (existing) {
+      console.log(`⚠️ Report ${reportId} already in queue with status: ${existing.status}`)
+      return
+    }
 
     const { error } = await supabase
       .from('report_generation_queue')
@@ -125,30 +131,19 @@ class ReportQueue {
 
   // Process the queue
   async processQueue(): Promise<void> {
-   // console.log('🔍 processQueue called - Current state:', {
-    //  processing: this.processing,
-    //  activeJobs: this.activeJobs,
-    //  maxConcurrent: this.maxConcurrent
-    //})
-
     if (this.processing) {
-     // console.log('⏳ Queue processor already running, skipping...')
       return
     }
 
     if (this.activeJobs >= this.maxConcurrent) {
-      //console.log(`⏳ Already at max concurrent jobs (${this.activeJobs}/${this.maxConcurrent})`)
       return
     }
 
     this.processing = true
-    //console.log('🔍 Checking for queued jobs...')
 
     try {
       const supabase = await createClient()
 
-      // Get next jobs from queue
-     // console.log('📡 Querying database for queued jobs...')
       const { data: jobs, error } = await supabase
         .from('report_generation_queue')
         .select('*')
@@ -162,18 +157,7 @@ class ReportQueue {
         throw error
       }
 
-      //console.log('📊 Queue query result:', { 
-       //jobsFound: jobs?.length || 0,
-       // jobsData: jobs?.map(j => ({ 
-        //  id: j.id, 
-         // reportId: j.report_id, 
-         // status: j.status,
-         // createdAt: j.created_at 
-        //}))
-      //})
-
       if (!jobs || jobs.length === 0) {
-        //console.log('📭 No queued jobs found')
         return
       }
 
@@ -196,11 +180,9 @@ class ReportQueue {
       console.error('❌ Queue processing error:', error)
     } finally {
       this.processing = false
-      //console.log('🔓 Queue processor unlocked')
       
       // If there are more jobs and capacity, continue processing
       if (this.activeJobs < this.maxConcurrent) {
-        //console.log('⏱️ Scheduling next queue check in 1 second...')
         setTimeout(() => this.processQueue(), 1000)
       }
     }
@@ -245,9 +227,11 @@ class ReportQueue {
         industry: params.industry,
         primaryFocus: params.primaryFocus
       })
-      
-      const reportContent = await generateRegulatoryReport(params)
-      console.log(`✅ AI report generated successfully. Content length: ${reportContent.length} characters`)
+
+      // Generate the report - this returns an object with raw and formatted properties
+      const reportOutput = await generateRegulatoryReport(params)
+      console.log(`✅ AI report generated successfully. Raw length: ${reportOutput.raw.length} characters`)
+      console.log(`✅ Formatted report with ${Object.keys(reportOutput.formatted).length} sections`)
 
       // Get state regulation data
       console.log(`📚 Fetching regulation data for ${params.state}...`)
@@ -257,10 +241,11 @@ class ReportQueue {
         moneyTransmitter: regulation.moneyTransmitter
       })
 
-      // Prepare full report content
+      // Prepare full report content with both raw and formatted versions
       const fullReport = {
         ...params,
-        content: reportContent,
+        raw: reportOutput.raw,
+        formatted: reportOutput.formatted,
         regulation: regulation,
         generated_at: new Date().toISOString(),
         generation_time_ms: Date.now() - startTime
@@ -268,7 +253,7 @@ class ReportQueue {
 
       // Update report with generated content
       console.log(`📝 Saving generated report to database...`)
-      const { data: report, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from('reports')
         .update({
           report_content: fullReport,
@@ -276,12 +261,22 @@ class ReportQueue {
           updated_at: new Date().toISOString()
         })
         .eq('id', job.report_id)
-        .select()
-        .single()
 
       if (updateError) {
         console.error('❌ Error updating report:', updateError)
         throw updateError
+      }
+
+      // Then fetch the updated report
+      const { data: report, error: fetchError } = await supabase
+        .from('reports')
+        .select('*')
+        .eq('id', job.report_id)
+        .maybeSingle()
+
+      if (fetchError) {
+        console.error('❌ Error fetching updated report:', fetchError)
+        throw fetchError
       }
 
       console.log(`✅ Report ${job.report_id} saved to database successfully`)
@@ -316,12 +311,16 @@ class ReportQueue {
 
             // Update report with PDF URL
             console.log(`📝 Updating report with PDF URL...`)
-            await supabase
+            const { error: pdfUpdateError } = await supabase
               .from('reports')
               .update({ pdf_url: urlData.publicUrl })
               .eq('id', report.id)
               
-            console.log('✅ PDF uploaded successfully:', urlData.publicUrl)
+            if (pdfUpdateError) {
+              console.error('❌ Error updating PDF URL:', pdfUpdateError)
+            } else {
+              console.log('✅ PDF uploaded successfully:', urlData.publicUrl)
+            }
           }
         } catch (pdfError) {
           console.error('❌ PDF generation failed:', pdfError)
@@ -331,13 +330,19 @@ class ReportQueue {
 
       // Mark job as completed
       console.log(`📝 Marking job ${job.id} as completed...`)
-      await supabase
+      const { error: jobUpdateError } = await supabase
         .from('report_generation_queue')
         .update({
           status: 'completed',
           completed_at: new Date().toISOString()
         })
         .eq('id', job.id)
+
+      if (jobUpdateError) {
+        console.error('❌ Error updating job status:', jobUpdateError)
+      } else {
+        console.log(`✅ Job ${job.id} marked as completed`)
+      }
 
       // Log success metrics
       console.log(`📊 Logging success metrics to audit_log...`)

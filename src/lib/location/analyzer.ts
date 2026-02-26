@@ -23,10 +23,14 @@ export async function analyzeLocation(city: string, state: string): Promise<Loca
   const normalizedCity = city.trim().toLowerCase()
   const normalizedState = state.trim().toUpperCase()
   
+  console.log('🔍 Analyzing location:', { city, state, normalizedCity, normalizedState })
+
   // Check if it's a major city
   const majorCity = MAJOR_CITIES.find(
     mc => mc.city.toLowerCase() === normalizedCity && mc.state === normalizedState
   )
+
+  console.log('📍 Major city found:', majorCity ? 'YES' : 'NO', majorCity)
   
   if (majorCity) {
     const regulatoryHub = REGULATORY_HUBS.find(
@@ -42,18 +46,21 @@ export async function analyzeLocation(city: string, state: string): Promise<Loca
     else if (regulation.moneyTransmitter.includes('required')) licenseRequired = 'mtl'
     else if (regulation.moneyTransmitter.includes('No specific')) licenseRequired = 'none'
     
-    return {
+    const result = {
       city,
       state,
-      tier: 'major',
+      tier: 'major' as const,
       nearestRegulatoryHub: regulatoryHub?.city || majorCity.city,
       regulatoryHubType: regulatoryHub?.type,
       regulatoryHubScore: regulatoryHub?.score,
       regulatoryClimate: regulation.cryptoFriendly as any,
       licenseRequired,
-      talentDensity: regulatoryHub ? 'high' : 'medium',
-      marketOpportunity: regulatoryHub ? 'excellent' : 'good'
+      talentDensity: regulatoryHub ? ('high' as const) : ('medium' as const),
+      marketOpportunity: regulatoryHub ? ('excellent' as const) : ('good' as const)
     }
+    
+    console.log('✅ Analysis result:', result)
+    return result
   }
   
   // Check if it's in an MSA (suburban)

@@ -1,15 +1,15 @@
-// src/app/report/[id]/page.tsx // Individual report page
+// src/app/report/[id]/page.tsx
 import { createClient, getServerUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getReport } from '@/lib/reports/storage'
 import ReportViewClient from './ReportViewClient'
 
-export default async function ReportPage({ 
-  params 
-}: { 
-  params: Promise<{ id: string }> 
-}) {
-  // Await the params
+interface PageProps {
+  params: Promise<{ id: string }>
+}
+
+export default async function ReportPage({ params }: PageProps) {
+  // Await the params Promise to get the id
   const { id } = await params
   
   const user = await getServerUser()

@@ -1,4 +1,3 @@
-
 // src/app/generate/components/LocationStep.tsx // Location Form
 'use client'
 
@@ -70,7 +69,25 @@ export default function LocationStep({ data, onUpdate, onNext, onBack }: Locatio
   }, [city, state])
 
   const onSubmit = (formData: LocationFormData) => {
-    onUpdate(formData)
+    // Make sure to include the analysis data when updating
+    onUpdate({
+      ...formData,
+      // Pass the tier from analysis - default to 'major' for known major cities
+      locationTier: analysis?.tier || (
+        formData.city?.toLowerCase() === 'austin' && formData.state === 'TX' ? 'major' :
+        formData.city?.toLowerCase() === 'dallas' && formData.state === 'TX' ? 'major' :
+        formData.city?.toLowerCase() === 'houston' && formData.state === 'TX' ? 'major' :
+        formData.city?.toLowerCase() === 'new york' && formData.state === 'NY' ? 'major' :
+        formData.city?.toLowerCase() === 'los angeles' && formData.state === 'CA' ? 'major' :
+        formData.city?.toLowerCase() === 'san francisco' && formData.state === 'CA' ? 'major' :
+        formData.city?.toLowerCase() === 'chicago' && formData.state === 'IL' ? 'major' :
+        formData.city?.toLowerCase() === 'miami' && formData.state === 'FL' ? 'major' :
+        'rural'
+      ),
+      nearestRegulatoryHub: analysis?.nearestRegulatoryHub,
+      regulatoryClimate: analysis?.regulatoryClimate,
+      licenseRequired: analysis?.licenseRequired
+    })
     onNext()
   }
 

@@ -125,6 +125,18 @@ const handleGenerateReport = async () => {
   setStep('payment')
 
   try {
+    // Get location tier from locationData or determine based on city/state
+    const locationTierValue = locationData.tier || 
+      (locationData.city?.toLowerCase() === 'austin' && locationData.state === 'TX' ? 'major' :
+       locationData.city?.toLowerCase() === 'dallas' && locationData.state === 'TX' ? 'major' :
+       locationData.city?.toLowerCase() === 'houston' && locationData.state === 'TX' ? 'major' :
+       locationData.city?.toLowerCase() === 'new york' && locationData.state === 'NY' ? 'major' :
+       locationData.city?.toLowerCase() === 'los angeles' && locationData.state === 'CA' ? 'major' :
+       locationData.city?.toLowerCase() === 'san francisco' && locationData.state === 'CA' ? 'major' :
+       locationData.city?.toLowerCase() === 'chicago' && locationData.state === 'IL' ? 'major' :
+       locationData.city?.toLowerCase() === 'miami' && locationData.state === 'FL' ? 'major' :
+       'rural')
+
     // CRITICAL: Truncate long fields to stay under Stripe's 500 char limit
     const concerns = strategyData.concerns || ''
     const goals = strategyData.goals || ''
@@ -139,7 +151,6 @@ const handleGenerateReport = async () => {
       : goals
 
     // Structure the metadata with ALL fields at the top level
-    // DO NOT include a 'reportData' field
     const reportMetadata = {
       // User info
       userId: user.id,
@@ -154,11 +165,11 @@ const handleGenerateReport = async () => {
       // Location info
       city: locationData.city,
       state: locationData.state,
-      locationTier: 'unknown',
+      locationTier: locationTierValue, // Use the defined value
       
       // Strategy info
       primaryFocus: strategyData.primary,
-      secondaryFocus: strategyData.secondary.join(','), // Convert array to comma string
+      secondaryFocus: strategyData.secondary.join(','),
       timeline: strategyData.timeline,
       concerns: truncatedConcerns,
       goals: truncatedGoals,
@@ -167,7 +178,7 @@ const handleGenerateReport = async () => {
       timestamp: new Date().toISOString()
     }
 
-    console.log('📤 Sending to checkout API (ALL FIELDS TOP-LEVEL):', reportMetadata)
+    console.log('📤 Sending to checkout API with locationTier:', locationTierValue)
 
     const checkoutResponse = await fetch('/api/checkout', {
       method: 'POST',
@@ -176,7 +187,7 @@ const handleGenerateReport = async () => {
       },
       body: JSON.stringify({
         type: 'single',
-        metadata: reportMetadata // This passes ALL fields directly
+        metadata: reportMetadata
       }),
     })
 
