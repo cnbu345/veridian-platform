@@ -49,7 +49,7 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
       const interval = setInterval(() => {
         router.refresh()
         setRefreshCount(prev => prev + 1)
-      }, 5000) // Refresh every 5 seconds
+      }, 5000) 
       
       return () => clearInterval(interval)
     }
@@ -240,7 +240,7 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
 
   return (
     <div className="min-h-screen bg-slate-50 pt-20 pb-32">
-      <div className="container-custom max-w-6xl">
+      <div className="container-custom max-w-7xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <button

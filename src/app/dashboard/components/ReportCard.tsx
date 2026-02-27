@@ -1,4 +1,4 @@
-// src/app/dashboard/components/ReportCard.tsx - COMPLETE FIXED VERSION
+// src/app/dashboard/components/ReportCard.tsx
 'use client'
 
 import { useState } from 'react'
@@ -17,7 +17,7 @@ import {
   Loader2
 } from 'lucide-react'
 import ReportSummary from './ReportSummary'
-import { downloadReportPDF } from '@/lib/pdf/generator' // IMPORTANT: Add this import
+import { downloadReportPDF } from '@/lib/pdf/generator'
 
 interface ReportCardProps {
   report: any

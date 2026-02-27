@@ -2,7 +2,7 @@
 import { getServerUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import SettingsCard from './components/SettingsCard'
-import { Lock } from 'lucide-react'
+import { Lock, Sparkles, Shield, Settings as SettingsIcon } from 'lucide-react'
 
 export default async function SettingsPage() {
   const user = await getServerUser()
@@ -18,7 +18,7 @@ export default async function SettingsPage() {
       id: 'profile',
       title: 'Profile Information',
       description: 'Manage your personal details and company information',
-      iconName: 'User',  // Pass the name instead of the component
+      iconName: 'User',
       href: '/dashboard/settings/profile',
       status: 'complete' as const,
       badge: 'Personal Info',
@@ -101,44 +101,82 @@ export default async function SettingsPage() {
   ]
 
   return (
-    <div className="max-w-5xl mx-auto">
-      {/* Header with gradient */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="h-8 w-1 bg-gradient-to-b from-gold-400 to-gold-600 rounded-full" />
-          <h1 className="text-3xl font-bold text-navy-900">Settings</h1>
+    <div className="mx-auto space-y-8">
+      {/* Premium Header matching Dashboard and Reports */}
+      <div className="relative">
+        {/* Decorative gradient line */}
+        <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-gold-400 via-gold-600 to-gold-400 rounded-full" />
+        
+        <div className="pl-6">
+          <div className="flex items-center gap-3 mb-3">
+            <h1 className="text-4xl font-display font-bold bg-gradient-to-r from-navy-900 to-navy-700 bg-clip-text text-transparent">
+              Settings
+            </h1>
+            <div className="flex items-center gap-1 px-3 py-1.5 bg-gold-50 rounded-full">
+              <SettingsIcon className="w-4 h-4 text-gold-600" />
+              <span className="text-xs font-semibold text-gold-700">
+                Account Configuration
+              </span>
+            </div>
+          </div>
+          
+          <p className="text-navy-600 text-lg max-w-2xl">
+            Manage your account settings, security preferences, and subscription details. 
+            Customize your experience and keep your information up to date.
+          </p>
         </div>
-        <p className="text-navy-600 ml-4">
-          Manage your account settings and preferences
-        </p>
       </div>
 
       {/* Settings Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {settingsSections.map((section) => (
           <SettingsCard key={section.id} {...section} />
         ))}
       </div>
 
-      {/* Help Section */}
-      <div className="mt-8 bg-gradient-to-br from-navy-50 to-navy-100/50 rounded-2xl p-8 border border-navy-200">
-        <div className="flex items-start justify-between">
-          <div className="space-y-3">
-            <h3 className="text-lg font-semibold text-navy-900">Need assistance?</h3>
-            <p className="text-navy-600 max-w-md">
-              Our support team is available 24/7 to help with any account-related questions.
-            </p>
-            <div className="flex gap-4 pt-2">
-              <button className="px-4 py-2 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors text-sm font-medium">
-                Contact Support
-              </button>
-              <button className="px-4 py-2 border border-navy-300 text-navy-700 rounded-lg hover:bg-white transition-colors text-sm font-medium">
-                View Documentation
-              </button>
+      {/* Premium Help Section */}
+      <div className="relative bg-gradient-to-br from-navy-900 to-navy-800 rounded-2xl overflow-hidden group">
+        {/* Decorative elements */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-gold-500 rounded-full blur-3xl" />
+          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-gold-400 rounded-full blur-3xl" />
+        </div>
+        
+        <div className="relative p-8">
+          <div className="flex items-start justify-between">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gold-500/20 rounded-xl flex items-center justify-center">
+                  <Shield className="w-6 h-6 text-gold-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-display font-bold text-white">
+                    Need expert assistance?
+                  </h3>
+                  <p className="text-navy-300">
+                    Our dedicated support team is available 24/7
+                  </p>
+                </div>
+              </div>
+              
+              <p className="text-navy-200 max-w-xl text-lg">
+                Whether you need help with account settings, billing questions, or technical support, 
+                we're here to ensure your experience is seamless.
+              </p>
+              
+              <div className="flex gap-4 pt-4">
+                <button className="px-6 py-3 bg-gold-500 text-navy-900 font-semibold rounded-xl hover:bg-gold-400 transition-all duration-300 hover:scale-105 shadow-lg shadow-gold-500/25">
+                  Contact Support
+                </button>
+                <button className="px-6 py-3 bg-navy-700 text-white font-semibold rounded-xl hover:bg-navy-600 transition-all duration-300 border border-navy-600">
+                  View Documentation
+                </button>
+              </div>
             </div>
-          </div>
-          <div className="hidden md:block">
-            <Lock className="w-12 h-12 text-navy-400" />
+            
+            <div className="hidden md:block">
+              <Lock className="w-16 h-16 text-gold-500/50" />
+            </div>
           </div>
         </div>
       </div>

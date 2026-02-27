@@ -16,12 +16,13 @@ interface RootLayoutClientProps {
 export default function RootLayoutClient({ children, initialUser }: RootLayoutClientProps) {
   const pathname = usePathname()
   
-  // Check if current route is admin or dashboard
+  // Check if current route is admin, dashboard, or report
   const isAdminRoute = pathname?.startsWith('/admin')
   const isDashboardRoute = pathname?.startsWith('/dashboard')
+  const isReportRoute = pathname?.startsWith('/report')
   
   // Don't show navbar/footer on admin or dashboard routes
-  const showNavbarAndFooter = !isAdminRoute && !isDashboardRoute
+  const showNavbarAndFooter = !isAdminRoute && !isDashboardRoute && !isReportRoute
 
   return (
     <>

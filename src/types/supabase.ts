@@ -16,6 +16,9 @@ export interface Database {
           email: string
           full_name: string | null
           company_name: string | null
+          company_size: string | null
+          industry: string | null
+          avatar_url: string | null
           subscription_tier: 'free' | 'single' | 'quarterly' | 'monthly' | 'enterprise'
           stripe_customer_id: string | null
           created_at: string
@@ -26,6 +29,10 @@ export interface Database {
           email: string
           full_name?: string | null
           company_name?: string | null
+          company_name: string | null
+          company_size: string | null
+          industry: string | null
+          avatar_url: string | null
           subscription_tier?: 'free' | 'single' | 'quarterly' | 'monthly' | 'enterprise'
           stripe_customer_id?: string | null
           created_at?: string
@@ -36,6 +43,10 @@ export interface Database {
           email?: string
           full_name?: string | null
           company_name?: string | null
+          company_name: string | null
+          company_size: string | null
+          industry: string | null
+          avatar_url: string | null
           subscription_tier?: 'free' | 'single' | 'quarterly' | 'monthly' | 'enterprise'
           stripe_customer_id?: string | null
           created_at?: string

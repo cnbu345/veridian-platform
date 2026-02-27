@@ -4,12 +4,12 @@ import { redirect } from 'next/navigation'
 import { getReport } from '@/lib/reports/storage'
 import ReportViewClient from './ReportViewClient'
 
-interface PageProps {
-  params: Promise<{ id: string }>
-}
-
-export default async function ReportPage({ params }: PageProps) {
-  // Await the params Promise to get the id
+export default async function ReportPage({ 
+  params 
+}: { 
+  params: Promise<{ id: string }> 
+}) {
+  // Await the params
   const { id } = await params
   
   const user = await getServerUser()
