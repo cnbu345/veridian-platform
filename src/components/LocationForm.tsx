@@ -55,35 +55,35 @@ export default function LocationForm() {
   }
 
   return (
-    <div className="space-y-6 max-w-md">
+    <div className="space-y-4 sm:space-y-6 max-w-full sm:max-w-md mx-auto px-4 sm:px-0">
       <div>
-        <h3 className="text-lg font-semibold mb-4">Enter Your Business Jurisdiction</h3>
-        <p className="text-sm text-gray-600 mb-4">
+        <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-4">Enter Your Business Jurisdiction</h3>
+        <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
           We'll analyze your location for state-specific regulations and compliance requirements
         </p>
       </div>
       
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
           City
         </label>
         <input
           type="text"
           value={city}
           onChange={(e) => setCity(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           placeholder="e.g., Austin"
         />
       </div>
       
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
           State
         </label>
         <select
           value={state}
           onChange={(e) => setState(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           <option value="">Select State</option>
           {US_STATES.map(s => (
@@ -95,45 +95,45 @@ export default function LocationForm() {
       <button
         onClick={handleAnalyze}
         disabled={loading || !city || !state}
-        className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full bg-blue-600 text-white px-4 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {loading ? 'Analyzing...' : 'Analyze Jurisdiction'}
       </button>
 
       {locationInfo && (
-        <div className="p-6 bg-white rounded-lg border border-gray-200 shadow-sm">
-          <h3 className="text-xl font-bold mb-4">Regulatory Analysis Results</h3>
+        <div className="p-4 sm:p-6 bg-white rounded-lg border border-gray-200 shadow-sm">
+          <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Regulatory Analysis Results</h3>
           
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div>
-              <span className="text-sm text-gray-600">Jurisdiction</span>
-              <p className="text-lg font-semibold">
+              <span className="text-xs text-gray-600">Jurisdiction</span>
+              <p className="text-base sm:text-lg font-semibold">
                 {locationInfo.city}, {locationInfo.state}
               </p>
             </div>
 
             <div>
-              <span className="text-sm text-gray-600">Market Classification</span>
-              <div className="flex items-center gap-2">
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getTierColor(locationInfo.tier)}`}>
+              <span className="text-xs text-gray-600">Market Classification</span>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 mt-1">
+                <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-medium ${getTierColor(locationInfo.tier)}`}>
                   {locationInfo.tier.toUpperCase()}
                 </span>
-                <span className="text-gray-700">{getTierDescription(locationInfo.tier)}</span>
+                <span className="text-xs sm:text-sm text-gray-700">{getTierDescription(locationInfo.tier)}</span>
               </div>
             </div>
 
             {locationInfo.nearestWeb3Hub && (
               <div>
-                <span className="text-sm text-gray-600">Nearest Compliance Hub</span>
-                <p className="text-lg font-semibold">
+                <span className="text-xs text-gray-600">Nearest Compliance Hub</span>
+                <p className="text-sm sm:text-base font-semibold">
                   {locationInfo.nearestWeb3Hub}, {locationInfo.state}
                   {locationInfo.web3HubType && (
-                    <span className="ml-2 text-sm font-normal text-gray-600">
+                    <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-normal text-gray-600">
                       ({locationInfo.web3HubType === 'primary' ? 'Primary Hub' : 'Secondary Hub'})
                     </span>
                   )}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">
                   Access to specialized regulatory counsel and compliance resources
                 </p>
               </div>
@@ -141,16 +141,16 @@ export default function LocationForm() {
 
             {locationInfo.distanceToMajor && (
               <div>
-                <span className="text-sm text-gray-600">Distance to Major Market</span>
-                <p className="text-lg font-semibold">
+                <span className="text-xs text-gray-600">Distance to Major Market</span>
+                <p className="text-sm sm:text-base font-semibold">
                   ≈ {locationInfo.distanceToMajor} miles
                 </p>
               </div>
             )}
 
-            <div className="pt-4 border-t border-gray-200">
-              <p className="text-sm text-gray-600">
-                <strong>Next Step:</strong> Based on this analysis, your compliance report will include state-specific regulatory requirements for {locationInfo.state}, licensing obligations, and connections to compliance resources in {locationInfo.nearestWeb3Hub || 'your region'}.
+            <div className="pt-3 sm:pt-4 border-t border-gray-200">
+              <p className="text-xs sm:text-sm text-gray-600">
+                <strong className="block sm:inline">Next Step:</strong> Based on this analysis, your compliance report will include state-specific regulatory requirements for {locationInfo.state}, licensing obligations, and connections to compliance resources in {locationInfo.nearestWeb3Hub || 'your region'}.
               </p>
             </div>
           </div>

@@ -1,4 +1,4 @@
-// src/components/layout/Navbar.tsx // Navbar
+// src/components/layout/Navbar.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -132,31 +132,30 @@ export default function Navbar({ initialUser }: NavbarProps) {
           : "bg-transparent"
       )}>
         <div className="container-custom">
-          <div className="flex items-center justify-between h-20">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-3 group">
-              {/* Use the gold logo for the navbar - looks premium */}
-              <div className="relative w-10 h-10">
+          <div className="flex items-center justify-between h-16 md:h-20">
+            {/* Logo - Optimized for mobile */}
+            <Link href="/" className="flex items-center gap-2 md:gap-3 group">
+              <div className="relative w-8 h-8 md:w-10 md:h-10">
                 <img 
                   src="/veridian-logo-gold-192X192.png" 
                   alt="Veridian Group" 
                   className="w-full h-full object-contain"
                 />
               </div>
-              <div>
-                <span className="text-xl font-display font-bold text-navy-900">
+              <div className="flex flex-col sm:flex-row sm:items-center">
+                <span className="text-lg md:text-xl font-display font-bold text-navy-900">
                   Veridian
                 </span>
-                <span className="text-xl font-display font-bold text-gold-600">
+                <span className="text-lg md:text-xl font-display font-bold text-gold-600">
                   Group
                 </span>
-                <span className="ml-2 text-xs font-medium text-navy-500 bg-navy-50 px-2 py-0.5 rounded-full">
+                <span className="hidden xs:inline ml-0 sm:ml-2 text-[10px] md:text-xs font-medium text-navy-500 bg-navy-50 px-1.5 md:px-2 py-0.5 rounded-full whitespace-nowrap">
                   Regulatory Intelligence
                 </span>
               </div>
             </Link>
 
-            {/* Desktop Navigation */}
+            {/* Desktop Navigation - Hidden on mobile */}
             <div className="hidden lg:flex items-center gap-8">
               {navLinks.map((item) => (
                 <div
@@ -247,7 +246,7 @@ export default function Navbar({ initialUser }: NavbarProps) {
               ))}
             </div>
 
-            {/* Auth Buttons */}
+            {/* Auth Buttons - Hidden on mobile */}
             <div className="hidden lg:flex items-center gap-4">
               {user ? (
                 <>
@@ -294,15 +293,16 @@ export default function Navbar({ initialUser }: NavbarProps) {
             <button
               onClick={() => setIsOpen(!isOpen)}
               className={cn(
-                "lg:hidden relative w-10 h-10",
+                "lg:hidden relative w-9 h-9 md:w-10 md:h-10",
                 "rounded-lg bg-white/90 backdrop-blur-sm",
                 "border border-slate-200 flex items-center justify-center"
               )}
+              aria-label="Toggle menu"
             >
               {isOpen ? (
-                <X className="w-5 h-5 text-navy-800" />
+                <X className="w-4 h-4 md:w-5 md:h-5 text-navy-800" />
               ) : (
-                <Menu className="w-5 h-5 text-navy-800" />
+                <Menu className="w-4 h-4 md:w-5 md:h-5 text-navy-800" />
               )}
             </button>
           </div>
@@ -318,7 +318,7 @@ export default function Navbar({ initialUser }: NavbarProps) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-40 lg:hidden"
-            style={{ top: '80px' }} // Start below navbar
+            style={{ top: '64px' }} // Match h-16 on mobile
           >
             {/* Backdrop */}
             <div 
@@ -334,29 +334,29 @@ export default function Navbar({ initialUser }: NavbarProps) {
               transition={{ duration: 0.3 }}
               className="absolute inset-x-0 bg-white shadow-xl border-t border-slate-200"
               style={{ 
-                maxHeight: 'calc(100vh - 80px)', // Take full height minus navbar
+                maxHeight: 'calc(100vh - 64px)', // Take full height minus navbar
                 overflowY: 'auto' // Enable scrolling
               }}
             >
-              <div className="container-custom py-6">
-                <div className="space-y-6 pb-8"> {/* Added pb-8 for extra bottom padding */}
+              <div className="container-custom py-4 md:py-6">
+                <div className="space-y-4 md:space-y-6 pb-8">
                   {/* Mobile Nav Links */}
                   {navLinks.map((item) => (
-                    <div key={item.name} className="space-y-3">
-                      <div className="text-sm font-semibold text-navy-400 uppercase tracking-wider">
+                    <div key={item.name} className="space-y-2 md:space-y-3">
+                      <div className="text-xs md:text-sm font-semibold text-navy-400 uppercase tracking-wider px-2">
                         {item.name}
                       </div>
                       {item.dropdown ? (
-                        <div className="space-y-2 pl-2">
+                        <div className="space-y-1 md:space-y-2 pl-2">
                           {item.dropdown.map((dropdownItem) => (
                             <Link
                               key={dropdownItem.name}
                               href={dropdownItem.href}
                               onClick={() => setIsOpen(false)}
-                              className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-gold-50 transition-colors"
+                              className="flex items-center gap-2 md:gap-3 py-2 md:py-3 px-3 rounded-lg hover:bg-gold-50 transition-colors"
                             >
-                              <dropdownItem.icon className="w-4 h-4 text-navy-500" />
-                              <span className="text-sm font-medium text-navy-700">
+                              <dropdownItem.icon className="w-3.5 h-3.5 md:w-4 md:h-4 text-navy-500" />
+                              <span className="text-xs md:text-sm font-medium text-navy-700">
                                 {dropdownItem.name}
                               </span>
                             </Link>
@@ -366,7 +366,7 @@ export default function Navbar({ initialUser }: NavbarProps) {
                         <Link
                           href={item.href}
                           onClick={() => setIsOpen(false)}
-                          className="block py-2 text-sm font-medium text-navy-700 hover:text-gold-600"
+                          className="block py-2 px-3 text-xs md:text-sm font-medium text-navy-700 hover:text-gold-600"
                         >
                           {item.name}
                         </Link>
@@ -375,13 +375,13 @@ export default function Navbar({ initialUser }: NavbarProps) {
                   ))}
 
                   {/* Mobile Auth - Now you can scroll to see this! */}
-                  <div className="pt-6 border-t border-slate-200">
+                  <div className="pt-4 md:pt-6 border-t border-slate-200 px-2">
                     {user ? (
-                      <div className="space-y-3">
+                      <div className="space-y-2 md:space-y-3">
                         <Link
                           href="/dashboard"
                           onClick={() => setIsOpen(false)}
-                          className="block w-full px-4 py-3 text-center text-sm font-semibold text-navy-700 bg-navy-50 rounded-lg hover:bg-navy-100"
+                          className="block w-full px-4 py-2.5 md:py-3 text-center text-xs md:text-sm font-semibold text-navy-700 bg-navy-50 rounded-lg hover:bg-navy-100"
                         >
                           Dashboard
                         </Link>
@@ -390,24 +390,24 @@ export default function Navbar({ initialUser }: NavbarProps) {
                             handleSignOut()
                             setIsOpen(false)
                           }}
-                          className="block w-full px-4 py-3 text-center text-sm font-semibold text-navy-700 border border-slate-200 rounded-lg hover:bg-slate-50"
+                          className="block w-full px-4 py-2.5 md:py-3 text-center text-xs md:text-sm font-semibold text-navy-700 border border-slate-200 rounded-lg hover:bg-slate-50"
                         >
                           Sign Out
                         </button>
                       </div>
                     ) : (
-                      <div className="space-y-3">
+                      <div className="space-y-2 md:space-y-3">
                         <Link
                           href="/auth"
                           onClick={() => setIsOpen(false)}
-                          className="block w-full px-4 py-3 text-center text-sm font-semibold text-white bg-navy-800 rounded-lg hover:bg-navy-700"
+                          className="block w-full px-4 py-2.5 md:py-3 text-center text-xs md:text-sm font-semibold text-white bg-navy-800 rounded-lg hover:bg-navy-700"
                         >
                           Sign In
                         </Link>
                         <Link
                           href="/auth?signup=true"
                           onClick={() => setIsOpen(false)}
-                          className="block w-full px-4 py-3 text-center text-sm font-semibold text-navy-800 bg-gold-500 rounded-lg hover:bg-gold-400"
+                          className="block w-full px-4 py-2.5 md:py-3 text-center text-xs md:text-sm font-semibold text-navy-800 bg-gold-500 rounded-lg hover:bg-gold-400"
                         >
                           Get Started
                         </Link>
@@ -416,7 +416,7 @@ export default function Navbar({ initialUser }: NavbarProps) {
                   </div>
 
                   {/* Extra bottom padding for safety */}
-                  <div className="h-8" />
+                  <div className="h-4 md:h-8" />
                 </div>
               </div>
             </motion.div>

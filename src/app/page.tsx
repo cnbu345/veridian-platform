@@ -1,3 +1,4 @@
+// src/app/page.tsx
 import Navbar from '@/components/layout/Navbar'
 import HeroSection from '@/components/marketing/HeroSection'
 import SocialProof from '@/components/marketing/SocialProof'

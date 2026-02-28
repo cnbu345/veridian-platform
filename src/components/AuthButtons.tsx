@@ -33,53 +33,53 @@ export default function AuthButtons() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-3">
-        <div className="w-20 h-8 bg-slate-200 rounded-lg animate-pulse" />
-        <div className="w-20 h-8 bg-slate-200 rounded-lg animate-pulse" />
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div className="w-16 sm:w-20 h-7 sm:h-8 bg-slate-200 rounded-lg animate-pulse" />
+        <div className="w-16 sm:w-20 h-7 sm:h-8 bg-slate-200 rounded-lg animate-pulse" />
       </div>
     )
   }
 
   if (user) {
     return (
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         <Link
           href="/dashboard"
-          className="flex items-center gap-2 text-sm font-medium text-navy-700 hover:text-gold-600 transition-colors"
+          className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm font-medium text-navy-700 hover:text-gold-600 transition-colors"
         >
-          <User className="w-4 h-4" />
-          <span className="hidden md:inline">Dashboard</span>
+          <User className="w-3 h-3 sm:w-4 sm:h-4" />
+          <span className="hidden sm:inline">Dashboard</span>
         </Link>
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-navy-200 
-                   text-navy-700 text-sm font-medium rounded-lg
+          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-white border border-navy-200 
+                   text-navy-700 text-xs sm:text-sm font-medium rounded-lg
                    hover:bg-slate-50 hover:border-gold-500 transition-all"
         >
-          <LogOut className="w-4 h-4" />
-          <span className="hidden md:inline">Sign Out</span>
+          <LogOut className="w-3 h-3 sm:w-4 sm:h-4" />
+          <span className="hidden sm:inline">Sign Out</span>
         </button>
       </div>
     )
   }
 
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-2 sm:gap-3">
       <Link
         href="/auth"
-        className="flex items-center gap-2 px-4 py-2 bg-navy-900 text-white 
-                 text-sm font-medium rounded-lg hover:bg-navy-800 transition-colors"
+        className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-navy-900 text-white 
+                 text-xs sm:text-sm font-medium rounded-lg hover:bg-navy-800 transition-colors"
       >
-        <LogIn className="w-4 h-4" />
-        <span>Sign In</span>
+        <LogIn className="w-3 h-3 sm:w-4 sm:h-4" />
+        <span className="hidden sm:inline">Sign In</span>
       </Link>
       <Link
         href="/auth?signup=true"
-        className="flex items-center gap-2 px-4 py-2 bg-gold-600 text-navy-900 
-                 text-sm font-medium rounded-lg hover:bg-gold-500 transition-colors"
+        className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-gold-600 text-navy-900 
+                 text-xs sm:text-sm font-medium rounded-lg hover:bg-gold-500 transition-colors"
       >
-        <UserPlus className="w-4 h-4" />
-        <span>Sign Up</span>
+        <UserPlus className="w-3 h-3 sm:w-4 sm:h-4" />
+        <span className="hidden sm:inline">Sign Up</span>
       </Link>
     </div>
   )

@@ -19,7 +19,8 @@ import {
   Target,
   Landmark,
   Gavel,
-  AlertTriangle
+  AlertTriangle,
+  ChevronDown
 } from 'lucide-react'
 
 const features = [
@@ -104,33 +105,57 @@ export default function ReportFeatures() {
   const [activeTab, setActiveTab] = useState('compliance')
 
   return (
-    <section className="py-20 bg-slate-50">
+    <section className="py-12 md:py-20 bg-slate-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-10 md:mb-16"
         >
-          <span className="text-sm font-semibold uppercase tracking-wider text-navy-600 bg-navy-50 px-4 py-2 rounded-full">
+          <span className="text-xs md:text-sm font-semibold uppercase tracking-wider text-navy-600 bg-navy-50 px-3 md:px-4 py-1.5 md:py-2 rounded-full">
             Inside Your Compliance Report
           </span>
-          <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mt-6 mb-6">
-            What's inside your $2,497 report?<br />
-            <span className="text-slate-600 text-2xl md:text-3xl">
-              (About $15,000 worth of regulatory research)
-            </span>
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-slate-900 mt-4 md:mt-6 mb-4 md:mb-6 px-4">
+            What's inside your $2,497 report?
           </h2>
+          <p className="text-lg md:text-2xl lg:text-3xl text-slate-600">
+            (About $15,000 worth of regulatory research)
+          </p>
         </motion.div>
+
+        {/* Mobile Dropdown Selector - Visible only on mobile */}
+        <div className="block lg:hidden mb-8">
+          <div className="relative">
+            <select
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value)}
+              className="w-full p-4 pr-12 bg-white border-2 border-navy-200 rounded-xl text-slate-900 font-medium appearance-none cursor-pointer"
+              style={{
+                backgroundImage: 'none' // Ensure no default arrow in some browsers
+              }}
+            >
+              {features.map((feature) => (
+                <option key={feature.id} value={feature.id}>
+                  {feature.label} - {feature.title}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-navy-600 pointer-events-none" />
+          </div>
+          <p className="text-xs text-navy-600 mt-2 text-center">
+            Tap to explore each section
+          </p>
+        </div>
 
         <Tabs.Root
           defaultValue="compliance"
           value={activeTab}
           onValueChange={setActiveTab}
-          className="grid lg:grid-cols-2 gap-12 items-start"
+          className="flex flex-col lg:grid lg:grid-cols-2 gap-6 lg:gap-12 items-start"
         >
-          {/* Tab List - Left Column */}
-          <Tabs.List className="flex flex-col space-y-4">
+          {/* Tab List - Left Column - Hidden on mobile, shown on desktop */}
+          <Tabs.List className="hidden lg:flex flex-col space-y-4">
             {features.map((feature) => (
               <Tabs.Trigger
                 key={feature.id}
@@ -172,23 +197,23 @@ export default function ReportFeatures() {
           </Tabs.List>
 
           {/* Tab Content - Right Column */}
-          <div className="lg:sticky lg:top-24">
+          <div className="lg:sticky lg:top-24 w-full">
             {features.map((feature) => (
               <Tabs.Content
                 key={feature.id}
                 value={feature.id}
-                className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8"
+                className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6 md:p-8"
               >
                 <div className="flex items-center gap-3 mb-6">
-                  <div className={`w-10 h-10 bg-gradient-to-r ${feature.color} rounded-lg flex items-center justify-center`}>
+                  <div className={`w-10 h-10 bg-gradient-to-r ${feature.color} rounded-lg flex items-center justify-center shrink-0`}>
                     <feature.icon className="w-5 h-5 text-white" />
                   </div>
-                  <h4 className="text-xl font-bold text-slate-900">
+                  <h4 className="text-lg md:text-xl font-bold text-slate-900">
                     {feature.title}
                   </h4>
                 </div>
 
-                <ul className="space-y-4 mb-8">
+                <ul className="space-y-4 mb-6 md:mb-8">
                   {feature.points.map((point, idx) => (
                     <motion.li
                       key={idx}
@@ -200,13 +225,13 @@ export default function ReportFeatures() {
                       <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center shrink-0 mt-0.5">
                         <div className="w-2 h-2 rounded-full bg-green-600" />
                       </div>
-                      <span className="text-slate-700">{point}</span>
+                      <span className="text-sm md:text-base text-slate-700 leading-relaxed">{point}</span>
                     </motion.li>
                   ))}
                 </ul>
 
                 {/* Visual Preview */}
-                <div className="bg-slate-50 rounded-xl p-6 border border-slate-200">
+                <div className="bg-slate-50 rounded-xl p-4 md:p-6 border border-slate-200">
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-sm font-medium text-slate-700">Preview</span>
                     <span className="text-xs text-slate-500">Actual report excerpt</span>
@@ -215,10 +240,10 @@ export default function ReportFeatures() {
                   {feature.id === 'compliance' && (
                     <div className="space-y-3">
                       <div className="flex items-center gap-2 text-sm">
-                        <Shield className="w-4 h-4 text-navy-600" />
+                        <Shield className="w-4 h-4 text-navy-600 shrink-0" />
                         <span className="font-medium">Texas Regulatory Summary:</span>
                       </div>
-                      <p className="text-sm text-slate-600 pl-6">
+                      <p className="text-xs md:text-sm text-slate-600 pl-6 leading-relaxed">
                         No specific money transmission license required for custodial services. 
                         Must register as Money Services Business with Texas Department of Banking.
                         Pending HB 1234 would require licensing by Q4 2026.
@@ -229,21 +254,21 @@ export default function ReportFeatures() {
                   {feature.id === 'risk' && (
                     <div className="space-y-3">
                       <div className="flex items-center gap-2 text-sm">
-                        <AlertTriangle className="w-4 h-4 text-red-600" />
+                        <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
                         <span className="font-medium">High-Risk Jurisdictions:</span>
                       </div>
-                      <div className="pl-6">
-                        <div className="flex justify-between text-sm mb-2">
+                      <div className="pl-6 space-y-2">
+                        <div className="flex flex-wrap justify-between text-xs md:text-sm gap-1">
                           <span>New York - BitLicense required</span>
-                          <span className="text-red-600 font-semibold">High</span>
+                          <span className="text-red-600 font-semibold whitespace-nowrap">High</span>
                         </div>
-                        <div className="flex justify-between text-sm mb-2">
+                        <div className="flex flex-wrap justify-between text-xs md:text-sm gap-1">
                           <span>California - Under review</span>
-                          <span className="text-amber-600 font-semibold">Medium</span>
+                          <span className="text-amber-600 font-semibold whitespace-nowrap">Medium</span>
                         </div>
-                        <div className="flex justify-between text-sm">
+                        <div className="flex flex-wrap justify-between text-xs md:text-sm gap-1">
                           <span>Texas - Business friendly</span>
-                          <span className="text-green-600 font-semibold">Low</span>
+                          <span className="text-green-600 font-semibold whitespace-nowrap">Low</span>
                         </div>
                       </div>
                     </div>
@@ -252,23 +277,51 @@ export default function ReportFeatures() {
                   {feature.id === 'requirements' && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
-                        <Gavel className="w-4 h-4 text-amber-600" />
+                        <Gavel className="w-4 h-4 text-amber-600 shrink-0" />
                         <span className="font-medium">Licenses Required:</span>
                       </div>
-                      <div className="pl-6 space-y-2">
-                        <div className="text-sm">• Money Transmitter License (7 states)</div>
-                        <div className="text-sm">• Consumer Lender License (4 states)</div>
-                        <div className="text-sm">• Mortgage Broker License (2 states)</div>
+                      <div className="pl-6 space-y-1">
+                        <div className="text-xs md:text-sm">• Money Transmitter License (7 states)</div>
+                        <div className="text-xs md:text-sm">• Consumer Lender License (4 states)</div>
+                        <div className="text-xs md:text-sm">• Mortgage Broker License (2 states)</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {feature.id === 'roadmap' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="w-4 h-4 text-green-600 shrink-0" />
+                        <span className="font-medium">90-Day Timeline:</span>
+                      </div>
+                      <div className="pl-6 space-y-1">
+                        <div className="text-xs md:text-sm">• Days 1-30: Priority applications</div>
+                        <div className="text-xs md:text-sm">• Days 31-60: Policy development</div>
+                        <div className="text-xs md:text-sm">• Days 61-90: Filing setup</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {feature.id === 'resources' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <BookOpen className="w-4 h-4 text-purple-600 shrink-0" />
+                        <span className="font-medium">Key Contacts:</span>
+                      </div>
+                      <div className="pl-6 space-y-1">
+                        <div className="text-xs md:text-sm">• State regulator directory</div>
+                        <div className="text-xs md:text-sm">• Compliance officer contacts</div>
+                        <div className="text-xs md:text-sm">• Approved legal counsel</div>
                       </div>
                     </div>
                   )}
                 </div>
 
-                <div className="mt-6 pt-6 border-t border-slate-200">
+                <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-slate-200">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-sm text-slate-500 line-through">$5,000 value</span>
-                      <span className="ml-2 text-sm font-semibold text-green-600">
+                      <span className="text-xs md:text-sm text-slate-500 line-through">$5,000 value</span>
+                      <span className="ml-2 text-xs md:text-sm font-semibold text-green-600">
                         Included in your report
                       </span>
                     </div>
@@ -284,29 +337,29 @@ export default function ReportFeatures() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mt-16 bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-8 text-white"
+          className="mt-10 md:mt-16 bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-6 md:p-8 text-white"
         >
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center">
+            <div className="flex flex-col xs:flex-row items-center gap-4 text-center xs:text-left">
+              <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center shrink-0">
                 <Target className="w-8 h-8 text-gold-400" />
               </div>
               <div>
-                <div className="text-3xl font-bold mb-1">
-                  $15,000 <span className="text-lg font-normal text-slate-400 line-through">consulting value</span>
+                <div className="text-2xl md:text-3xl font-bold mb-1">
+                  $15,000 <span className="text-base md:text-lg font-normal text-slate-400 line-through">consulting value</span>
                 </div>
-                <div className="text-slate-300">
-                  Your price: <span className="text-2xl font-bold text-gold-400">$2,497</span>
+                <div className="text-base md:text-lg text-slate-300">
+                  Your price: <span className="text-xl md:text-2xl font-bold text-gold-400">$2,497</span>
                 </div>
               </div>
             </div>
             
-            <div className="text-right">
+            <div className="text-center md:text-right">
               <div className="text-sm text-slate-400 mb-1">You save</div>
-              <div className="text-3xl font-bold text-green-400">$12,503</div>
+              <div className="text-2xl md:text-3xl font-bold text-green-400">$12,503</div>
             </div>
           </div>
-          <p className="text-sm text-slate-400 mt-4 text-center">
+          <p className="text-xs md:text-sm text-slate-400 mt-4 text-center">
             Founder's Circle: $997 for first 50 customers
           </p>
         </motion.div>
