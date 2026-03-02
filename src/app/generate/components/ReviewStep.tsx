@@ -165,11 +165,11 @@ const handleGenerateReport = async () => {
       // Location info
       city: locationData.city,
       state: locationData.state,
-      locationTier: locationTierValue, // Use the defined value
+      locationTier: locationTierValue,
       
       // Strategy info
       primaryFocus: strategyData.primary,
-      secondaryFocus: strategyData.secondary.join(','),
+      secondaryFocus: JSON.stringify(strategyData.secondary),
       timeline: strategyData.timeline,
       concerns: truncatedConcerns,
       goals: truncatedGoals,
@@ -179,6 +179,7 @@ const handleGenerateReport = async () => {
     }
 
     console.log('📤 Sending to checkout API with locationTier:', locationTierValue)
+    console.log('📤 Sending to checkout API with secondaryFocus:', strategyData.secondary)
 
     const checkoutResponse = await fetch('/api/checkout', {
       method: 'POST',
