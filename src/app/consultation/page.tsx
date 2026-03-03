@@ -1,3 +1,4 @@
+// src/app/consultation/page.tsx
 export default function ConsultationPage() {
   return (
     <div className="section-padding">

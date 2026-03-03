@@ -537,7 +537,7 @@ const ReportDocument = ({ report }: { report: GeneratedReport }) => {
                   <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: 10 }}>
                     <Text style={[styles.smallText, { color: '#94A3B8' }]}>{metric.label}</Text>
                     <Text style={[styles.normalText, { 
-                      color: metric.label === 'Licenses Required' ? '#D4AF37' : 'white', 
+                      color: metric.label === 'Licenses Required' ? 'white' : 'white', 
                       fontSize: 16, 
                       fontWeight: 'bold',
                       marginBottom: 0
@@ -586,7 +586,7 @@ const ReportDocument = ({ report }: { report: GeneratedReport }) => {
                   {reportData.strategy.secondary.map((focus, index) => (
                     <View key={index} style={{ width: '50%', flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
                       <View style={[styles.bullet, { backgroundColor: '#92400E', marginRight: 5 }]} />
-                      <Text style={[styles.bulletText, { fontSize: 9, marginBottom: 0 }]}>
+                      <Text style={[styles.bulletText, { fontSize: 9, marginBottom: 0, top: 2 }]}>
                         {formatSecondaryFocus(focus)}
                       </Text>
                     </View>
@@ -653,7 +653,7 @@ const ReportDocument = ({ report }: { report: GeneratedReport }) => {
             ].map((text, index) => (
               <View key={index} style={styles.bulletPoint}>
                 <View style={styles.bullet} />
-                <Text style={styles.bulletText}>{text}</Text>
+                <Text style={[styles.bulletText, { top: 2 }]}>{text}</Text>
               </View>
             ))}
           </View>
@@ -750,7 +750,7 @@ const ReportDocument = ({ report }: { report: GeneratedReport }) => {
               <Text style={[styles.smallText, { fontWeight: 'bold', marginBottom: 5 }]}>
                 Hiring Strategy:
               </Text>
-              <Text style={[styles.smallText, { marginBottom: 8 }]}>
+              <Text style={[styles.smallText, { marginBottom: 8, top: 2 }]}>
                 {reportData.talentAnalysis.hiringStrategy}
               </Text>
               
@@ -760,7 +760,7 @@ const ReportDocument = ({ report }: { report: GeneratedReport }) => {
               {reportData.talentAnalysis.topChannels.map((channel, index) => (
                 <View key={index} style={styles.bulletPoint}>
                   <View style={styles.bullet} />
-                  <Text style={[styles.bulletText, { fontSize: 9 }]}>{channel}</Text>
+                  <Text style={[styles.bulletText, { fontSize: 9, top: 2 }]}>{channel}</Text>
                 </View>
               ))}
               
@@ -873,7 +873,7 @@ const ReportDocument = ({ report }: { report: GeneratedReport }) => {
               <View key={index} style={styles.gridItem2}>
                 <View style={styles.bulletPoint}>
                   <View style={styles.bullet} />
-                  <Text style={[styles.bulletText, { fontSize: 8 }]}>{item}</Text>
+                  <Text style={[styles.bulletText, { fontSize: 8, top: 2 }]}>{item}</Text>
                 </View>
               </View>
             ))}
@@ -907,7 +907,7 @@ const ReportDocument = ({ report }: { report: GeneratedReport }) => {
                   <View key={idx} style={styles.gridItem2}>
                     <View style={styles.bulletPoint}>
                       <View style={styles.bullet} />
-                      <Text style={[styles.bulletText, { fontSize: 8, color: '#94A3B8'}]}>{activity}</Text>
+                      <Text style={[styles.bulletText, { fontSize: 8, color: '#94A3B8', top: 2}]}>{activity}</Text>
                     </View>
                   </View>
                 ))}
@@ -927,7 +927,7 @@ const ReportDocument = ({ report }: { report: GeneratedReport }) => {
                 <View key={index} style={styles.gridItem2}>
                   <View style={styles.bulletPoint}>
                     <View style={styles.bullet} />
-                    <Text style={[styles.bulletText, { fontSize: 8 }]}>{milestone}</Text>
+                    <Text style={[styles.bulletText, { fontSize: 8, top: 2 }]}>{milestone}</Text>
                   </View>
                 </View>
               ))}
@@ -965,28 +965,28 @@ const ReportDocument = ({ report }: { report: GeneratedReport }) => {
           ))}
           
           <View style={styles.goldCard}>
-            <Text style={[styles.normalText, { fontWeight: 'bold', marginBottom: 5 }]}>
+            <Text style={[styles.normalText, { fontWeight: 'bold', marginBottom: 5, top: 2 }]}>
               Technology Implementation Timeline
             </Text>
             <View style={styles.bulletPoint}>
               <View style={styles.bullet} />
-              <Text style={styles.bulletText}>Weeks 1-2: Evaluate vendors, request demos</Text>
+              <Text style={[styles.bulletText, { top: 2 }]}>Weeks 1-2: Evaluate vendors, request demos</Text>
             </View>
             <View style={styles.bulletPoint}>
               <View style={styles.bullet} />
-              <Text style={styles.bulletText}>Weeks 3-4: Select platforms, begin contracting</Text>
+              <Text style={[styles.bulletText, { top: 2 }]}>Weeks 3-4: Select platforms, begin contracting</Text>
             </View>
             <View style={styles.bulletPoint}>
               <View style={styles.bullet} />
-              <Text style={styles.bulletText}>Weeks 5-8: Implementation and integration</Text>
+              <Text style={[styles.bulletText, { top: 2 }]}>Weeks 5-8: Implementation and integration</Text>
             </View>
             <View style={styles.bulletPoint}>
               <View style={styles.bullet} />
-              <Text style={styles.bulletText}>Weeks 9-10: Testing and staff training</Text>
+              <Text style={[styles.bulletText, { top: 2 }]}>Weeks 9-10: Testing and staff training</Text>
             </View>
             <View style={styles.bulletPoint}>
               <View style={styles.bullet} />
-              <Text style={styles.bulletText}>Week 12: Go live</Text>
+              <Text style={[styles.bulletText, { top: 2 }]}>Week 12: Go live</Text>
             </View>
           </View>
         </View>
@@ -1067,24 +1067,24 @@ const ReportDocument = ({ report }: { report: GeneratedReport }) => {
           </View>
           
           <View style={styles.highlightCard}>
-            <Text style={[styles.normalText, { fontWeight: 'bold', marginBottom: 5 }]}>
+            <Text style={[styles.normalText, { fontWeight: 'bold', marginBottom: 5, top: 2 }]}>
               Insurance Recommendations
             </Text>
             <View style={styles.bulletPoint}>
               <View style={styles.bullet} />
-              <Text style={styles.bulletText}>Directors & Officers (D&O) Liability: $2-5M coverage</Text>
+              <Text style={[styles.bulletText, { top: 2 }]}>Directors & Officers (D&O) Liability: $2-5M coverage</Text>
             </View>
             <View style={styles.bulletPoint}>
               <View style={styles.bullet} />
-              <Text style={styles.bulletText}>Errors & Omissions (E&O): $1-3M coverage</Text>
+              <Text style={[styles.bulletText, { top: 2 }]}>Errors & Omissions (E&O): $1-3M coverage</Text>
             </View>
             <View style={styles.bulletPoint}>
               <View style={styles.bullet} />
-              <Text style={styles.bulletText}>Cyber Liability: $1-5M coverage</Text>
+              <Text style={[styles.bulletText, { top: 2 }]}>Cyber Liability: $1-5M coverage</Text>
             </View>
             <View style={styles.bulletPoint}>
               <View style={styles.bullet} />
-              <Text style={styles.bulletText}>Crime/Fidelity Bond: $500k-1M coverage</Text>
+              <Text style={[styles.bulletText, { top: 2 }]}>Crime/Fidelity Bond: $500k-1M coverage</Text>
             </View>
           </View>
         </View>
@@ -1125,24 +1125,24 @@ const ReportDocument = ({ report }: { report: GeneratedReport }) => {
           </View>
           
           <View style={styles.highlightCard}>
-            <Text style={[styles.normalText, { fontWeight: 'bold', marginBottom: 5 }]}>
+            <Text style={[styles.normalText, { fontWeight: 'bold', marginBottom: 5, top: 2 }]}>
               Cost-Saving Recommendations
             </Text>
             <View style={styles.bulletPoint}>
               <View style={styles.bullet} />
-              <Text style={styles.bulletText}>Bundle technology platforms where possible</Text>
+              <Text style={[styles.bulletText, { top: 2 }]}>Bundle technology platforms where possible</Text>
             </View>
             <View style={styles.bulletPoint}>
               <View style={styles.bullet} />
-              <Text style={styles.bulletText}>Consider contract-to-hire for compliance roles</Text>
+              <Text style={[styles.bulletText, { top: 2 }]}>Consider contract-to-hire for compliance roles</Text>
             </View>
             <View style={styles.bulletPoint}>
               <View style={styles.bullet} />
-              <Text style={styles.bulletText}>Leverage free regulatory monitoring tools initially</Text>
+              <Text style={[styles.bulletText, { top: 2 }]}>Leverage free regulatory monitoring tools initially</Text>
             </View>
             <View style={styles.bulletPoint}>
               <View style={styles.bullet} />
-              <Text style={styles.bulletText}>Join industry associations for discounted services</Text>
+              <Text style={[styles.bulletText, { top: 2 }]}>Join industry associations for discounted services</Text>
             </View>
           </View>
         </View>
@@ -1164,7 +1164,7 @@ const ReportDocument = ({ report }: { report: GeneratedReport }) => {
                 {reportData.nextSteps.immediate.map((step, index) => (
                   <View key={index} style={styles.bulletPoint}>
                     <View style={[styles.bullet, { backgroundColor: '#92400E' }]} />
-                    <Text style={[styles.bulletText, { fontSize: 8 }]}>{step}</Text>
+                    <Text style={[styles.bulletText, { fontSize: 8, top: 2 }]}>{step}</Text>
                   </View>
                 ))}
               </View>
@@ -1178,7 +1178,7 @@ const ReportDocument = ({ report }: { report: GeneratedReport }) => {
                 {reportData.nextSteps.shortTerm.map((step, index) => (
                   <View key={index} style={styles.bulletPoint}>
                     <View style={[styles.bullet, { backgroundColor: '#0369A1' }]} />
-                    <Text style={[styles.bulletText, { fontSize: 8 }]}>{step}</Text>
+                    <Text style={[styles.bulletText, { fontSize: 8, top: 2 }]}>{step}</Text>
                   </View>
                 ))}
               </View>
@@ -1197,7 +1197,7 @@ const ReportDocument = ({ report }: { report: GeneratedReport }) => {
                 {item.tasks.map((task, idx) => (
                   <View key={idx} style={styles.bulletPoint}>
                     <View style={styles.bullet} />
-                    <Text style={[styles.bulletText, { fontSize: 8 }]}>{task}</Text>
+                    <Text style={[styles.bulletText, { fontSize: 8, top: 2 }]}>{task}</Text>
                   </View>
                 ))}
               </View>
@@ -1210,23 +1210,23 @@ const ReportDocument = ({ report }: { report: GeneratedReport }) => {
             </Text>
             <View style={styles.bulletPoint}>
               <View style={styles.bullet} />
-              <Text style={styles.bulletText}>Review regulatory changes in all operating states</Text>
+              <Text style={[styles.bulletText, { top: 2}]}>Review regulatory changes in all operating states</Text>
             </View>
             <View style={styles.bulletPoint}>
               <View style={styles.bullet} />
-              <Text style={styles.bulletText}>Audit transaction monitoring alerts and outcomes</Text>
+              <Text style={[styles.bulletText, { top: 2}]}>Audit transaction monitoring alerts and outcomes</Text>
             </View>
             <View style={styles.bulletPoint}>
               <View style={styles.bullet} />
-              <Text style={styles.bulletText}>Update risk assessment with new findings</Text>
+              <Text style={[styles.bulletText, { top: 2}]}>Update risk assessment with new findings</Text>
             </View>
             <View style={styles.bulletPoint}>
               <View style={styles.bullet} />
-              <Text style={styles.bulletText}>Verify all licenses are current and renewals scheduled</Text>
+              <Text style={[styles.bulletText, { top: 2}]}>Verify all licenses are current and renewals scheduled</Text>
             </View>
             <View style={styles.bulletPoint}>
               <View style={styles.bullet} />
-              <Text style={styles.bulletText}>Conduct staff training on new requirements</Text>
+              <Text style={[styles.bulletText, { top: 2}]}>Conduct staff training on new requirements</Text>
             </View>
           </View>
         </View>

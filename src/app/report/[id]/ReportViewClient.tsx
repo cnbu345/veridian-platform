@@ -284,7 +284,7 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
               ) : (
                 <>
                   <Download className="w-4 h-4" />
-                  Download PDF (10 Pages)
+                  Download PDF
                 </>
               )}
             </button>
@@ -314,7 +314,7 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
               <div>
                 <div className="flex items-center gap-2 text-gold-400 text-sm mb-2">
                   <FileText className="w-4 h-4" />
-                  <span>CONFIDENTIAL • 10-PAGE PREMIUM REPORT</span>
+                  <span>CONFIDENTIAL • PREMIUM REPORT</span>
                 </div>
                 <h1 className="text-2xl font-bold text-white mb-1">{report.company_name}</h1>
                 <div className="flex items-center gap-4 text-navy-300 text-sm">
@@ -438,7 +438,7 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
                       <div key={index} className="bg-white/5 rounded-xl p-4 backdrop-blur-sm border border-white/10">
                         <p className="text-xs text-navy-300 mb-1">{metric.label}</p>
                         <p className={`text-lg font-semibold ${
-                          metric.label === 'Licenses Required' ? 'text-gold-400' : 'text-white'
+                          metric.label === 'Licenses Required' ? 'text-white' : 'text-white'
                         }`}>
                           {metric.value}
                         </p>
