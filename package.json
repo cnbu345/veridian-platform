@@ -34,6 +34,7 @@
     "date-fns-tz": "^3.2.0",
     "file-saver": "^2.0.5",
     "framer-motion": "^11.3.0",
+    "googleapis": "^171.4.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.1.0",
     "lucide-react": "^0.563.0",
