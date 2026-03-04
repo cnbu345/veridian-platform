@@ -2,7 +2,7 @@
 'use client'
 
 import { cn } from '@/lib/utils/utils'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { 
@@ -19,10 +19,13 @@ import {
   Filter,
   Grid3x3,
   List,
-  ChevronDown
+  ChevronDown,
+  Video
 } from 'lucide-react'
 import EmptyState from './components/EmptyState'
 import { motion, AnimatePresence } from 'framer-motion'
+import { format, parseISO } from 'date-fns'
+import { createClient } from '@/lib/supabase/client'
 
 interface DashboardClientProps {
   user: User
@@ -32,6 +35,16 @@ interface DashboardClientProps {
   } | null
   initialReports: any[]
   error?: string
+}
+
+interface Consultation {
+  id: string
+  consultation_date: string
+  consultation_type: 'discovery' | 'strategy' | 'technical' | 'compliance'
+  status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled'
+  meeting_link: string | null
+  reminder_sent: boolean
+  notes: string | null
 }
 
 export default function DashboardClient({ 
@@ -44,6 +57,46 @@ export default function DashboardClient({
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
+  const [upcomingConsultations, setUpcomingConsultations] = useState<Consultation[]>([])
+  const [loadingConsultations, setLoadingConsultations] = useState(true)
+
+  // Fetch upcoming consultations
+  useEffect(() => {
+    const fetchConsultations = async () => {
+      try {
+        const supabase = createClient()
+        const now = new Date().toISOString()
+        
+        const { data, error } = await supabase
+          .from('consultations')
+          .select('*')
+          .eq('status', 'scheduled')
+          .gte('consultation_date', now)
+          .order('consultation_date', { ascending: true })
+          .limit(5)
+        
+        if (error) throw error
+        setUpcomingConsultations(data || [])
+      } catch (error) {
+        console.error('Error fetching consultations:', error)
+      } finally {
+        setLoadingConsultations(false)
+      }
+    }
+
+    fetchConsultations()
+  }, [])
+
+  // Get consultation type label
+  const getTypeLabel = (type: string) => {
+    const types = {
+      discovery: 'Discovery Call',
+      strategy: 'Strategy Session',
+      technical: 'Technical Review',
+      compliance: 'Compliance Check'
+    }
+    return types[type as keyof typeof types] || type
+  }
 
   // Get first name from profile or fallback to email username
   const getFirstName = () => {
@@ -135,6 +188,93 @@ export default function DashboardClient({
           )
         })}
       </div>
+
+      {/* Consultations Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="bg-white rounded-xl border border-slate-200 p-6"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-navy-900 flex items-center gap-2">
+            <Video className="w-5 h-5 text-gold-600" />
+            Upcoming Consultations
+          </h3>
+          <Link 
+            href="/dashboard/consultations" 
+            className="text-sm text-gold-600 hover:text-gold-700 font-medium flex items-center gap-1"
+          >
+            View All
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+        
+        {loadingConsultations ? (
+          <div className="space-y-3">
+            {[1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-3 animate-pulse">
+                <div className="w-8 h-8 bg-slate-200 rounded-lg" />
+                <div className="flex-1">
+                  <div className="h-4 bg-slate-200 rounded w-32 mb-2" />
+                  <div className="h-3 bg-slate-200 rounded w-24" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : upcomingConsultations.length > 0 ? (
+          <div className="space-y-3">
+            {upcomingConsultations.slice(0, 2).map((consultation) => (
+              <div key={consultation.id} className="flex items-center gap-3 group hover:bg-slate-50 p-2 rounded-lg transition-colors">
+                <div className="w-8 h-8 bg-navy-100 rounded-lg flex items-center justify-center">
+                  <Calendar className="w-4 h-4 text-navy-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-navy-900">
+                    {format(parseISO(consultation.consultation_date), 'MMM d, h:mm a')}
+                  </p>
+                  <p className="text-xs text-navy-500">
+                    {getTypeLabel(consultation.consultation_type)}
+                  </p>
+                </div>
+                {consultation.meeting_link && (
+                  <a
+                    href={consultation.meeting_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs px-3 py-1 bg-gold-50 text-gold-600 rounded-full hover:bg-gold-100 transition-colors font-medium"
+                  >
+                    Join
+                  </a>
+                )}
+              </div>
+            ))}
+            
+            {upcomingConsultations.length > 2 && (
+              <Link
+                href="/dashboard/consultations"
+                className="block text-center text-xs text-navy-500 hover:text-navy-700 mt-2 pt-2 border-t border-slate-100"
+              >
+                +{upcomingConsultations.length - 2} more upcoming
+              </Link>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-6">
+            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Calendar className="w-6 h-6 text-slate-400" />
+            </div>
+            <p className="text-sm text-navy-500 mb-3">No upcoming consultations</p>
+            <Link
+              href="/consultation"
+              className="text-sm text-gold-600 hover:text-gold-700 font-medium inline-flex items-center gap-1"
+            >
+              Schedule one now
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        )}
+      </motion.div>
 
       {/* Reports Section */}
       <div>
