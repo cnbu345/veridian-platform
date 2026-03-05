@@ -13,7 +13,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Camera,
-  Calendar
+  Calendar,
+  HandHelpingIcon,
+  MessageCircleDashedIcon
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useState, useRef, useEffect } from 'react'
@@ -110,6 +112,11 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
       name: 'Consultations',
       href: '/dashboard/consultations',
       icon: Calendar
+    },
+    {
+      name: 'Support',
+      href: '../../support',
+      icon: MessageCircleDashedIcon
     },
     {
       name: 'Settings',

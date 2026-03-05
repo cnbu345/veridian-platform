@@ -73,7 +73,9 @@ export default function PricingPage() {
               >
                 Purchase Report
               </Link>
-              
+              <p className="text-xs text-center text-navy-500 mt-2">
+                Includes 1 free 30-minute consultation ($500 value)
+              </p>
               <p className="text-xs text-center text-navy-400 mt-4">
                 Founder's: <span className="line-through">$2,497</span> <span className="text-gold-600 font-bold">$997</span>
               </p>
@@ -110,7 +112,7 @@ export default function PricingPage() {
                 </li>
                 <li className="flex items-start gap-2 text-sm">
                   <Check className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                  <span>Access to new features</span>
+                  <span>2 complimentary strategy sessions per year ($1,000 value)</span>
                 </li>
               </ul>
 
@@ -154,7 +156,7 @@ export default function PricingPage() {
                 </li>
                 <li className="flex items-start gap-2 text-sm">
                   <Check className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                  <span>Quarterly strategy calls (60 min each)</span>
+                  <span>4 quarterly strategy calls ($2,000 value)</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm">
                   <Check className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
