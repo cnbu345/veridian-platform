@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, User, Building2, Phone, Mail, FileText } from 'lucide-react'
 import { format, addDays, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from 'date-fns'
+import { toZonedTime, format as tzFormat } from 'date-fns-tz'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils/utils'
 import { useRouter } from 'next/navigation'
@@ -26,17 +27,23 @@ interface Availability {
 
 // Days in order starting with Sunday (to match JavaScript's getDay())
 const DAYS_OF_WEEK = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-const DAY_ABBREVIATIONS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
+// Consultation types that match your database
 const CONSULTATION_TYPES = [
   { value: 'discovery', label: 'Discovery Call', description: '30-minute intro call to discuss your needs' },
   { value: 'strategy', label: 'Strategy Session', description: 'Deep dive into your regulatory strategy' },
   { value: 'technical', label: 'Technical Review', description: 'Technical consultation on implementation' },
-  { value: 'compliance', label: 'Compliance Check', description: 'Review your compliance status' }
+  { value: 'compliance', label: 'Compliance Check', description: 'Review your compliance status' },
+  { value: 'enterprise', label: 'Enterprise Strategy', description: 'Enterprise-level strategy' }
 ]
+
+// Get user's local timezone
+const TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
 
 export default function ConsultationPage() {
   const router = useRouter()
+  
+  // All state variables
   const [step, setStep] = useState(1)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
@@ -44,6 +51,7 @@ export default function ConsultationPage() {
   const [availability, setAvailability] = useState<Availability | null>(null)
   const [availableDates, setAvailableDates] = useState<Date[]>([])
   const [availableTimes, setAvailableTimes] = useState<string[]>([])
+  const [bookedSlots, setBookedSlots] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -77,84 +85,222 @@ export default function ConsultationPage() {
     }
   }, [selectedDate, availability])
 
+  // Function to load admin availability settings
   const loadAvailability = async () => {
     try {
       setLoading(true)
+      setError(null)
+      
+      console.log('Fetching availability...')
       const response = await fetch('/api/admin/availability')
       
       if (!response.ok) {
-        throw new Error('Failed to load availability')
+        throw new Error(`Failed to load availability: ${response.status}`)
       }
       
       const data = await response.json()
+      console.log('Availability data:', data.availability)
+      
+      if (!data.availability) {
+        throw new Error('No availability data received')
+      }
+      
       setAvailability(data.availability)
       
     } catch (err) {
       console.error('Error loading availability:', err)
-      setError('Unable to load available time slots')
+      setError('Unable to load available time slots. Please try again later.')
     } finally {
       setLoading(false)
     }
   }
 
+  // Function to fetch already booked slots from the database
+  const fetchBookedSlots = async (date: Date): Promise<string[]> => {
+    try {
+      // Format date as YYYY-MM-DD (example: 2026-03-05)
+      const year = date.getFullYear()
+      const month = (date.getMonth() + 1).toString().padStart(2, '0')
+      const day = date.getDate().toString().padStart(2, '0')
+      const dateStr = `${year}-${month}-${day}`
+      
+      console.log('Fetching booked slots for date:', dateStr)
+      
+      // Call our API endpoint
+      const response = await fetch(`/api/consultations/availability?date=${dateStr}`)
+      
+      if (!response.ok) {
+        console.error('Failed to fetch booked slots')
+        return []
+      }
+      
+      const data = await response.json()
+      console.log('API returned booked slots (UTC):', data.bookedSlots)
+      
+      // Return the UTC times directly (like "18:00", "19:00", "21:30")
+      return data.bookedSlots || []
+    } catch (error) {
+      console.error('Error fetching booked slots:', error)
+      return []
+    }
+  }
+
+  // Function to generate available dates for the calendar
   const generateAvailableDates = () => {
+    if (!availability) {
+      console.log('No availability data yet')
+      return
+    }
+    
     const start = startOfMonth(currentMonth)
     const end = endOfMonth(currentMonth)
     const daysInMonth = eachDayOfInterval({ start, end })
     
+    console.log('Generating available dates for month:', format(currentMonth, 'MMMM yyyy'))
+    
+    // Filter days that have availability slots
     const available = daysInMonth.filter(date => {
-      const dayOfWeek = DAYS_OF_WEEK[date.getDay()] // getDay() returns 0-6, matching our array
-      const dayAvailability = availability?.[dayOfWeek]
-      return dayAvailability?.isAvailable && dayAvailability.slots.length > 0
+      const dayOfWeek = DAYS_OF_WEEK[date.getDay()]
+      const dayAvailability = availability[dayOfWeek]
+      
+      // Check if this day has any available slots
+      const isAvailable = dayAvailability?.isAvailable && 
+                          dayAvailability.slots && 
+                          dayAvailability.slots.length > 0
+      
+      return isAvailable
     })
     
+    console.log('Available dates found:', available.length)
     setAvailableDates(available)
   }
 
-  const generateAvailableTimes = (date: Date) => {
-    const dayOfWeek = DAYS_OF_WEEK[date.getDay()]
-    const dayAvailability = availability?.[dayOfWeek]
-    
-    if (!dayAvailability?.isAvailable) {
+  // Function to generate available time slots for a selected date
+  const generateAvailableTimes = async (date: Date) => {
+    if (!availability) {
+      console.log('No availability data')
       setAvailableTimes([])
       return
     }
     
-    // Generate 30-minute slots within each time range
+    const dayOfWeek = DAYS_OF_WEEK[date.getDay()]
+    const dayAvailability = availability[dayOfWeek]
+    
+    console.log('='.repeat(50))
+    console.log('GENERATING TIMES FOR DATE:', format(date, 'yyyy-MM-dd (EEEE)'))
+    console.log('Day of week:', dayOfWeek)
+    console.log('Day availability:', dayAvailability)
+    
+    if (!dayAvailability?.isAvailable || !dayAvailability.slots || dayAvailability.slots.length === 0) {
+      console.log('No available slots for this day')
+      setAvailableTimes([])
+      return
+    }
+    
+    // Fetch booked slots from the database (these are in UTC)
+    const bookedUtcSlots = await fetchBookedSlots(date)
+    console.log('Booked UTC slots from API:', bookedUtcSlots)
+    setBookedSlots(bookedUtcSlots)
+    
+    // Generate all possible time slots based on admin availability
     const times: string[] = []
-    dayAvailability.slots.forEach(slot => {
-      const [startHour, startMinute] = slot.start.split(':').map(Number)
-      const [endHour, endMinute] = slot.end.split(':').map(Number)
+    
+    dayAvailability.slots.forEach((slot: TimeSlot, index: number) => {
+      console.log(`\nProcessing availability slot ${index}:`, slot)
+      
+      // Get start and end times from the availability slot
+      let start: string, end: string
+      
+      if (typeof slot === 'string') {
+        // Handle old format (just start time)
+        start = slot
+        // Default to 30 minutes later
+        const [hours, minutes] = slot.split(':').map(Number)
+        const endDate = new Date()
+        endDate.setHours(hours, minutes + 30)
+        end = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`
+      } else {
+        // Handle new format (object with start and end)
+        start = slot.start
+        end = slot.end
+      }
+      
+      const [startHour, startMinute] = start.split(':').map(Number)
+      const [endHour, endMinute] = end.split(':').map(Number)
       
       const startTotal = startHour * 60 + startMinute
       const endTotal = endHour * 60 + endMinute
       
-      // Generate slots every 30 minutes
+      console.log(`Time range: ${start} to ${end}`)
+      
+      // Generate 30-minute slots
       for (let time = startTotal; time < endTotal; time += 30) {
         const hours = Math.floor(time / 60)
         const minutes = time % 60
-        times.push(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`)
+        const localTimeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+        
+        // Convert this local time to UTC to check against booked slots
+        // This is the key part - we need to see what UTC time this local time would become
+        const localDateTime = new Date(date)
+        localDateTime.setHours(hours, minutes, 0, 0)
+        
+        // Convert local time to UTC to get the UTC time string
+        const utcHours = localDateTime.getUTCHours().toString().padStart(2, '0')
+        const utcMinutes = localDateTime.getUTCMinutes().toString().padStart(2, '0')
+        const utcTimeString = `${utcHours}:${utcMinutes}`
+        
+        // Check if this time is in the past
+        const now = new Date()
+        const isPast = localDateTime < now
+        
+        // Check if this UTC time is already booked
+        const isBooked = bookedUtcSlots.includes(utcTimeString)
+        
+        console.log(`  Local: ${localTimeString} -> UTC: ${utcTimeString}`, {
+          isPast,
+          isBooked,
+          wouldEndBeforeEnd: time + 30 <= endTotal
+        })
+        
+        // Only add if it's valid, not booked, and in the future
+        if (time + 30 <= endTotal && !isBooked && !isPast) {
+          times.push(localTimeString)
+          console.log(`  ✅ ADDED: ${localTimeString}`)
+        } else {
+          if (isBooked) console.log(`  ❌ SKIPPED (booked): ${localTimeString} (UTC: ${utcTimeString})`)
+          if (isPast) console.log(`  ❌ SKIPPED (past): ${localTimeString}`)
+        }
       }
     })
     
-    setAvailableTimes(times)
-    setSelectedTime(null) // Reset selected time when date changes
+    // Remove duplicates and sort
+    const uniqueTimes = [...new Set(times)].sort()
+    console.log('\nFinal available times (local):', uniqueTimes)
+    console.log('='.repeat(50))
+    
+    setAvailableTimes(uniqueTimes)
+    setSelectedTime(null)
   }
 
+  // Check if a date is available for booking
   const isDateAvailable = (date: Date) => {
     return availableDates.some(availableDate => isSameDay(availableDate, date))
   }
 
-  const handleDateSelect = (date: Date) => {
+  // Handle date selection
+  const handleDateSelect = async (date: Date) => {
     setSelectedDate(date)
     setError(null)
+    await generateAvailableTimes(date)
   }
 
+  // Handle time selection
   const handleTimeSelect = (time: string) => {
     setSelectedTime(time)
     setError(null)
   }
 
+  // Handle month change in calendar
   const handleMonthChange = (increment: number) => {
     setCurrentMonth(prev => {
       const newMonth = new Date(prev)
@@ -163,6 +309,7 @@ export default function ConsultationPage() {
     })
   }
 
+  // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData(prev => ({
       ...prev,
@@ -170,6 +317,7 @@ export default function ConsultationPage() {
     }))
   }
 
+  // Handle continue button
   const handleContinue = () => {
     if (step === 1 && selectedDate && selectedTime) {
       setStep(2)
@@ -187,20 +335,52 @@ export default function ConsultationPage() {
     }
   }
 
+  // Handle back button
   const handleBack = () => {
     setStep(prev => prev - 1)
     setError(null)
   }
 
+  // Handle final form submission
   const handleSubmit = async () => {
     try {
       setSubmitting(true)
       setError(null)
 
+      // Double-check that the slot is still available
+      if (selectedDate && selectedTime) {
+        const booked = await fetchBookedSlots(selectedDate)
+        
+        // Convert selected local time to UTC to check against booked slots
+        const [hours, minutes] = selectedTime.split(':').map(Number)
+        const localDateTime = new Date(selectedDate)
+        localDateTime.setHours(hours, minutes, 0, 0)
+        
+        const utcHours = localDateTime.getUTCHours().toString().padStart(2, '0')
+        const utcMinutes = localDateTime.getUTCMinutes().toString().padStart(2, '0')
+        const utcTimeString = `${utcHours}:${utcMinutes}`
+        
+        if (booked.includes(utcTimeString)) {
+          setError('This time slot has just been booked. Please select another time.')
+          await generateAvailableTimes(selectedDate)
+          setSubmitting(false)
+          return
+        }
+      }
+
       // Combine date and time
       const [hours, minutes] = selectedTime!.split(':')
       const consultationDate = new Date(selectedDate!)
-      consultationDate.setHours(parseInt(hours), parseInt(minutes))
+      consultationDate.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+      
+      // IMPORTANT: Convert to UTC ISO string for storage
+      // This ensures the database stores it in UTC correctly
+      const utcDateString = consultationDate.toISOString()
+      
+      console.log('Submitting consultation:', {
+        localTime: consultationDate.toString(),
+        utcTime: utcDateString
+      })
       
       const response = await fetch('/api/consultations/book', {
         method: 'POST',
@@ -212,7 +392,7 @@ export default function ConsultationPage() {
           customer_email: formData.email,
           customer_phone: formData.phone,
           company_name: formData.companyName,
-          consultation_date: consultationDate.toISOString(),
+          consultation_date: utcDateString, // Send UTC time to API
           consultation_type: selectedType,
           notes: formData.notes
         }),
@@ -221,10 +401,10 @@ export default function ConsultationPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to schedule consultation')
+        throw new Error(data.error || data.details || 'Failed to schedule consultation')
       }
 
-      // Redirect to success page or dashboard
+      // Redirect to success page
       router.push('/dashboard/consultations?booked=true')
       
     } catch (err) {
@@ -283,6 +463,9 @@ export default function ConsultationPage() {
             {step === 1 && "Choose a date and time that works for you"}
             {step === 2 && "Tell us a bit about yourself"}
             {step === 3 && "Review and confirm your consultation"}
+          </p>
+          <p className="text-xs text-navy-400 mt-2">
+            All times shown in your timezone: {TIMEZONE}
           </p>
           
           {/* Progress Steps */}
@@ -345,17 +528,9 @@ export default function ConsultationPage() {
 
                 {/* Calendar Grid - Day Headers */}
                 <div className="grid grid-cols-7 gap-1 mb-2">
-                  {[
-                    { key: 'sun', label: 'S' },
-                    { key: 'mon', label: 'M' },
-                    { key: 'tue', label: 'T' },
-                    { key: 'wed', label: 'W' },
-                    { key: 'thu', label: 'T' },
-                    { key: 'fri', label: 'F' },
-                    { key: 'sat', label: 'S' }
-                  ].map(day => (
-                    <div key={day.key} className="text-center text-xs font-medium text-navy-500 py-2">
-                      {day.label}
+                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                    <div key={`${day}-${index}`} className="text-center text-xs font-medium text-navy-500 py-2">
+                      {day}
                     </div>
                   ))}
                 </div>
@@ -444,20 +619,30 @@ export default function ConsultationPage() {
                     </p>
                     
                     <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 max-h-[300px] sm:max-h-[400px] overflow-y-auto pr-2">
-                      {availableTimes.map(time => (
-                        <button
-                          key={time}
-                          onClick={() => handleTimeSelect(time)}
-                          className={cn(
-                            "px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm rounded-lg border transition-all",
-                            selectedTime === time
-                              ? "bg-gold-600 text-white border-gold-600"
-                              : "bg-white border-slate-200 text-navy-700 hover:border-gold-300 hover:bg-gold-50"
-                          )}
-                        >
-                          {format(parseISO(`2000-01-01T${time}`), 'h:mm a')}
-                        </button>
-                      ))}
+                      {availableTimes.map(time => {
+                        const [hours, minutes] = time.split(':')
+                        const slotDateTime = new Date(selectedDate)
+                        slotDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+                        const isPast = slotDateTime < new Date()
+                        
+                        return (
+                          <button
+                            key={time}
+                            onClick={() => !isPast && handleTimeSelect(time)}
+                            disabled={isPast}
+                            className={cn(
+                              "px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm rounded-lg border transition-all",
+                              selectedTime === time && !isPast
+                                ? "bg-gold-600 text-white border-gold-600"
+                                : isPast
+                                ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                                : "bg-white border-slate-200 text-navy-700 hover:border-gold-300 hover:bg-gold-50"
+                            )}
+                          >
+                            {format(parseISO(`2000-01-01T${time}`), 'h:mm a')}
+                          </button>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -471,7 +656,7 @@ export default function ConsultationPage() {
                   {selectedDate && selectedTime ? (
                     <p>
                       Selected: {format(selectedDate, 'EEEE, MMMM d')} at{' '}
-                      {format(parseISO(`2000-01-01T${selectedTime}`), 'h:mm a')}
+                      {format(parseISO(`2000-01-01T${selectedTime}`), 'h:mm a')} ({TIMEZONE})
                     </p>
                   ) : (
                     <p>Please select a date and time to continue</p>
@@ -652,6 +837,7 @@ export default function ConsultationPage() {
                   {selectedDate && format(selectedDate, 'EEEE, MMMM d, yyyy')} at{' '}
                   {selectedTime && format(parseISO(`2000-01-01T${selectedTime}`), 'h:mm a')}
                 </p>
+                <p className="text-sm text-navy-500 mt-1">Timezone: {TIMEZONE}</p>
                 <p className="text-sm text-navy-500 mt-1">30 minute consultation</p>
               </div>
 
@@ -715,9 +901,9 @@ export default function ConsultationPage() {
           </motion.div>
         )}
 
-        {/* Mobile Responsiveness Note */}
+        {/* Timezone Note */}
         <p className="text-center text-xs text-navy-400 mt-4">
-          All times are shown in your local timezone
+          All times are shown in your local timezone: {TIMEZONE}
         </p>
       </div>
     </div>

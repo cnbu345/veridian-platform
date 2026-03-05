@@ -26,8 +26,12 @@ import {
   Building2,
   Scale,
   Gavel,
-  Bell
+  Bell,
+  PlusCircleIcon,
+  PlusSquareIcon,
+  BarChart3Icon
 } from 'lucide-react'
+import { title } from 'process'
 
 const navItems = [
   {
@@ -37,7 +41,7 @@ const navItems = [
   },
   {
     title: 'Revenue',
-    href: '/admin/revenue',
+    href: '/admin/revenue/pricing',
     icon: DollarSign,
     subItems: [
       { title: 'Overview', href: '/admin/revenue' },
@@ -47,8 +51,17 @@ const navItems = [
     ]
   },
   {
+    title: 'Sales',
+    href: '/admin/sales/leads',
+    icon: BarChart3Icon,
+    subItems: [
+      { title: 'Leads', href: '/admin/sales/leads' },
+      { title: 'Pipeline', href: '/admin/sales/pipeline' }
+    ]
+  },
+  {
     title: 'Reports',
-    href: '/admin/reports',
+    href: '/admin/reports/queue',
     icon: FileText,
     subItems: [
       { title: 'All Reports', href: '/admin/reports' },
@@ -70,7 +83,7 @@ const navItems = [
   },
   {
     title: 'Customers',
-    href: '/admin/customers',
+    href: '/admin/customers/health',
     icon: Users,
     subItems: [
       { title: 'All Customers', href: '/admin/customers' },
@@ -92,13 +105,24 @@ const navItems = [
   },
   {
     title: 'Marketing',
-    href: '/admin/marketing',
+    href: '/admin/marketing/content',
     icon: TrendingUp,
     subItems: [
       { title: 'Analytics', href: '/admin/marketing' },
       { title: 'Email Campaigns', href: '/admin/marketing/email' },
       { title: 'Landing Pages', href: '/admin/marketing/pages' },
-      { title: 'SEO', href: '/admin/marketing/seo' }
+      { title: 'SEO', href: '/admin/marketing/seo' },
+      { title: 'Competitors', href: '/admin/marketing/competitors' }
+    ]
+  },
+  {
+    title: 'Health',
+    href: '/admin/health/alerts',
+    icon: PlusSquareIcon,
+    subItems: [
+      { title: 'Alerts', href: '/admin/health/alerts' },
+      { title: 'FAQs', href: '/admin/support/faqs' },
+      { title: 'Knowledge Base', href: '/admin/support/kb' }
     ]
   },
   {

@@ -5,13 +5,15 @@ import { useState, useEffect } from 'react'
 import { 
   Calendar, Clock, User, Phone, Mail, Building2, Check, X, MoreVertical, 
   Filter, Download, ChevronLeft, ChevronRight, Video, Calendar as CalendarIcon,
-  Search, RefreshCw, DollarSign, AlertCircle, Edit2, Trash2, Copy, Send
+  Search, RefreshCw, DollarSign, AlertCircle, Edit2, Trash2, Copy, Send,
+  ExternalLink
 } from 'lucide-react'
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, isSameDay, parseISO } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { cn } from '@/lib/utils/utils'
 
 interface Consultation {
   id: string
@@ -87,6 +89,14 @@ export default function ConsultationManagementClient({ initialConsultations }: P
       totalRevenue
     })
   }, [consultations])
+
+  const CONSULTATION_TYPES = [
+  { value: 'discovery', label: 'Discovery Call', description: '30-minute intro call' },
+  { value: 'strategy', label: 'Strategy Session', description: 'Deep dive strategy' },
+  { value: 'technical', label: 'Technical Review', description: 'Technical consultation' },
+  { value: 'compliance', label: 'Compliance Check', description: 'Compliance review' },
+  { value: 'enterprise', label: 'Enterprise Strategy', description: 'Enterprise-level strategy' }
+]
 
   // Filter consultations based on selected filter and search term
   const filteredConsultations = consultations.filter(c => {
@@ -250,9 +260,19 @@ export default function ConsultationManagementClient({ initialConsultations }: P
     }
   }
 
-  const handleCopyMeetingLink = (link: string) => {
+  const handleCopyMeetingLink = (link: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
     navigator.clipboard.writeText(link)
     toast.success('Meeting link copied to clipboard')
+  }
+
+  const handleJoinMeeting = (link: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    window.open(link, '_blank', 'noopener,noreferrer')
   }
 
   const handleSendReminder = async (consultation: Consultation) => {
@@ -349,13 +369,15 @@ export default function ConsultationManagementClient({ initialConsultations }: P
   }
 
   const getTypeLabel = (type: string) => {
-    switch(type) {
-      case 'discovery': return 'Discovery Call'
-      case 'compliance': return 'Compliance Review'
-      case 'enterprise': return 'Enterprise Strategy'
-      default: return type
-    }
+  switch(type) {
+    case 'discovery': return 'Discovery Call'
+    case 'strategy': return 'Strategy Session'
+    case 'technical': return 'Technical Review'
+    case 'compliance': return 'Compliance Check'
+    case 'enterprise': return 'Enterprise Strategy'
+    default: return type
   }
+}
 
   // Calendar view helpers
   const getWeekDays = () => {
@@ -612,12 +634,33 @@ export default function ConsultationManagementClient({ initialConsultations }: P
                 {consultation.meeting_link && (
                   <div className="flex items-center gap-2 text-sm">
                     <Video className="w-4 h-4 text-navy-400" />
-                    <button
-                      onClick={() => handleCopyMeetingLink(consultation.meeting_link!)}
-                      className="text-gold-600 hover:text-gold-700 flex items-center gap-1"
-                    >
-                      Copy Link <Copy className="w-3 h-3" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleCopyMeetingLink(consultation.meeting_link!)}
+                        className="text-gold-600 hover:text-gold-700 flex items-center gap-1"
+                        title="Copy link"
+                      >
+                        Copy <Copy className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={(e) => handleJoinMeeting(consultation.meeting_link!, e)}
+                        className="px-2 py-1 bg-green-600 text-white rounded-md text-xs hover:bg-green-700 flex items-center gap-1"
+                        title="Join meeting"
+                      >
+                        <Video className="w-3 h-3" />
+                        Join
+                      </button>
+                      <a
+                        href={consultation.meeting_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-navy-400 hover:text-navy-600"
+                        title="Opens in new tab"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
                   </div>
                 )}
               </div>
@@ -762,14 +805,29 @@ export default function ConsultationManagementClient({ initialConsultations }: P
                           setSelectedConsultation(c)
                           setShowDetailsModal(true)
                         }}
-                        className={`text-xs p-1 rounded cursor-pointer transition-colors ${
+                        className={cn(
+                          "text-xs p-1 rounded cursor-pointer transition-colors group relative",
                           c.status === 'scheduled' ? 'bg-blue-100 text-blue-800 hover:bg-blue-200' :
                           c.status === 'completed' ? 'bg-green-100 text-green-800 hover:bg-green-200' :
                           'bg-slate-100 text-slate-800 hover:bg-slate-200'
-                        }`}
+                        )}
                       >
-                        <div className="font-medium truncate">
-                          {format(parseISO(c.consultation_date), 'h:mm a')}
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium truncate">
+                            {format(parseISO(c.consultation_date), 'h:mm a')}
+                          </span>
+                          {c.meeting_link && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleJoinMeeting(c.meeting_link!, e)
+                              }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-white/30 rounded"
+                              title="Join meeting"
+                            >
+                              <Video className="w-3 h-3" />
+                            </button>
+                          )}
                         </div>
                         <div className="truncate">{c.customer_name}</div>
                       </div>
@@ -816,14 +874,31 @@ export default function ConsultationManagementClient({ initialConsultations }: P
                           setSelectedConsultation(c)
                           setShowDetailsModal(true)
                         }}
-                        className={`text-xs p-2 mb-1 rounded cursor-pointer transition-colors ${
+                        className={cn(
+                          "text-xs p-2 mb-1 rounded cursor-pointer transition-colors group relative",
                           c.status === 'scheduled' ? 'bg-blue-100 hover:bg-blue-200' :
                           c.status === 'completed' ? 'bg-green-100 hover:bg-green-200' :
                           'bg-slate-100 hover:bg-slate-200'
-                        }`}
+                        )}
                       >
-                        <div className="font-medium text-navy-900">{c.customer_name}</div>
-                        <div className="text-navy-600 truncate">{c.company_name}</div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-navy-900">{c.customer_name}</div>
+                            <div className="text-navy-600 truncate">{c.company_name}</div>
+                          </div>
+                          {c.meeting_link && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleJoinMeeting(c.meeting_link!, e)
+                              }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/30 rounded"
+                              title="Join meeting"
+                            >
+                              <Video className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -950,20 +1025,40 @@ export default function ConsultationManagementClient({ initialConsultations }: P
               {selectedConsultation.meeting_link && (
                 <div>
                   <h3 className="text-sm font-medium text-navy-500 mb-3">Meeting Link</h3>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={selectedConsultation.meeting_link}
-                      readOnly
-                      className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50"
-                    />
-                    <button
-                      onClick={() => handleCopyMeetingLink(selectedConsultation.meeting_link!)}
-                      className="px-4 py-2 bg-navy-900 text-white rounded-lg text-sm hover:bg-navy-800 transition-colors flex items-center gap-2"
-                    >
-                      <Copy className="w-4 h-4" />
-                      Copy
-                    </button>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex-1 flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={selectedConsultation.meeting_link}
+                        readOnly
+                        className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50"
+                      />
+                      <a
+                        href={selectedConsultation.meeting_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-navy-400 hover:text-navy-600"
+                        title="Opens in new tab"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleCopyMeetingLink(selectedConsultation.meeting_link!)}
+                        className="px-4 py-2 border border-slate-300 text-navy-600 rounded-lg text-sm hover:bg-slate-50 transition-colors flex items-center gap-2"
+                      >
+                        <Copy className="w-4 h-4" />
+                        Copy
+                      </button>
+                      <button
+                        onClick={(e) => handleJoinMeeting(selectedConsultation.meeting_link!, e)}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors flex items-center gap-2"
+                      >
+                        <Video className="w-4 h-4" />
+                        Join Meeting
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

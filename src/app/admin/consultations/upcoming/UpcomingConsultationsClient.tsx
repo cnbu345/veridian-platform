@@ -7,7 +7,7 @@ import {
   Calendar, Clock, User, Phone, Mail, Building2, Video, 
   MoreVertical, Check, X, Send, Copy, AlertCircle, Filter,
   Search, RefreshCw, ChevronDown, Download, Calendar as CalendarIcon,
-  ChevronLeft, ChevronRight, Edit2, Trash2
+  ChevronLeft, ChevronRight, Edit2, Trash2, ExternalLink, FileText
 } from 'lucide-react'
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, addDays } from 'date-fns'
 import { toZonedTime, format as tzFormat } from 'date-fns-tz'
@@ -58,6 +58,11 @@ const CONSULTATION_TYPES = {
     label: 'Compliance Check', 
     color: 'bg-green-100 text-green-700 border-green-200',
     icon: '✓'
+  },
+  enterprise: { 
+    label: 'Enterprise Strategy', 
+    color: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+    icon: '🏢'
   }
 }
 
@@ -308,6 +313,10 @@ export default function UpcomingConsultationsClient({ initialConsultations }: Pr
   const handleCopyMeetingLink = (link: string) => {
     navigator.clipboard.writeText(link)
     toast.success('Meeting link copied to clipboard')
+  }
+
+  const handleJoinMeeting = (link: string) => {
+    window.open(link, '_blank', 'noopener,noreferrer')
   }
 
   const handleRefresh = async () => {
@@ -592,13 +601,23 @@ export default function UpcomingConsultationsClient({ initialConsultations }: Pr
                 {/* Actions */}
                 <div className="flex items-center gap-1 self-end sm:self-start">
                   {consultation.meeting_link && (
-                    <button
-                      onClick={() => handleCopyMeetingLink(consultation.meeting_link!)}
-                      className="p-2 text-navy-500 hover:text-gold-600 hover:bg-gold-50 rounded-lg transition-colors"
-                      title="Copy meeting link"
-                    >
-                      <Copy className="w-4 h-4" />
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleCopyMeetingLink(consultation.meeting_link!)}
+                        className="p-2 text-navy-500 hover:text-gold-600 hover:bg-gold-50 rounded-lg transition-colors"
+                        title="Copy meeting link"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleJoinMeeting(consultation.meeting_link!)}
+                        className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1 text-sm font-medium"
+                        title="Join meeting"
+                      >
+                        <Video className="w-4 h-4" />
+                        <span className="hidden sm:inline">Join</span>
+                      </button>
+                    </>
                   )}
                   
                   {!consultation.reminder_sent && (
@@ -622,6 +641,7 @@ export default function UpcomingConsultationsClient({ initialConsultations }: Pr
                       setShowDetailsModal(true)
                     }}
                     className="p-2 text-navy-400 hover:text-navy-600 hover:bg-slate-100 rounded-lg transition-colors"
+                    title="View details"
                   >
                     <MoreVertical className="w-4 h-4" />
                   </button>
@@ -689,7 +709,7 @@ export default function UpcomingConsultationsClient({ initialConsultations }: Pr
         )}
       </div>
 
-      {/* Details Modal */}
+      {/* Details Modal - UPDATED to match the design from calendar and show full details */}
       <AnimatePresence>
         {showDetailsModal && selectedConsultation && (
           <motion.div
@@ -703,11 +723,11 @@ export default function UpcomingConsultationsClient({ initialConsultations }: Pr
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-4 sm:p-6 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white">
-                <h2 className="text-lg sm:text-xl font-semibold text-navy-900">Consultation Details</h2>
+              <div className="p-6 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white">
+                <h2 className="text-xl font-semibold text-navy-900">Consultation Details</h2>
                 <button
                   onClick={() => setShowDetailsModal(false)}
                   className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
@@ -715,25 +735,25 @@ export default function UpcomingConsultationsClient({ initialConsultations }: Pr
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              
-              <div className="p-4 sm:p-6 space-y-6">
+
+              <div className="p-6 space-y-4">
                 {/* Customer Info */}
-                <div>
-                  <h3 className="text-sm font-medium text-navy-500 mb-3">Client Information</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-slate-50 p-3 rounded-lg">
+                <div className="bg-slate-50 p-4 rounded-lg">
+                  <h3 className="text-sm font-medium text-navy-500 mb-3">Customer Information</h3>
+                  <div className="space-y-2">
+                    <div>
                       <p className="text-xs text-navy-400">Name</p>
                       <p className="text-navy-900 font-medium">{selectedConsultation.customer_name}</p>
                     </div>
-                    <div className="bg-slate-50 p-3 rounded-lg">
+                    <div>
                       <p className="text-xs text-navy-400">Company</p>
                       <p className="text-navy-900">{selectedConsultation.company_name}</p>
                     </div>
-                    <div className="bg-slate-50 p-3 rounded-lg col-span-1 sm:col-span-2">
+                    <div>
                       <p className="text-xs text-navy-400">Email</p>
                       <p className="text-navy-900 break-all">{selectedConsultation.customer_email}</p>
                     </div>
-                    <div className="bg-slate-50 p-3 rounded-lg col-span-1 sm:col-span-2">
+                    <div>
                       <p className="text-xs text-navy-400">Phone</p>
                       <p className="text-navy-900">{selectedConsultation.customer_phone}</p>
                     </div>
@@ -741,81 +761,122 @@ export default function UpcomingConsultationsClient({ initialConsultations }: Pr
                 </div>
 
                 {/* Consultation Details */}
-                <div>
+                <div className="bg-slate-50 p-4 rounded-lg">
                   <h3 className="text-sm font-medium text-navy-500 mb-3">Consultation Details</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-slate-50 p-3 rounded-lg">
-                      <p className="text-xs text-navy-400">Date</p>
-                      <p className="text-navy-900">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="w-4 h-4 text-navy-400" />
+                      <span className="text-navy-900">
                         {formatLocalDate(selectedConsultation.consultation_date, 'EEEE, MMMM d, yyyy')}
-                      </p>
+                      </span>
                     </div>
-                    <div className="bg-slate-50 p-3 rounded-lg">
-                      <p className="text-xs text-navy-400">Time</p>
-                      <p className="text-navy-900">
-                        {formatLocalDate(selectedConsultation.consultation_date, 'h:mm a')} ({TIMEZONE})
-                      </p>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Clock className="w-4 h-4 text-navy-400" />
+                      <span className="text-navy-900">
+                        {formatLocalDate(selectedConsultation.consultation_date, 'h:mm a')} ({selectedConsultation.duration_minutes} min)
+                      </span>
                     </div>
-                    <div className="bg-slate-50 p-3 rounded-lg">
-                      <p className="text-xs text-navy-400">Type</p>
-                      <p className="text-navy-900 capitalize">{selectedConsultation.consultation_type}</p>
-                    </div>
-                    <div className="bg-slate-50 p-3 rounded-lg">
-                      <p className="text-xs text-navy-400">Duration</p>
-                      <p className="text-navy-900">{selectedConsultation.duration_minutes} minutes</p>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className={cn(
+                        "px-2 py-1 rounded-full text-xs font-medium",
+                        CONSULTATION_TYPES[selectedConsultation.consultation_type].color
+                      )}>
+                        {CONSULTATION_TYPES[selectedConsultation.consultation_type].icon} {CONSULTATION_TYPES[selectedConsultation.consultation_type].label}
+                      </span>
                     </div>
                     {selectedConsultation.reminder_sent && (
-                      <div className="bg-slate-50 p-3 rounded-lg">
-                        <p className="text-xs text-navy-400">Reminder Sent</p>
-                        <p className="text-navy-900">
-                          {selectedConsultation.reminder_sent_at 
+                      <div className="flex items-center gap-2 text-sm">
+                        <Send className="w-4 h-4 text-navy-400" />
+                        <span className="text-navy-900">
+                          Reminder sent {selectedConsultation.reminder_sent_at 
                             ? formatLocalDate(selectedConsultation.reminder_sent_at, 'MMM d, h:mm a')
-                            : 'Yes'}
-                        </p>
+                            : ''}
+                        </span>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Notes */}
-                {selectedConsultation.notes && (
-                  <div>
-                    <h3 className="text-sm font-medium text-navy-500 mb-3">Notes</h3>
-                    <div className="bg-slate-50 p-4 rounded-lg">
-                      <p className="text-navy-700 whitespace-pre-wrap text-sm">{selectedConsultation.notes}</p>
+                {/* Notes Section */}
+                {selectedConsultation.notes ? (
+                  <div className="bg-slate-50 p-4 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="w-4 h-4 text-navy-500" />
+                      <h3 className="text-sm font-medium text-navy-500">Notes</h3>
                     </div>
+                    <p className="text-navy-700 whitespace-pre-wrap text-sm bg-white p-3 rounded-lg border border-slate-200">
+                      {selectedConsultation.notes}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-slate-50 p-4 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="w-4 h-4 text-navy-400" />
+                      <h3 className="text-sm font-medium text-navy-500">Notes</h3>
+                    </div>
+                    <p className="text-navy-400 text-sm italic bg-white p-3 rounded-lg border border-slate-200">
+                      No notes added for this consultation
+                    </p>
                   </div>
                 )}
 
                 {/* Meeting Link */}
-                {selectedConsultation.meeting_link && (
-                  <div>
+                {selectedConsultation.meeting_link ? (
+                  <div className="bg-slate-50 p-4 rounded-lg">
                     <h3 className="text-sm font-medium text-navy-500 mb-3">Meeting Link</h3>
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                      <input
-                        type="text"
-                        value={selectedConsultation.meeting_link}
-                        readOnly
-                        className="flex-1 px-4 py-2 border border-slate-200 rounded-lg bg-slate-50 text-sm"
-                      />
-                      <button
-                        onClick={() => handleCopyMeetingLink(selectedConsultation.meeting_link!)}
-                        className="px-4 py-2 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors text-sm"
-                      >
-                        Copy
-                      </button>
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={selectedConsultation.meeting_link}
+                          readOnly
+                          className="flex-1 px-3 py-2 border border-slate-200 rounded-lg bg-white text-sm"
+                        />
+                        <a
+                          href={selectedConsultation.meeting_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-navy-400 hover:text-navy-600"
+                          title="Opens in new tab"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleJoinMeeting(selectedConsultation.meeting_link!)}
+                          className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                        >
+                          <Video className="w-5 h-5" />
+                          Join Meeting Now
+                        </button>
+                        <button
+                          onClick={() => handleCopyMeetingLink(selectedConsultation.meeting_link!)}
+                          className="px-4 py-3 border border-slate-200 text-navy-600 rounded-lg hover:bg-slate-50 transition-colors text-sm flex items-center justify-center"
+                          title="Copy link"
+                        >
+                          <Copy className="w-5 h-5" />
+                        </button>
+                      </div>
                     </div>
+                  </div>
+                ) : (
+                  <div className="bg-slate-50 p-4 rounded-lg">
+                    <h3 className="text-sm font-medium text-navy-500 mb-3">Meeting Link</h3>
+                    <p className="text-navy-400 text-sm italic bg-white p-3 rounded-lg border border-slate-200">
+                      No meeting link provided
+                    </p>
                   </div>
                 )}
 
-                {/* Actions */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-4 border-t border-slate-200">
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
                   <button
                     onClick={() => {
                       setShowDetailsModal(false)
                       setShowRescheduleModal(true)
                     }}
-                    className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm"
+                    className="flex-1 px-4 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
                   >
                     Reschedule
                   </button>
@@ -824,21 +885,35 @@ export default function UpcomingConsultationsClient({ initialConsultations }: Pr
                       setShowDetailsModal(false)
                       setShowCancelModal(true)
                     }}
-                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                    className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
                   >
                     Cancel
                   </button>
-                  <button
-                    onClick={() => {
-                      handleSendReminder(selectedConsultation)
-                      setShowDetailsModal(false)
-                    }}
-                    disabled={selectedConsultation.reminder_sent}
-                    className="flex-1 px-4 py-2 bg-gold-600 text-white rounded-lg hover:bg-gold-700 transition-colors text-sm disabled:opacity-50"
-                  >
-                    {selectedConsultation.reminder_sent ? 'Reminder Sent' : 'Send Reminder'}
-                  </button>
+                  {!selectedConsultation.reminder_sent && (
+                    <button
+                      onClick={() => {
+                        handleSendReminder(selectedConsultation)
+                        setShowDetailsModal(false)
+                      }}
+                      disabled={sendingReminder === selectedConsultation.id}
+                      className="flex-1 px-4 py-3 bg-gold-600 text-white rounded-lg hover:bg-gold-700 transition-colors text-sm font-medium disabled:opacity-50"
+                    >
+                      {sendingReminder === selectedConsultation.id ? 'Sending...' : 'Send Reminder'}
+                    </button>
+                  )}
                 </div>
+
+                {/* Close Button (shown when no actions available) */}
+                {selectedConsultation.reminder_sent && (
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => setShowDetailsModal(false)}
+                      className="w-full px-4 py-3 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors text-sm font-medium"
+                    >
+                      Close
+                    </button>
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>
