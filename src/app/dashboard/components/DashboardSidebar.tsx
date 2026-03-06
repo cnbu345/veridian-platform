@@ -14,10 +14,12 @@ import {
   ChevronRight,
   Camera,
   Calendar,
-  HandHelpingIcon,
-  MessageCircleDashedIcon,
-  MessageCircleCodeIcon,
-  MessageCircle
+  MessageCircle,
+  HelpCircle,
+  BookOpen,
+  PlusCircle,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useState, useRef, useEffect } from 'react'
@@ -30,6 +32,9 @@ interface DashboardSidebarProps {
 
 export default function DashboardSidebar({ user }: DashboardSidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
+    support: true // Default expanded
+  })
   const [profileImage, setProfileImage] = useState<string | null>(
     user.user_metadata?.avatar_url || null
   )
@@ -48,7 +53,6 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
 
     return () => subscription.unsubscribe()
   }, [supabase.auth])
-
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -99,6 +103,13 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
     }
   }
 
+  const toggleMenu = (menu: string) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [menu]: !prev[menu]
+    }))
+  }
+
   const navItems = [
     {
       name: 'Dashboard',
@@ -117,8 +128,13 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
     },
     {
       name: 'Support',
-      href: '../dashboard/support',
-      icon: MessageCircle
+      href: '/dashboard/support',
+      icon: MessageCircle,
+      subItems: [
+        { title: 'My Tickets', href: '/dashboard/support', icon: MessageCircle },
+        { title: 'FAQ', href: '/dashboard/support/faq', icon: HelpCircle },
+        { title: 'Knowledge Base', href: '/dashboard/support/kb', icon: BookOpen },
+      ]
     },
     {
       name: 'Settings',
@@ -133,6 +149,13 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
     }
     return pathname.startsWith(href)
   }
+
+  const isSubItemActive = (href: string) => {
+    return pathname === href
+  }
+
+  // Check if any subitem is active to keep menu expanded
+  const isSupportActive = navItems[3].subItems?.some(item => pathname === item.href) || pathname.startsWith('/dashboard/support')
 
   return (
     <aside 
@@ -223,45 +246,132 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
           {navItems.map((item) => {
             const Icon = item.icon
             const active = isActive(item.href)
+            const hasSubItems = item.subItems && item.subItems.length > 0
+            const isExpanded = expandedMenus[item.name.toLowerCase()] || (item.name === 'Support' && isSupportActive)
 
-            return collapsed ? (
-              <Tooltip key={item.href} text={item.name}>
-                <Link
-                  href={item.href}
-                  className={cn(
-                    "flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition-all",
-                    active
-                      ? "bg-gold-500 text-navy-900"
-                      : "text-gold-400 hover:bg-gold-500"
-                  )}
-                >
-                  <Icon className={cn(
-                    "w-4 h-4 shrink-0",
-                    active ? "text-navy-900" : "text-gold-400 group-hover:text-navy-900",
-                    !active && "hover:text-navy-900"
-                  )} />
-                </Link>
-              </Tooltip>
-            ) : (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all group",
-                  active
-                    ? "bg-gold-500 text-navy-900"
-                    : "text-gold-400 hover:bg-gold-500"
+            // If collapsed, render simple tooltip links
+            if (collapsed) {
+              if (hasSubItems) {
+                // For items with subitems in collapsed mode, just show the parent with tooltip
+                return (
+                  <Tooltip key={item.href} text={item.name}>
+                    <div className="relative">
+                      <Link
+                        href={item.href}
+                        className={cn(
+                          "flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                          active
+                            ? "bg-gold-500 text-navy-900"
+                            : "text-gold-400 hover:bg-gold-500"
+                        )}
+                      >
+                        <Icon className={cn(
+                          "w-4 h-4 shrink-0",
+                          active ? "text-navy-900" : "text-gold-400",
+                          !active && "hover:text-navy-900"
+                        )} />
+                      </Link>
+                    </div>
+                  </Tooltip>
+                )
+              }
+              
+              return (
+                <Tooltip key={item.href} text={item.name}>
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      "flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                      active
+                        ? "bg-gold-500 text-navy-900"
+                        : "text-gold-400 hover:bg-gold-500"
+                    )}
+                  >
+                    <Icon className={cn(
+                      "w-4 h-4 shrink-0",
+                      active ? "text-navy-900" : "text-gold-400",
+                      !active && "hover:text-navy-900"
+                    )} />
+                  </Link>
+                </Tooltip>
+              )
+            }
+
+            // Expanded mode
+            return (
+              <div key={item.href} className="space-y-1">
+                {/* Parent Item */}
+                {hasSubItems ? (
+                  <button
+                    onClick={() => toggleMenu(item.name.toLowerCase())}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all group",
+                      active && !isSupportActive
+                        ? "bg-gold-500 text-navy-900"
+                        : "text-gold-400 hover:bg-gold-500"
+                    )}
+                  >
+                    <Icon className={cn(
+                      "w-4 h-4 shrink-0",
+                      active && !isSupportActive ? "text-navy-900" : "text-gold-400 group-hover:text-navy-900"
+                    )} />
+                    <span className={cn(
+                      "flex-1 text-left",
+                      !active && "group-hover:text-navy-900"
+                    )}>{item.name}</span>
+                    {isExpanded ? (
+                      <ChevronUp className="w-4 h-4 text-gold-400 group-hover:text-navy-900" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-gold-400 group-hover:text-navy-900" />
+                    )}
+                  </button>
+                ) : (
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all group",
+                      active
+                        ? "bg-gold-500 text-navy-900"
+                        : "text-gold-400 hover:bg-gold-500"
+                    )}
+                  >
+                    <Icon className={cn(
+                      "w-4 h-4 shrink-0",
+                      active ? "text-navy-900" : "text-gold-400 group-hover:text-navy-900"
+                    )} />
+                    <span className={cn(
+                      "flex-1",
+                      !active && "group-hover:text-navy-900"
+                    )}>{item.name}</span>
+                  </Link>
                 )}
-              >
-                <Icon className={cn(
-                  "w-4 h-4 shrink-0",
-                  active ? "text-navy-900" : "text-gold-400 group-hover:text-navy-900"
-                )} />
-                <span className={cn(
-                  "flex-1",
-                  !active && "group-hover:text-navy-900"
-                )}>{item.name}</span>
-              </Link>
+
+                {/* Sub Items */}
+                {hasSubItems && isExpanded && (
+                  <div className="ml-9 pl-2 border-l border-navy-700 space-y-1">
+                    {item.subItems?.map((subItem) => {
+                      const SubIcon = subItem.icon || MessageCircle
+                      const subActive = isSubItemActive(subItem.href)
+                      
+                      return (
+                        <Link
+                          key={subItem.href}
+                          href={subItem.href}
+                          className={cn(
+                            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all group",
+                            subActive
+                              ? "bg-gold-500/20 text-gold-400"
+                              : "text-navy-400 hover:bg-navy-800 hover:text-gold-400"
+                          )}
+                        >
+                          <SubIcon className="w-4 h-4 shrink-0" />
+                          <span className="flex-1">{subItem.title}</span>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             )
           })}
         </nav>

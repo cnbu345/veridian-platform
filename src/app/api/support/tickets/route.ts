@@ -110,7 +110,7 @@ export async function POST(request: Request) {
         title: 'Support Ticket Created',
         message: `Your ticket "${subject}" has been created. Our team will respond within 24 hours.`,
         data: { ticket_id: ticket.id, ticket_number: ticket.ticket_number },
-        link: `/dashboard/support?ticket=${ticket.id}`,
+        link: `/src/app/api/support/tickets/[ticketId]/route.ts`,
         priority: 'normal'
       })
 

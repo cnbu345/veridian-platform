@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   MessageCircle, Send, Clock, CheckCircle, AlertCircle,
   ChevronRight, Plus, X, ExternalLink, Inbox, Archive,
-  Check, RefreshCw, HelpCircle
+  Check, RefreshCw, HelpCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/utils'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -248,6 +248,7 @@ export default function SupportClient({ userId, initialTicketId }: Props) {
       </div>
     )
   }
+
 
   return (
     <div className="space-y-6">

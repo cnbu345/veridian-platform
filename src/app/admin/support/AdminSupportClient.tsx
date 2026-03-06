@@ -117,20 +117,28 @@ export default function AdminSupportClient({ initialTickets, initialTicketId }: 
   })
 
   const loadTicketMessages = async (ticketId: string) => {
-    try {
-      const response = await fetch(`/api/support/tickets/${ticketId}/messages`)
-      const data = await response.json()
-      
-      if (response.ok) {
-        setSelectedTicket(prev => prev ? {
-          ...prev,
-          messages: data.messages
-        } : null)
-      }
-    } catch (error) {
-      console.error('Error loading messages:', error)
+  try {
+    console.log('Loading messages for ticket:', ticketId)
+    const response = await fetch(`/api/support/tickets/${ticketId}/messages`)
+    
+    if (!response.ok) {
+      const text = await response.text()
+      console.error('Error response:', response.status, text.substring(0, 200))
+      throw new Error(`Failed to load messages: ${response.status}`)
     }
+    
+    const data = await response.json()
+    console.log('Messages loaded:', data.messages?.length || 0)
+    
+    setSelectedTicket(prev => prev ? {
+      ...prev,
+      messages: data.messages || []
+    } : null)
+  } catch (error) {
+    console.error('Error loading messages:', error)
+    toast.error('Failed to load messages')
   }
+}
 
   const handleSelectTicket = (ticket: Ticket) => {
     // Update URL with ticket ID without page reload
@@ -195,18 +203,26 @@ export default function AdminSupportClient({ initialTickets, initialTicketId }: 
     if (!selectedTicket) return
 
     try {
+      console.log('Updating ticket:', selectedTicket.id, 'with updates:', updates)
+      
       const response = await fetch(`/api/support/tickets/${selectedTicket.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
       })
 
+      // Log the response status
+      console.log('Response status:', response.status)
+      
+      // Try to get the response body
+      const data = await response.json()
+      console.log('Response data:', data)
+
       if (!response.ok) {
-        throw new Error('Failed to update ticket')
+        // More detailed error message
+        throw new Error(data.error || data.details || `Failed to update ticket: ${response.status}`)
       }
 
-      const data = await response.json()
-      
       // Update local state
       setSelectedTicket(prev => ({ ...prev!, ...data.ticket }))
       setTickets(prev => prev.map(t => 
@@ -216,7 +232,7 @@ export default function AdminSupportClient({ initialTickets, initialTicketId }: 
       toast.success('Ticket updated')
     } catch (error) {
       console.error('Error updating ticket:', error)
-      toast.error('Failed to update ticket')
+      toast.error(error instanceof Error ? error.message : 'Failed to update ticket')
     }
   }
 

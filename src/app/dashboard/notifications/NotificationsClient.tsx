@@ -77,7 +77,7 @@ export default function NotificationsClient() {
 
   const markAsRead = async (notificationIds: string[]) => {
     try {
-      const response = await fetch('/api/notifications/mark-read', {
+      const response = await fetch('/api/notifications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notificationIds })

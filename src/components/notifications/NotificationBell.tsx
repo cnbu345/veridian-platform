@@ -1,7 +1,7 @@
 // src/components/notifications/NotificationBell.tsx
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { 
   Bell, 
   Check, 
@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 
 interface Notification {
@@ -82,7 +82,12 @@ export default function NotificationBell({ isAdmin = false }: NotificationBellPr
   const buttonRef = useRef<HTMLButtonElement>(null)
   const supabase = createClient()
   const router = useRouter()
-  const pathname = usePathname()
+  const pollingIntervalRef = useRef<NodeJS.Timeout>()
+
+  // Get icon for notification type
+  const getNotificationIcon = (type: string) => {
+    return NOTIFICATION_ICONS[type] || Bell
+  }
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -97,51 +102,27 @@ export default function NotificationBell({ isAdmin = false }: NotificationBellPr
   }, [])
 
   // Fetch notifications
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
-      setLoading(true)
-      const response = await fetch('/api/notifications?limit=10')
+      const response = await fetch('/api/notifications?limit=10&includeRead=true')
       const data = await response.json()
       
       if (response.ok) {
-        setNotifications(data.notifications || [])
-        setUnreadCount(data.unreadCount || 0)
-      } else {
-        console.error('Error fetching notifications:', data.error)
-      }
-    } catch (error) {
-      console.error('Error fetching notifications:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Initial fetch and real-time subscription
-  useEffect(() => {
-    fetchNotifications()
-    
-    // Get current user for real-time subscription
-    const setupRealtimeSubscription = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      // Subscribe to new notifications
-      const subscription = supabase
-        .channel('notifications-channel')
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${user.id}`
-          },
-          (payload) => {
-            const newNotification = payload.new as Notification
-            setNotifications(prev => [newNotification, ...prev].slice(0, 10))
-            setUnreadCount(prev => prev + 1)
-            
-            // Show toast for new notifications
+        const oldCount = unreadCount
+        const newNotifications = data.notifications || []
+        const newUnreadCount = data.unreadCount || 0
+        
+        setNotifications(newNotifications)
+        setUnreadCount(newUnreadCount)
+        
+        // Check if we got new unread notifications
+        if (newUnreadCount > oldCount) {
+          console.log('🔔 New notification detected via polling!')
+          
+          // Find the newest notification
+          const newest = newNotifications.find((n: Notification) => !n.is_read)
+          if (newest) {
+            // Show toast
             toast.custom((t) => (
               <div className={cn(
                 "max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden",
@@ -151,16 +132,16 @@ export default function NotificationBell({ isAdmin = false }: NotificationBellPr
                   <div className="flex items-start">
                     <div className="flex-shrink-0">
                       {(() => {
-                        const Icon = NOTIFICATION_ICONS[newNotification.type] || Bell
+                        const Icon = getNotificationIcon(newest.type)
                         return <Icon className="h-6 w-6 text-gold-600" />
                       })()}
                     </div>
                     <div className="ml-3 w-0 flex-1">
                       <p className="text-sm font-medium text-navy-900">
-                        {newNotification.title}
+                        {newest.title}
                       </p>
                       <p className="mt-1 text-sm text-navy-500">
-                        {newNotification.message}
+                        {newest.message}
                       </p>
                     </div>
                     <div className="ml-4 flex-shrink-0 flex">
@@ -176,16 +157,63 @@ export default function NotificationBell({ isAdmin = false }: NotificationBellPr
               </div>
             ), { duration: 5000 })
           }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error)
+    }
+  }, [unreadCount])
+
+  // Initial fetch and polling
+  useEffect(() => {
+    console.log('🔔 NotificationBell mounted - starting polling')
+    
+    // Fetch immediately
+    fetchNotifications()
+    
+    // Set up polling every 5 seconds
+    pollingIntervalRef.current = setInterval(fetchNotifications, 5000)
+    
+    // Cleanup
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+      }
+    }
+  }, [fetchNotifications])
+
+  // Try real-time but don't rely on it
+  useEffect(() => {
+    const setupRealtime = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      console.log('Attempting real-time connection (non-critical)')
+      
+      const channel = supabase
+        .channel('notifications-fallback')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('📡 Real-time worked!', payload)
+            fetchNotifications()
+          }
         )
         .subscribe()
 
       return () => {
-        subscription.unsubscribe()
+        channel.unsubscribe()
       }
     }
 
-    setupRealtimeSubscription()
-  }, [])
+    setupRealtime()
+  }, [supabase, fetchNotifications])
 
   // Mark notifications as read
   const markAsRead = async (notificationIds?: string[]) => {
@@ -200,8 +228,6 @@ export default function NotificationBell({ isAdmin = false }: NotificationBellPr
         body: JSON.stringify({ notificationIds: ids })
       })
 
-      const data = await response.json()
-
       if (response.ok) {
         setNotifications(prev => 
           prev.map(n => 
@@ -209,8 +235,6 @@ export default function NotificationBell({ isAdmin = false }: NotificationBellPr
           )
         )
         setUnreadCount(prev => Math.max(0, prev - ids.length))
-      } else {
-        throw new Error(data.error || 'Failed to mark notifications as read')
       }
     } catch (error) {
       console.error('Error marking notifications as read:', error)
@@ -218,7 +242,7 @@ export default function NotificationBell({ isAdmin = false }: NotificationBellPr
     }
   }
 
-  // Mark all notifications as read
+  // Mark all as read
   const markAllAsRead = async () => {
     try {
       const response = await fetch('/api/notifications', {
@@ -227,14 +251,10 @@ export default function NotificationBell({ isAdmin = false }: NotificationBellPr
         body: JSON.stringify({ markAll: true })
       })
 
-      const data = await response.json()
-
       if (response.ok) {
         setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
         setUnreadCount(0)
         toast.success('All notifications marked as read')
-      } else {
-        throw new Error(data.error || 'Failed to mark notifications as read')
       }
     } catch (error) {
       console.error('Error marking all as read:', error)
@@ -242,71 +262,35 @@ export default function NotificationBell({ isAdmin = false }: NotificationBellPr
     }
   }
 
-  // Clear all notifications
-  const clearAllNotifications = async () => {
-    try {
-      const response = await fetch('/api/notifications?clearAll=true', {
-        method: 'DELETE'
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setNotifications([])
-        setUnreadCount(0)
-        toast.success('All notifications cleared')
-      } else {
-        throw new Error(data.error || 'Failed to clear notifications')
-      }
-    } catch (error) {
-      console.error('Error clearing notifications:', error)
-      toast.error('Failed to clear notifications')
-    }
-  }
-
-  // Handle notification click with proper routing based on user role
+  // Handle notification click
   const handleNotificationClick = async (notification: Notification) => {
-    // Mark as read if not already read
     if (!notification.is_read) {
       await markAsRead([notification.id])
     }
     
-    // Navigate to the link if it exists
     if (notification.link) {
       let finalLink = notification.link
       
-      // Force correct routing based on user role
       if (isAdmin) {
-        // If admin, ensure link goes to admin section
         if (finalLink.includes('/support?')) {
           finalLink = finalLink.replace('/support?', '/admin/support?')
         } else if (finalLink.includes('/dashboard/support?')) {
           finalLink = finalLink.replace('/dashboard/support?', '/admin/support?')
         }
+        // Also remove any stray /dashboard
+        finalLink = finalLink.replace('/dashboard/admin', '/admin')
       } else {
         // If client, ensure link goes to client section
         if (finalLink.includes('/admin/support?')) {
-          finalLink = finalLink.replace('/admin/support?', '/support?')
+          finalLink = finalLink.replace('/admin/support?', '/dashboard/support?')
         }
       }
-      
-      console.log('🔔 Notification clicked:', {
-        original: notification.link,
-        final: finalLink,
-        isAdmin
-      })
       
       router.push(finalLink)
       setShowDropdown(false)
     }
   }
 
-  // Get icon for notification type
-  const getNotificationIcon = (type: string) => {
-    return NOTIFICATION_ICONS[type] || Bell
-  }
-
-  // Get the correct "View all" link based on admin status
   const getViewAllLink = () => {
     return isAdmin ? '/admin/notifications' : '/dashboard/notifications'
   }
@@ -343,22 +327,20 @@ export default function NotificationBell({ isAdmin = false }: NotificationBellPr
           <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
             <h3 className="font-semibold text-navy-900">Notifications</h3>
             <div className="flex items-center gap-2">
+              <button
+                onClick={fetchNotifications}
+                className="text-xs text-navy-600 hover:text-navy-700 font-medium transition-colors px-2 py-1 hover:bg-slate-200 rounded flex items-center gap-1"
+                title="Refresh"
+              >
+                <RefreshCw className="w-3 h-3" />
+                Refresh
+              </button>
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
                   className="text-xs text-gold-600 hover:text-gold-700 font-medium transition-colors px-2 py-1 hover:bg-gold-50 rounded"
                 >
                   Mark all read
-                </button>
-              )}
-              {notifications.length > 0 && (
-                <button
-                  onClick={clearAllNotifications}
-                  className="text-xs text-red-600 hover:text-red-700 font-medium transition-colors px-2 py-1 hover:bg-red-50 rounded flex items-center gap-1"
-                  title="Clear all notifications"
-                >
-                  <Trash2 className="w-3 h-3" />
-                  Clear all
                 </button>
               )}
             </div>
@@ -380,6 +362,10 @@ export default function NotificationBell({ isAdmin = false }: NotificationBellPr
                 const Icon = getNotificationIcon(notification.type)
                 const isReopened = notification.type === 'ticket_reopened'
                 
+                // Check the context from the notification data
+                const isAdminContext = notification.data?.context === 'admin'
+                const isCustomerContext = notification.data?.context === 'customer'
+                
                 return (
                   <div
                     key={notification.id}
@@ -387,19 +373,29 @@ export default function NotificationBell({ isAdmin = false }: NotificationBellPr
                     className={cn(
                       "px-4 py-4 border-b border-slate-100 last:border-0 cursor-pointer transition-all hover:bg-slate-50",
                       !notification.is_read && "bg-gold-50/30 hover:bg-gold-100/50",
-                      isReopened && !notification.is_read && "border-l-4 border-l-amber-500"
+                      isReopened && !notification.is_read && "border-l-4 border-l-amber-500",
+                      // Add different left border for admin context
+                      isAdminContext && !notification.is_read && "border-l-4 border-l-purple-500"
                     )}
                   >
                     <div className="flex gap-4">
-                      {/* Icon */}
+                      {/* Icon with different colors based on context */}
                       <div className={cn(
                         "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0",
-                        !notification.is_read ? "bg-gold-100" : "bg-slate-100",
+                        !notification.is_read 
+                          ? isAdminContext 
+                            ? "bg-purple-100"  // Admin notifications use purple
+                            : "bg-gold-100"     // Customer notifications use gold
+                          : "bg-slate-100",
                         isReopened && !notification.is_read && "bg-amber-100"
                       )}>
                         <Icon className={cn(
                           "w-5 h-5",
-                          !notification.is_read ? "text-gold-600" : "text-navy-500",
+                          !notification.is_read 
+                            ? isAdminContext
+                              ? "text-purple-600"
+                              : "text-gold-600"
+                            : "text-navy-500",
                           isReopened && !notification.is_read && "text-amber-600"
                         )} />
                       </div>
@@ -414,6 +410,17 @@ export default function NotificationBell({ isAdmin = false }: NotificationBellPr
                             )}>
                               {notification.title}
                             </p>
+                            {/* Add context badge */}
+                            {isAdminContext && (
+                              <span className="ml-2 px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                Admin
+                              </span>
+                            )}
+                            {isCustomerContext && (
+                              <span className="ml-2 px-1.5 py-0.5 bg-gold-100 text-gold-700 rounded-full text-xs font-medium">
+                                Customer
+                              </span>
+                            )}
                             {isReopened && (
                               <span className="ml-2 px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-medium inline-flex items-center gap-1">
                                 <RefreshCw className="w-3 h-3" />
@@ -448,7 +455,10 @@ export default function NotificationBell({ isAdmin = false }: NotificationBellPr
 
                       {/* Unread indicator */}
                       {!notification.is_read && (
-                        <div className="w-2 h-2 bg-gold-600 rounded-full flex-shrink-0 mt-2 animate-pulse" />
+                        <div className={cn(
+                          "w-2 h-2 rounded-full flex-shrink-0 mt-2 animate-pulse",
+                          isAdminContext ? "bg-purple-600" : "bg-gold-600"
+                        )} />
                       )}
                     </div>
                   </div>

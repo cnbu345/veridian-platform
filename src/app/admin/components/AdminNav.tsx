@@ -121,8 +121,7 @@ const navItems = [
     icon: PlusSquareIcon,
     subItems: [
       { title: 'Alerts', href: '/admin/health/alerts' },
-      { title: 'FAQs', href: '/admin/support/faqs' },
-      { title: 'Knowledge Base', href: '/admin/support/kb' }
+  
     ]
   },
   {
