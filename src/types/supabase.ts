@@ -264,7 +264,121 @@ export interface Database {
           resources?: string[] | null
           last_updated?: string
         }
-      }
+      },
+        notifications: {
+        Row: {
+          id: string
+          user_id: string
+          type: string
+          title: string
+          message: string
+          data: Json
+          is_read: boolean
+          priority: string
+          link: string | null
+          created_at: string
+          expires_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: string
+          title: string
+          message: string
+          data?: Json
+          is_read?: boolean
+          priority?: string
+          link?: string | null
+          created_at?: string
+          expires_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: string
+          title?: string
+          message?: string
+          data?: Json
+          is_read?: boolean
+          priority?: string
+          link?: string | null
+          created_at?: string
+          expires_at?: string | null
+        }
+      },
+      support_tickets: {
+        Row: {
+          id: string
+          user_id: string
+          ticket_number: string
+          subject: string
+          status: string
+          priority: string
+          category: string
+          assigned_to: string | null
+          created_at: string
+          updated_at: string
+          resolved_at: string | null
+          resolved_by: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          ticket_number: string
+          subject: string
+          status?: string
+          priority?: string
+          category?: string
+          assigned_to?: string | null
+          created_at?: string
+          updated_at?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          ticket_number?: string
+          subject?: string
+          status?: string
+          priority?: string
+          category?: string
+          assigned_to?: string | null
+          created_at?: string
+          updated_at?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+      },
+      support_messages: {
+        Row: {
+          id: string
+          ticket_id: string
+          user_id: string
+          message: string
+          attachments: Json | null
+          is_internal: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          ticket_id: string
+          user_id: string
+          message: string
+          attachments?: Json | null
+          is_internal?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          ticket_id?: string
+          user_id?: string
+          message?: string
+          attachments?: Json | null
+          is_internal?: boolean
+          created_at?: string
+        }
+      },
     }
     Views: {
       [_ in never]: never

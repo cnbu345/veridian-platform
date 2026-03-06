@@ -1,16 +1,19 @@
 // src/app/admin/support/AdminSupportClient.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   MessageSquare, Send, Clock, CheckCircle, AlertCircle,
   ChevronRight, Search, Filter, MoreVertical, User,
   Mail, Building2, Tag, RefreshCw, X, Eye, EyeOff,
-  CheckCircle2, Archive, Trash2, Star
+  CheckCircle2, Archive, Trash2, Star, Inbox, Plus,
+  HelpCircle, ExternalLink
 } from 'lucide-react'
 import { cn } from '@/lib/utils/utils'
 import { format, formatDistanceToNow } from 'date-fns'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 
 interface Ticket {
@@ -22,24 +25,33 @@ interface Ticket {
   category: string
   created_at: string
   updated_at: string
+  resolved_at: string | null
+  resolved_by: string | null
+  reopened_at: string | null  // Add this line
   user_id: string
   users: {
-    full_name: string
+    full_name: string | null
     email: string
-    company_name: string
+    company_name: string | null
     subscription_tier: string
   }
-  messages: Array<{
+  messages?: Array<{
     id: string
     created_at: string
     user_id: string
     message: string
     is_internal: boolean
+    users?: {
+      full_name: string | null
+      email: string
+      is_admin: boolean
+    }
   }>
 }
 
 interface Props {
   initialTickets: Ticket[]
+  initialTicketId?: string
 }
 
 const STATUS_COLORS = {
@@ -60,7 +72,11 @@ const PRIORITY_COLORS = {
 const STATUS_OPTIONS = ['open', 'in_progress', 'waiting_on_customer', 'resolved', 'closed']
 const PRIORITY_OPTIONS = ['low', 'normal', 'high', 'urgent']
 
-export default function AdminSupportClient({ initialTickets }: Props) {
+export default function AdminSupportClient({ initialTickets, initialTicketId }: Props) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const ticketIdFromUrl = searchParams.get('ticket') || initialTicketId
+  
   const [tickets, setTickets] = useState(initialTickets)
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [newMessage, setNewMessage] = useState('')
@@ -70,6 +86,17 @@ export default function AdminSupportClient({ initialTickets }: Props) {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [loading, setLoading] = useState(false)
+
+  // Load ticket from URL if present
+  useEffect(() => {
+    if (ticketIdFromUrl) {
+      const ticket = tickets.find(t => t.id === ticketIdFromUrl)
+      if (ticket) {
+        setSelectedTicket(ticket)
+        loadTicketMessages(ticket.id)
+      }
+    }
+  }, [ticketIdFromUrl, tickets])
 
   const filteredTickets = tickets.filter(ticket => {
     if (statusFilter !== 'all' && ticket.status !== statusFilter) return false
@@ -89,8 +116,32 @@ export default function AdminSupportClient({ initialTickets }: Props) {
     return true
   })
 
+  const loadTicketMessages = async (ticketId: string) => {
+    try {
+      const response = await fetch(`/api/support/tickets/${ticketId}/messages`)
+      const data = await response.json()
+      
+      if (response.ok) {
+        setSelectedTicket(prev => prev ? {
+          ...prev,
+          messages: data.messages
+        } : null)
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error)
+    }
+  }
+
   const handleSelectTicket = (ticket: Ticket) => {
+    // Update URL with ticket ID without page reload
+    router.push(`/admin/support?ticket=${ticket.id}`, { scroll: false })
     setSelectedTicket(ticket)
+    loadTicketMessages(ticket.id)
+  }
+
+  const handleCloseTicket = () => {
+    router.push('/admin/support', { scroll: false })
+    setSelectedTicket(null)
   }
 
   const handleSendMessage = async () => {
@@ -118,10 +169,17 @@ export default function AdminSupportClient({ initialTickets }: Props) {
         if (!prev) return prev
         return {
           ...prev,
-          messages: [...prev.messages, data.message],
+          messages: [...(prev.messages || []), data.message],
           updated_at: new Date().toISOString()
         }
       })
+      
+      // Update ticket in list
+      setTickets(prev => prev.map(t => 
+        t.id === selectedTicket.id 
+          ? { ...t, updated_at: new Date().toISOString() } 
+          : t
+      ))
       
       setNewMessage('')
       toast.success(isInternal ? 'Internal note added' : 'Message sent')
@@ -159,6 +217,45 @@ export default function AdminSupportClient({ initialTickets }: Props) {
     } catch (error) {
       console.error('Error updating ticket:', error)
       toast.error('Failed to update ticket')
+    }
+  }
+
+  const handleReopenTicket = async (ticketId: string) => {
+    try {
+      const response = await fetch(`/api/support/tickets/${ticketId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'open' })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast.success('Ticket reopened')
+        
+        // Update local state
+        setTickets(prev => prev.map(t => 
+          t.id === ticketId ? { ...t, status: 'open', resolved_at: null, resolved_by: null } : t
+        ))
+        
+        // If this is the selected ticket, update it
+        if (selectedTicket?.id === ticketId) {
+          setSelectedTicket(prev => prev ? { 
+            ...prev, 
+            status: 'open', 
+            resolved_at: null, 
+            resolved_by: null 
+          } : null)
+          
+          // Reload messages to show the ticket is now open
+          await loadTicketMessages(ticketId)
+        }
+      } else {
+        throw new Error(data.error || 'Failed to reopen ticket')
+      }
+    } catch (error) {
+      console.error('Error reopening ticket:', error)
+      toast.error('Failed to reopen ticket')
     }
   }
 
@@ -240,7 +337,7 @@ export default function AdminSupportClient({ initialTickets }: Props) {
         <div className="flex-1 overflow-y-auto divide-y divide-slate-200">
           {filteredTickets.length === 0 ? (
             <div className="p-8 text-center">
-              <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <Inbox className="w-12 h-12 text-slate-300 mx-auto mb-3" />
               <p className="text-navy-500">No tickets found</p>
             </div>
           ) : (
@@ -255,14 +352,22 @@ export default function AdminSupportClient({ initialTickets }: Props) {
               >
                 <div className="flex justify-between items-start mb-2">
                   <span className="text-xs font-mono text-navy-500">
-                    {ticket.ticket_number}
+                    #{ticket.ticket_number}
                   </span>
-                  <span className={cn(
-                    "px-2 py-0.5 rounded-full text-xs font-medium",
-                    STATUS_COLORS[ticket.status]
-                  )}>
-                    {ticket.status.replace('_', ' ')}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {ticket.reopened_at && (
+                      <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-medium flex items-center gap-1">
+                        <RefreshCw className="w-3 h-3" />
+                        Reopened
+                      </span>
+                    )}
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-full text-xs font-medium",
+                      STATUS_COLORS[ticket.status]
+                    )}>
+                      {ticket.status.replace('_', ' ')}
+                    </span>
+                  </div>
                 </div>
                 
                 <h3 className="font-medium text-navy-900 text-sm mb-1 line-clamp-1">
@@ -270,7 +375,7 @@ export default function AdminSupportClient({ initialTickets }: Props) {
                 </h3>
                 
                 <p className="text-xs text-navy-500 mb-2 line-clamp-1">
-                  {ticket.users?.full_name} • {ticket.users?.company_name}
+                  {ticket.users?.full_name} • {ticket.users?.company_name || 'No company'}
                 </p>
                 
                 <div className="flex items-center gap-2 text-xs">
@@ -285,13 +390,6 @@ export default function AdminSupportClient({ initialTickets }: Props) {
                     {formatDistanceToNow(new Date(ticket.updated_at), { addSuffix: true })}
                   </span>
                 </div>
-
-                {ticket.messages && (
-                  <div className="mt-2 flex items-center gap-1 text-xs text-navy-400">
-                    <MessageSquare className="w-3 h-3" />
-                    <span>{ticket.messages.length} messages</span>
-                  </div>
-                )}
               </button>
             ))
           )}
@@ -310,6 +408,12 @@ export default function AdminSupportClient({ initialTickets }: Props) {
                     <h2 className="text-xl font-bold text-navy-900">
                       {selectedTicket.subject}
                     </h2>
+                    {selectedTicket.reopened_at && (
+                      <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium flex items-center gap-1">
+                        <RefreshCw className="w-3 h-3" />
+                        Reopened {formatDistanceToNow(new Date(selectedTicket.reopened_at), { addSuffix: true })}
+                      </span>
+                    )}
                     <span className={cn(
                       "px-3 py-1 rounded-full text-xs font-medium",
                       STATUS_COLORS[selectedTicket.status]
@@ -320,6 +424,11 @@ export default function AdminSupportClient({ initialTickets }: Props) {
                   <p className="text-sm text-navy-500">
                     Ticket #{selectedTicket.ticket_number}
                   </p>
+                  {selectedTicket.reopened_at && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      Previously resolved on {selectedTicket.resolved_at ? format(new Date(selectedTicket.resolved_at), 'MMM d, yyyy') : 'unknown date'}
+                    </p>
+                  )}
                 </div>
                 
                 <div className="flex gap-2">
@@ -346,6 +455,13 @@ export default function AdminSupportClient({ initialTickets }: Props) {
                       </option>
                     ))}
                   </select>
+                  
+                  <button
+                    onClick={handleCloseTicket}
+                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                  >
+                    <X className="w-4 h-4 text-navy-600" />
+                  </button>
                 </div>
               </div>
 

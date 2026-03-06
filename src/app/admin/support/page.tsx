@@ -3,16 +3,21 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import AdminSupportClient from './AdminSupportClient'
 
-export default async function AdminSupportPage() {
+// IMPORTANT: The component must be async to await searchParams
+export default async function AdminSupportPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ticket?: string }>
+}) {
   const supabase = await createClient()
   
-  // Check if user is authenticated and is admin
+  // Check if user is authenticated
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     redirect('/auth/signin')
   }
   
-  // Verify admin status
+  // Check if user is admin
   const { data: userData } = await supabase
     .from('users')
     .select('is_admin')
@@ -23,7 +28,7 @@ export default async function AdminSupportPage() {
     redirect('/dashboard')
   }
   
-  // Fetch all tickets for admin view
+  // Fetch all tickets with user info
   const { data: tickets } = await supabase
     .from('support_tickets')
     .select(`
@@ -33,16 +38,18 @@ export default async function AdminSupportPage() {
         email,
         company_name,
         subscription_tier
-      ),
-      messages:support_messages (
-        id,
-        created_at,
-        user_id,
-        message,
-        is_internal
       )
     `)
     .order('created_at', { ascending: false })
   
-  return <AdminSupportClient initialTickets={tickets || []} />
+  // AWAIT the searchParams Promise before accessing its properties
+  const params = await searchParams
+  const initialTicketId = params.ticket
+  
+  return (
+    <AdminSupportClient 
+      initialTickets={tickets || []} 
+      initialTicketId={initialTicketId}
+    />
+  )
 }

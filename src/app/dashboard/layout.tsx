@@ -2,6 +2,7 @@
 import { redirect } from 'next/navigation'
 import { createClient, getServerUser } from '@/lib/supabase/server'
 import DashboardSidebar from './components/DashboardSidebar'
+import ClientHeader from './components/ClientHeader'
 
 export default async function DashboardLayout({
   children,
@@ -14,11 +15,12 @@ export default async function DashboardLayout({
     redirect('/auth')
   }
 
-  return (
+   return (
     <div className="min-h-screen bg-slate-50 flex">
       <DashboardSidebar user={user} />
-      <main className="flex-1 ml-64"> {/* ml-64 matches sidebar width */}
-        <div className="pt-7 px-8 pb-8">
+      <main className="flex-1 ml-64 flex flex-col">
+        <ClientHeader user={user} />
+        <div className="flex-1 p-8">
           {children}
         </div>
       </main>

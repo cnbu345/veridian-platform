@@ -99,6 +99,48 @@ export async function POST(request: Request) {
       // Don't fail the whole request, but log it
     }
 
+    // --- MANUALLY CREATE NOTIFICATIONS ---
+    
+    // 1. Notify the user that their ticket was created
+    await supabase
+      .from('notifications')
+      .insert({
+        user_id: user.id,
+        type: 'ticket_created',
+        title: 'Support Ticket Created',
+        message: `Your ticket "${subject}" has been created. Our team will respond within 24 hours.`,
+        data: { ticket_id: ticket.id, ticket_number: ticket.ticket_number },
+        link: `/dashboard/support?ticket=${ticket.id}`,
+        priority: 'normal'
+      })
+
+    // 2. Notify all admins about the new ticket
+    const { data: admins } = await supabase
+      .from('users')
+      .select('id')
+      .eq('is_admin', true)
+
+    if (admins) {
+      const adminNotifications = admins.map(admin => ({
+        user_id: admin.id,
+        type: 'ticket_created',
+        title: 'New Support Ticket',
+        message: `New ticket from ${user.email}: "${subject}"`,
+        data: { 
+          ticket_id: ticket.id, 
+          ticket_number: ticket.ticket_number,
+          customer_id: user.id,
+          customer_email: user.email
+        },
+        link: `/admin/support?ticket=${ticket.id}`,
+        priority: 'normal'
+      }))
+
+      await supabase
+        .from('notifications')
+        .insert(adminNotifications)
+    }
+
     return NextResponse.json({ 
       success: true, 
       ticket,
