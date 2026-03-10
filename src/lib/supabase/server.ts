@@ -11,19 +11,19 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        async getAll() {
-          return (await cookieStore).getAll()
+        get(name: string) {
+          return cookieStore.get(name)?.value
         },
-        async setAll(cookiesToSet) {
+        set(name: string, value: string, options: any) {
           try {
-            const cookieStore = await cookies()
-            cookiesToSet.forEach(({ name, value, options }) => {
-              try {
-                cookieStore.set(name, value, options)
-              } catch {
-                // Ignore errors in middleware
-              }
-            })
+            cookieStore.set({ name, value, ...options })
+          } catch {
+            // Ignore errors in middleware
+          }
+        },
+        remove(name: string, options: any) {
+          try {
+            cookieStore.set({ name, value: '', ...options })
           } catch {
             // Ignore errors in middleware
           }
