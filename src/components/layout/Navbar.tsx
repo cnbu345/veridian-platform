@@ -1,4 +1,3 @@
-// src/components/layout/Navbar.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -123,14 +122,10 @@ export default function Navbar({ initialUser }: NavbarProps) {
     return null
   }
 
+  // ALWAYS solid with dark text - no transparency
   return (
     <>
-      <nav className={cn(
-        "fixed top-0 w-full z-50 transition-all duration-500",
-        scrolled 
-          ? "bg-white/95 backdrop-blur-xl border-b border-slate-200/50 shadow-soft"
-          : "bg-transparent"
-      )}>
+      <nav className="fixed top-0 w-full z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200/50 shadow-soft">
         <div className="container-custom">
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
@@ -143,16 +138,10 @@ export default function Navbar({ initialUser }: NavbarProps) {
                 />
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center">
-                <span className={cn(
-                  "text-lg md:text-xl font-display font-bold transition-colors",
-                  scrolled ? "text-navy-900" : "text-white"
-                )}>
+                <span className="text-lg md:text-xl font-display font-bold text-navy-900">
                   Veridian
                 </span>
-                <span className={cn(
-                  "text-lg md:text-xl font-display font-bold transition-colors ml-0 sm:ml-1",
-                  scrolled ? "text-gold-600" : "text-gold-400"
-                )}>
+                <span className="text-lg md:text-xl font-display font-bold text-gold-600 ml-0 sm:ml-1">
                   Group
                 </span>
                 <span className="hidden xs:inline ml-0 sm:ml-2 text-[10px] md:text-xs font-medium text-navy-500 bg-navy-50 px-1.5 md:px-2 py-0.5 rounded-full whitespace-nowrap">
@@ -175,10 +164,8 @@ export default function Navbar({ initialUser }: NavbarProps) {
                       className={cn(
                         "flex items-center gap-1.5 text-sm font-semibold transition-colors",
                         pathname === item.href 
-                          ? scrolled ? "text-gold-600" : "text-gold-400"
-                          : scrolled 
-                            ? "text-navy-700 hover:text-gold-600" 
-                            : "text-white hover:text-gold-400"
+                          ? "text-gold-600"
+                          : "text-navy-700 hover:text-gold-600"
                       )}
                     >
                       {item.name}
@@ -193,10 +180,8 @@ export default function Navbar({ initialUser }: NavbarProps) {
                       className={cn(
                         "text-sm font-semibold transition-colors",
                         pathname === item.href 
-                          ? scrolled ? "text-gold-600" : "text-gold-400"
-                          : scrolled 
-                            ? "text-navy-700 hover:text-gold-600" 
-                            : "text-white hover:text-gold-400"
+                          ? "text-gold-600"
+                          : "text-navy-700 hover:text-gold-600"
                       )}
                     >
                       {item.name}
@@ -262,23 +247,13 @@ export default function Navbar({ initialUser }: NavbarProps) {
                 <>
                   <Link
                     href="/dashboard"
-                    className={cn(
-                      "px-5 py-2.5 text-sm font-semibold transition-colors",
-                      scrolled 
-                        ? "text-navy-700 hover:text-gold-600" 
-                        : "text-white hover:text-gold-400"
-                    )}
+                    className="px-5 py-2.5 text-sm font-semibold text-navy-700 hover:text-gold-600 transition-colors"
                   >
                     Dashboard
                   </Link>
                   <button
                     onClick={handleSignOut}
-                    className={cn(
-                      "px-5 py-2.5 text-sm font-semibold transition-colors",
-                      scrolled 
-                        ? "text-navy-700 hover:text-gold-600" 
-                        : "text-white hover:text-gold-400"
-                    )}
+                    className="px-5 py-2.5 text-sm font-semibold text-navy-700 hover:text-gold-600 transition-colors"
                   >
                     Sign Out
                   </button>
@@ -293,19 +268,14 @@ export default function Navbar({ initialUser }: NavbarProps) {
                 <>
                   <Link
                     href="/auth"
-                    className={cn(
-                      "px-5 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2",
-                      scrolled 
-                        ? "text-navy-700 hover:text-gold-600" 
-                        : "text-white hover:text-gold-400"
-                    )}
+                    className="px-5 py-2.5 text-sm font-semibold text-navy-700 hover:text-gold-600 transition-colors flex items-center gap-2"
                   >
                     <LogIn className="w-4 h-4" />
                     Sign In
                   </Link>
                   <Link
                     href="/auth?signup=true"
-                    className="btn-primary px-6 py-2.5 text-sm flex items-center gap-2"
+                    className="bg-gold-600 text-white px-6 py-2.5 text-sm font-semibold rounded-lg hover:bg-gold-700 transition-colors flex items-center gap-2"
                   >
                     <UserPlus className="w-4 h-4" />
                     Get Started
@@ -317,26 +287,13 @@ export default function Navbar({ initialUser }: NavbarProps) {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className={cn(
-                "lg:hidden relative w-9 h-9 md:w-10 md:h-10",
-                "rounded-lg",
-                scrolled 
-                  ? "bg-white border border-slate-200" 
-                  : "bg-white/10 backdrop-blur-sm border border-white/20",
-                "flex items-center justify-center"
-              )}
+              className="lg:hidden relative w-9 h-9 md:w-10 md:h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center"
               aria-label="Toggle menu"
             >
               {isOpen ? (
-                <X className={cn(
-                  "w-4 h-4 md:w-5 md:h-5",
-                  scrolled ? "text-navy-800" : "text-white"
-                )} />
+                <X className="w-4 h-4 md:w-5 md:h-5 text-navy-800" />
               ) : (
-                <Menu className={cn(
-                  "w-4 h-4 md:w-5 md:h-5",
-                  scrolled ? "text-navy-800" : "text-white"
-                )} />
+                <Menu className="w-4 h-4 md:w-5 md:h-5 text-navy-800" />
               )}
             </button>
           </div>

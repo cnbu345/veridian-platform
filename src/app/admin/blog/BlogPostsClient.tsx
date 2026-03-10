@@ -471,18 +471,32 @@ export default function BlogPostsClient({ initialPosts, categories }: Props) {
                             </span>
                           </button>
 
-                          {/* View Button */}
-                          <Link
-                            href={`/blog/${post.slug}`}
-                            target="_blank"
-                            className="w-10 h-10 bg-slate-200 text-navy-700 rounded-lg hover:bg-gold-200 hover:text-gold-800 transition-colors group relative flex items-center justify-center"
-                            title="View post"
-                          >
-                            <ExternalLink className="w-5 h-5" />
-                            <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-navy-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                              View
-                            </span>
-                          </Link>
+                          {/* View/Preview Button */}
+                          {post.status === 'published' ? (
+                            <Link
+                              href={`/blog/${post.slug}`}
+                              target="_blank"
+                              className="w-10 h-10 bg-slate-200 text-navy-700 rounded-lg hover:bg-gold-200 hover:text-gold-800 transition-colors group relative flex items-center justify-center"
+                              title="View live post"
+                            >
+                              <ExternalLink className="w-5 h-5" />
+                              <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-navy-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                                View Live
+                              </span>
+                            </Link>
+                          ) : (
+                            <Link
+                              href={`/admin/blog/preview/${post.id}`}
+                              target="_blank"
+                              className="w-10 h-10 bg-slate-200 text-navy-700 rounded-lg hover:bg-gold-200 hover:text-gold-800 transition-colors group relative flex items-center justify-center"
+                              title="Preview draft"
+                            >
+                              <Eye className="w-5 h-5" />
+                              <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-navy-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                                Preview Draft
+                              </span>
+                            </Link>
+                          )}
                         </div>
                       </td>
                     </tr>

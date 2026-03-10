@@ -1,4 +1,3 @@
-// src/app/admin/blog/BlogPostForm.tsx
 'use client'
 
 import { useState } from 'react'
@@ -10,10 +9,12 @@ import {
   Star, Calendar, Clock, Link as LinkIcon,
   FileText, AlertCircle, CheckCircle
 } from 'lucide-react'
-import { cn } from '@/lib/utils/utils'
+import { cn } from '@/lib/utils/utils'  // <-- THIS IS CORRECT
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import WysiwygEditor from '@/components/editor/WysiwygEditor'
+import RichTextEditor from '@/components/editor/RichTextEditor'
+import TipTapEditor from '@/components/editor/TipTapEditor'
 import ImageUpload from '@/components/upload/ImageUpload'
 
 interface Category {
@@ -171,18 +172,37 @@ export default function BlogPostForm({ post, categories }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content - Left Column */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Title */}
+          {/* Title and Slug - NOW VISIBLE TOGETHER */}
           <div className="bg-white rounded-xl border border-slate-200 p-6">
-            <label className="block text-sm font-medium text-navy-700 mb-2">
-              Title *
-            </label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => handleTitleChange(e.target.value)}
-              placeholder="Enter post title"
-              className="w-full px-4 py-3 text-lg border border-slate-200 rounded-xl focus:ring-2 focus:ring-gold-500 focus:border-transparent"
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-navy-700 mb-2">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => handleTitleChange(e.target.value)}
+                  placeholder="Enter post title"
+                  className="w-full px-4 py-3 text-lg border border-slate-200 rounded-xl focus:ring-2 focus:ring-gold-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-navy-700 mb-2">
+                  Slug *
+                </label>
+                <input
+                  type="text"
+                  value={formData.slug}
+                  onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+                  placeholder="url-friendly-post-title"
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-gold-500 focus:border-transparent"
+                />
+                <p className="text-xs text-navy-400 mt-1">
+                  Auto-generated from title. Edit if needed (lowercase, hyphens only).
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Content Editor */}
@@ -190,7 +210,7 @@ export default function BlogPostForm({ post, categories }: Props) {
             <label className="block text-sm font-medium text-navy-700 mb-2">
               Content *
             </label>
-            <WysiwygEditor
+            <TipTapEditor
               value={formData.content}
               onChange={(content) => setFormData(prev => ({ ...prev, content }))}
               placeholder="Write your blog post content here..."
@@ -287,22 +307,22 @@ export default function BlogPostForm({ post, categories }: Props) {
 
           {/* Featured Image */}
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                <div className="p-4 bg-slate-50 border-b border-slate-200">
-                    <h3 className="font-semibold text-navy-900 flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4" />
-                    Featured Image
-                    </h3>
-                </div>
-                <div className="p-4">
-                    <ImageUpload
-                    value={formData.featured_image}
-                    onChange={(url) => setFormData(prev => ({ ...prev, featured_image: url }))}
-                    />
-                    <p className="text-xs text-navy-400 mt-2">
-                    Recommended size: 1200 x 630 pixels
-                    </p>
-                </div>
+            <div className="p-4 bg-slate-50 border-b border-slate-200">
+              <h3 className="font-semibold text-navy-900 flex items-center gap-2">
+                <ImageIcon className="w-4 h-4" />
+                Featured Image
+              </h3>
             </div>
+            <div className="p-4">
+              <ImageUpload
+                value={formData.featured_image}
+                onChange={(url) => setFormData(prev => ({ ...prev, featured_image: url }))}
+              />
+              <p className="text-xs text-navy-400 mt-2">
+                Recommended size: 1200 x 630 pixels
+              </p>
+            </div>
+          </div>
 
           {/* Tags */}
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">

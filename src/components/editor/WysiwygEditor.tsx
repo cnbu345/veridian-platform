@@ -33,12 +33,34 @@ interface WysiwygEditorProps {
   height?: string
 }
 
+// Helper function to clean HTML before deserializing
+const cleanHtml = (html: string): string => {
+  if (!html) return ''
+  
+  let cleaned = html
+  
+  // Remove any remaining nested paragraphs (just in case)
+  cleaned = cleaned.replace(/<p>\s*<p>/g, '<p>')
+  cleaned = cleaned.replace(/<\/p>\s*<\/p>/g, '</p>')
+  
+  // Remove empty paragraphs
+  cleaned = cleaned.replace(/<p>\s*<\/p>/g, '')
+  
+  // Fix headings that might still be in paragraphs
+  cleaned = cleaned.replace(/<p>\s*<(h[1-6])>/g, '<$1>')
+  cleaned = cleaned.replace(/<\/\1>\s*<\/p>/g, '</$1>')
+  
+  return cleaned
+}
+
 // Helper function to convert HTML to Slate's internal format
 const deserialize = (html: string): Descendant[] => {
-  if (!html) return [{ type: 'paragraph', children: [{ text: '' }] }]
+  const cleanHtml_content = cleanHtml(html)
+  
+  if (!cleanHtml_content) return [{ type: 'paragraph', children: [{ text: '' }] }]
   
   const parser = new DOMParser()
-  const doc = parser.parseFromString(html, 'text/html')
+  const doc = parser.parseFromString(cleanHtml_content, 'text/html')
   
   const deserializeNode = (node: Node): any => {
     if (node.nodeType === 3) {
@@ -91,7 +113,8 @@ const deserialize = (html: string): Descendant[] => {
     }
   }
   
-  return Array.from(doc.body.childNodes).map(deserializeNode).filter(Boolean)
+  const result = Array.from(doc.body.childNodes).map(deserializeNode).filter(Boolean)
+  return result.length > 0 ? result : [{ type: 'paragraph', children: [{ text: '' }] }]
 }
 
 // Helper function to serialize Slate's format back to HTML
