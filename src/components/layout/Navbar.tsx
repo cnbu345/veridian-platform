@@ -133,7 +133,7 @@ export default function Navbar({ initialUser }: NavbarProps) {
       )}>
         <div className="container-custom">
           <div className="flex items-center justify-between h-16 md:h-20">
-            {/* Logo - Optimized for mobile */}
+            {/* Logo */}
             <Link href="/" className="flex items-center gap-2 md:gap-3 group">
               <div className="relative w-8 h-8 md:w-10 md:h-10">
                 <img 
@@ -143,10 +143,16 @@ export default function Navbar({ initialUser }: NavbarProps) {
                 />
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center">
-                <span className="text-lg md:text-xl font-display font-bold text-navy-900">
+                <span className={cn(
+                  "text-lg md:text-xl font-display font-bold transition-colors",
+                  scrolled ? "text-navy-900" : "text-white"
+                )}>
                   Veridian
                 </span>
-                <span className="text-lg md:text-xl font-display font-bold text-gold-600">
+                <span className={cn(
+                  "text-lg md:text-xl font-display font-bold transition-colors ml-0 sm:ml-1",
+                  scrolled ? "text-gold-600" : "text-gold-400"
+                )}>
                   Group
                 </span>
                 <span className="hidden xs:inline ml-0 sm:ml-2 text-[10px] md:text-xs font-medium text-navy-500 bg-navy-50 px-1.5 md:px-2 py-0.5 rounded-full whitespace-nowrap">
@@ -155,7 +161,7 @@ export default function Navbar({ initialUser }: NavbarProps) {
               </div>
             </Link>
 
-            {/* Desktop Navigation - Hidden on mobile */}
+            {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-8">
               {navLinks.map((item) => (
                 <div
@@ -169,8 +175,10 @@ export default function Navbar({ initialUser }: NavbarProps) {
                       className={cn(
                         "flex items-center gap-1.5 text-sm font-semibold transition-colors",
                         pathname === item.href 
-                          ? "text-gold-600"
-                          : "text-navy-700 hover:text-gold-600"
+                          ? scrolled ? "text-gold-600" : "text-gold-400"
+                          : scrolled 
+                            ? "text-navy-700 hover:text-gold-600" 
+                            : "text-white hover:text-gold-400"
                       )}
                     >
                       {item.name}
@@ -185,8 +193,10 @@ export default function Navbar({ initialUser }: NavbarProps) {
                       className={cn(
                         "text-sm font-semibold transition-colors",
                         pathname === item.href 
-                          ? "text-gold-600"
-                          : "text-navy-700 hover:text-gold-600"
+                          ? scrolled ? "text-gold-600" : "text-gold-400"
+                          : scrolled 
+                            ? "text-navy-700 hover:text-gold-600" 
+                            : "text-white hover:text-gold-400"
                       )}
                     >
                       {item.name}
@@ -246,19 +256,29 @@ export default function Navbar({ initialUser }: NavbarProps) {
               ))}
             </div>
 
-            {/* Auth Buttons - Hidden on mobile */}
+            {/* Auth Buttons */}
             <div className="hidden lg:flex items-center gap-4">
               {user ? (
                 <>
                   <Link
                     href="/dashboard"
-                    className="px-5 py-2.5 text-sm font-semibold text-navy-700 hover:text-gold-600 transition-colors"
+                    className={cn(
+                      "px-5 py-2.5 text-sm font-semibold transition-colors",
+                      scrolled 
+                        ? "text-navy-700 hover:text-gold-600" 
+                        : "text-white hover:text-gold-400"
+                    )}
                   >
                     Dashboard
                   </Link>
                   <button
                     onClick={handleSignOut}
-                    className="px-5 py-2.5 text-sm font-semibold text-navy-700 hover:text-gold-600 transition-colors"
+                    className={cn(
+                      "px-5 py-2.5 text-sm font-semibold transition-colors",
+                      scrolled 
+                        ? "text-navy-700 hover:text-gold-600" 
+                        : "text-white hover:text-gold-400"
+                    )}
                   >
                     Sign Out
                   </button>
@@ -273,7 +293,12 @@ export default function Navbar({ initialUser }: NavbarProps) {
                 <>
                   <Link
                     href="/auth"
-                    className="px-5 py-2.5 text-sm font-semibold text-navy-700 hover:text-gold-600 transition-colors flex items-center gap-2"
+                    className={cn(
+                      "px-5 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2",
+                      scrolled 
+                        ? "text-navy-700 hover:text-gold-600" 
+                        : "text-white hover:text-gold-400"
+                    )}
                   >
                     <LogIn className="w-4 h-4" />
                     Sign In
@@ -294,22 +319,31 @@ export default function Navbar({ initialUser }: NavbarProps) {
               onClick={() => setIsOpen(!isOpen)}
               className={cn(
                 "lg:hidden relative w-9 h-9 md:w-10 md:h-10",
-                "rounded-lg bg-white/90 backdrop-blur-sm",
-                "border border-slate-200 flex items-center justify-center"
+                "rounded-lg",
+                scrolled 
+                  ? "bg-white border border-slate-200" 
+                  : "bg-white/10 backdrop-blur-sm border border-white/20",
+                "flex items-center justify-center"
               )}
               aria-label="Toggle menu"
             >
               {isOpen ? (
-                <X className="w-4 h-4 md:w-5 md:h-5 text-navy-800" />
+                <X className={cn(
+                  "w-4 h-4 md:w-5 md:h-5",
+                  scrolled ? "text-navy-800" : "text-white"
+                )} />
               ) : (
-                <Menu className="w-4 h-4 md:w-5 md:h-5 text-navy-800" />
+                <Menu className={cn(
+                  "w-4 h-4 md:w-5 md:h-5",
+                  scrolled ? "text-navy-800" : "text-white"
+                )} />
               )}
             </button>
           </div>
         </div>
       </nav>
 
-      {/* Mobile Menu - FIXED SCROLLING ISSUE */}
+      {/* Mobile Menu */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -318,7 +352,7 @@ export default function Navbar({ initialUser }: NavbarProps) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-40 lg:hidden"
-            style={{ top: '64px' }} // Match h-16 on mobile
+            style={{ top: '64px' }}
           >
             {/* Backdrop */}
             <div 
@@ -326,7 +360,7 @@ export default function Navbar({ initialUser }: NavbarProps) {
               onClick={() => setIsOpen(false)}
             />
             
-            {/* Menu Panel - FIXED: Now scrollable to bottom */}
+            {/* Menu Panel */}
             <motion.div
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -334,8 +368,8 @@ export default function Navbar({ initialUser }: NavbarProps) {
               transition={{ duration: 0.3 }}
               className="absolute inset-x-0 bg-white shadow-xl border-t border-slate-200"
               style={{ 
-                maxHeight: 'calc(100vh - 64px)', // Take full height minus navbar
-                overflowY: 'auto' // Enable scrolling
+                maxHeight: 'calc(100vh - 64px)',
+                overflowY: 'auto'
               }}
             >
               <div className="container-custom py-4 md:py-6">
@@ -374,7 +408,7 @@ export default function Navbar({ initialUser }: NavbarProps) {
                     </div>
                   ))}
 
-                  {/* Mobile Auth - Now you can scroll to see this! */}
+                  {/* Mobile Auth */}
                   <div className="pt-4 md:pt-6 border-t border-slate-200 px-2">
                     {user ? (
                       <div className="space-y-2 md:space-y-3">
@@ -415,7 +449,7 @@ export default function Navbar({ initialUser }: NavbarProps) {
                     )}
                   </div>
 
-                  {/* Extra bottom padding for safety */}
+                  {/* Extra bottom padding */}
                   <div className="h-4 md:h-8" />
                 </div>
               </div>

@@ -29,7 +29,8 @@ import {
   Bell,
   PlusCircleIcon,
   PlusSquareIcon,
-  BarChart3Icon
+  BarChart3Icon,
+  Newspaper
 } from 'lucide-react'
 import { title } from 'process'
 
@@ -132,6 +133,17 @@ const navItems = [
       { title: 'Tickets', href: '/admin/support' },
       { title: 'FAQs', href: '/admin/support/faqs' },
       { title: 'Knowledge Base', href: '/admin/support/kb' }
+    ]
+  },
+  {
+    title: 'Blog',
+    href: '/admin/blog',
+    icon: Newspaper,
+    subItems: [
+      { title: 'All Posts', href: '/admin/blog' },
+      { title: 'Create New', href: '/admin/blog/new' },
+      { title: 'Categories', href: '/admin/blog/categories' },
+      { title: 'Comments', href: '/admin/blog/comments' }
     ]
   },
   {

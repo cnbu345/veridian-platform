@@ -1,4 +1,4 @@
-// src/lib/supabase/server.ts // Server-side Supabase client
+// src/lib/supabase/server.ts - Server-side Supabase client
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { Database } from '@/types/supabase'
