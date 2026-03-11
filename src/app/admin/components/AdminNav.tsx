@@ -84,10 +84,11 @@ const navItems = [
   },
   {
     title: 'Customers',
-    href: '/admin/customers/health',
+    href: '/admin/customers',
     icon: Users,
     subItems: [
       { title: 'All Customers', href: '/admin/customers' },
+      { title: 'Health Dashboard', href: '/admin/customers/health' },
       { title: 'Enterprise', href: '/admin/customers/enterprise' },
       { title: 'Churned', href: '/admin/customers/churned' },
       { title: 'Feedback', href: '/admin/customers/feedback' }

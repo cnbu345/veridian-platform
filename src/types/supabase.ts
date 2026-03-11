@@ -507,6 +507,199 @@ export interface Database {
           is_approved?: boolean
           created_at?: string
         }
+      },
+      customer_feedback: {
+        Row: {
+          id: string
+          user_id: string
+          feedback_type: 'nps' | 'csat' | 'general' | 'feature_request' | 'bug_report' | 'support'
+          rating: number | null
+          comment: string | null
+          source: 'email' | 'in_app' | 'support_ticket' | 'consultation' | 'survey' | 'api'
+          status: 'new' | 'reviewed' | 'in_progress' | 'actioned' | 'archived'
+          priority: 'low' | 'medium' | 'high' | 'critical'
+          category: string | null
+          tags: string[] | null
+          assigned_to: string | null
+          metadata: Json | null
+          created_at: string
+          updated_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          actioned_at: string | null
+          action_notes: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          feedback_type: 'nps' | 'csat' | 'general' | 'feature_request' | 'bug_report' | 'support'
+          rating?: number | null
+          comment?: string | null
+          source?: 'email' | 'in_app' | 'support_ticket' | 'consultation' | 'survey' | 'api'
+          status?: 'new' | 'reviewed' | 'in_progress' | 'actioned' | 'archived'
+          priority?: 'low' | 'medium' | 'high' | 'critical'
+          category?: string | null
+          tags?: string[] | null
+          assigned_to?: string | null
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          actioned_at?: string | null
+          action_notes?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          feedback_type?: 'nps' | 'csat' | 'general' | 'feature_request' | 'bug_report' | 'support'
+          rating?: number | null
+          comment?: string | null
+          source?: 'email' | 'in_app' | 'support_ticket' | 'consultation' | 'survey' | 'api'
+          status?: 'new' | 'reviewed' | 'in_progress' | 'actioned' | 'archived'
+          priority?: 'low' | 'medium' | 'high' | 'critical'
+          category?: string | null
+          tags?: string[] | null
+          assigned_to?: string | null
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          actioned_at?: string | null
+          action_notes?: string | null
+        }
+      },
+      customer_health: {
+        Row: {
+          id: string
+          user_id: string
+          health_score: number
+          risk_level: 'healthy' | 'moderate' | 'at_risk'
+          last_login: string
+          report_count: number
+          support_tickets: number
+          nps_score: number | null
+          csat_score: number | null
+          churn_probability: number
+          expansion_opportunity: string[] | null
+          notes: string | null
+          updated_at: string
+          last_feedback_date: string | null
+          feedback_trend: 'improving' | 'declining' | 'stable' | null
+          feature_requests: string[] | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          health_score: number
+          risk_level: 'healthy' | 'moderate' | 'at_risk'
+          last_login: string
+          report_count?: number
+          support_tickets?: number
+          nps_score?: number | null
+          csat_score?: number | null
+          churn_probability: number
+          expansion_opportunity?: string[] | null
+          notes?: string | null
+          updated_at?: string
+          last_feedback_date: string | null
+          feedback_trend: 'improving' | 'declining' | 'stable' | null
+          feature_requests: string[] | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          health_score?: number
+          risk_level?: 'healthy' | 'moderate' | 'at_risk'
+          last_login?: string
+          report_count?: number
+          support_tickets?: number
+          nps_score?: number | null
+          csat_score?: number | null
+          churn_probability?: number
+          expansion_opportunity?: string[] | null
+          notes?: string | null
+          updated_at?: string
+          last_feedback_date: string | null
+          feedback_trend: 'improving' | 'declining' | 'stable' | null
+          feature_requests: string[] | null
+        }
+      }
+      user_activity: {
+        Row: {
+          id: string
+          email: string
+          company_name: string | null
+          role: string
+          is_admin: boolean
+          signup_date: string
+          last_login: string | null
+          report_count: number
+          payment_count: number
+          last_report_date: string | null
+        }
+        Insert: {} // Read-only view
+        Update: {} // Read-only view
+      }
+      user_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          tier_id: string
+          stripe_subscription_id: string | null
+          stripe_customer_id: string | null
+          status: string
+          current_period_start: string | null
+          current_period_end: string | null
+          cancel_at_period_end: boolean
+          canceled_at: string | null
+          trial_start: string | null
+          trial_end: string | null
+          is_founder: boolean
+          founder_code_id: string | null
+          metadata: any | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          tier_id: string
+          stripe_subscription_id?: string | null
+          stripe_customer_id?: string | null
+          status?: string
+          current_period_start?: string | null
+          current_period_end?: string | null
+          cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          trial_start?: string | null
+          trial_end?: string | null
+          is_founder?: boolean
+          founder_code_id?: string | null
+          metadata?: any | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          tier_id?: string
+          stripe_subscription_id?: string | null
+          stripe_customer_id?: string | null
+          status?: string
+          current_period_start?: string | null
+          current_period_end?: string | null
+          cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          trial_start?: string | null
+          trial_end?: string | null
+          is_founder?: boolean
+          founder_code_id?: string | null
+          metadata?: any | null
+          created_at?: string
+          updated_at?: string
+        }
       }
     }
     Views: {
