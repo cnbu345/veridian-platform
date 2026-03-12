@@ -1,4 +1,4 @@
-// src/app/admin/customers/enterprise/page.tsx
+// src/app/admin/customers/enterprise/page.tsx (Enhanced version)
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -14,7 +14,10 @@ import {
   TrendingUp,
   Shield,
   Users,
-  Crown
+  Crown,
+  Plus,
+  Briefcase,
+  DollarSign
 } from 'lucide-react'
 import CustomerFilters from '../components/CustomerFilters'
 import MobileCustomerCard from '../components/MobileCustomerCard'
@@ -31,6 +34,7 @@ interface EnterpriseCustomer {
   subscription_tier: string
   organization_size?: string
   contract_value?: number
+  enterprise_tier?: 'lite' | 'pro' | 'unlimited' | 'custom'
 }
 
 export default function EnterpriseCustomersPage() {
@@ -39,6 +43,14 @@ export default function EnterpriseCustomersPage() {
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [refreshing, setRefreshing] = useState(false)
+  const [stats, setStats] = useState({
+    totalValue: 0,
+    averageHealth: 0,
+    liteCount: 0,
+    proCount: 0,
+    unlimitedCount: 0,
+    customCount: 0
+  })
 
   const fetchCustomers = async () => {
     try {
@@ -51,15 +63,34 @@ export default function EnterpriseCustomersPage() {
       const response = await fetch(`/api/admin/customers?${params}`)
       const data = await response.json()
       
-      // Filter for enterprise customers (you can adjust the logic)
+      // Filter for enterprise customers
       const enterpriseCustomers = (data.customers || []).filter(
         (c: EnterpriseCustomer) => 
           c.subscription_tier === 'enterprise' || 
+          c.subscription_tier === 'enterprise-lite' ||
+          c.subscription_tier === 'enterprise-pro' ||
+          c.subscription_tier === 'enterprise-unlimited' ||
           c.company_name?.toLowerCase().includes('bank') ||
-          c.company_name?.toLowerCase().includes('financial')
+          c.company_name?.toLowerCase().includes('financial') ||
+          c.company_name?.toLowerCase().includes('insurance')
       )
       
       setCustomers(enterpriseCustomers)
+      
+      // Calculate stats
+      const totalValue = enterpriseCustomers.reduce((sum, c) => sum + (c.contract_value || 50000), 0)
+      const avgHealth = enterpriseCustomers.length > 0 
+        ? Math.round(enterpriseCustomers.reduce((sum, c) => sum + c.health_score, 0) / enterpriseCustomers.length)
+        : 0
+      
+      setStats({
+        totalValue,
+        averageHealth: avgHealth,
+        liteCount: enterpriseCustomers.filter(c => c.subscription_tier === 'enterprise-lite').length,
+        proCount: enterpriseCustomers.filter(c => c.subscription_tier === 'enterprise-pro').length,
+        unlimitedCount: enterpriseCustomers.filter(c => c.subscription_tier === 'enterprise-unlimited').length,
+        customCount: enterpriseCustomers.filter(c => c.subscription_tier === 'enterprise' || c.subscription_tier === 'custom').length
+      })
     } catch (error) {
       console.error('Failed to fetch enterprise customers:', error)
     } finally {
@@ -91,16 +122,25 @@ export default function EnterpriseCustomersPage() {
     }
   }
 
-  // Calculate enterprise metrics
-  const totalEnterpriseValue = customers.reduce((sum, c) => sum + (c.contract_value || 50000), 0)
-  const avgHealthScore = customers.length > 0 
-    ? Math.round(customers.reduce((sum, c) => sum + c.health_score, 0) / customers.length)
-    : 0
-  const atRiskCount = customers.filter(c => c.risk_level === 'at_risk').length
+  const getTierBadge = (tier: string) => {
+    switch(tier) {
+      case 'enterprise-lite':
+        return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">Lite</span>
+      case 'enterprise-pro':
+        return <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">Pro</span>
+      case 'enterprise-unlimited':
+        return <span className="px-2 py-1 bg-gold-100 text-gold-800 rounded-full text-xs font-medium">Unlimited</span>
+      case 'enterprise':
+      case 'custom':
+        return <span className="px-2 py-1 bg-navy-100 text-navy-800 rounded-full text-xs font-medium">Custom</span>
+      default:
+        return null
+    }
+  }
 
   return (
     <div className="space-y-6 px-4 sm:px-6 lg:px-8">
-      {/* Header */}
+      {/* Header with Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
@@ -112,6 +152,13 @@ export default function EnterpriseCustomersPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href="/admin/customers/enterprise/builder"
+            className="flex items-center gap-2 px-4 py-2 bg-gold-600 text-white rounded-lg text-sm hover:bg-gold-700"
+          >
+            <Briefcase className="w-4 h-4" />
+            New Enterprise Deal
+          </Link>
           <button
             onClick={fetchCustomers}
             disabled={refreshing}
@@ -127,13 +174,13 @@ export default function EnterpriseCustomersPage() {
       </div>
 
       {/* Enterprise Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-gradient-to-br from-navy-900 to-navy-800 rounded-xl p-6 text-white">
           <div className="flex items-center justify-between mb-2">
             <span className="text-navy-200">Total Enterprise Value</span>
-            <Building2 className="w-5 h-5 text-gold-400" />
+            <DollarSign className="w-5 h-5 text-gold-400" />
           </div>
-          <div className="text-2xl font-bold">${totalEnterpriseValue.toLocaleString()}</div>
+          <div className="text-2xl font-bold">${stats.totalValue.toLocaleString()}</div>
           <div className="text-sm text-navy-300 mt-1">Annual contract value</div>
         </div>
 
@@ -150,7 +197,7 @@ export default function EnterpriseCustomersPage() {
             <span className="text-sm text-navy-600">Avg Health Score</span>
             <TrendingUp className="w-5 h-5 text-green-600" />
           </div>
-          <div className="text-3xl font-bold text-navy-900">{avgHealthScore}</div>
+          <div className="text-3xl font-bold text-navy-900">{stats.averageHealth}</div>
         </div>
 
         <div className="bg-white rounded-xl border border-slate-200 p-6">
@@ -158,7 +205,35 @@ export default function EnterpriseCustomersPage() {
             <span className="text-sm text-navy-600">At Risk</span>
             <Shield className="w-5 h-5 text-red-600" />
           </div>
-          <div className="text-3xl font-bold text-navy-900">{atRiskCount}</div>
+          <div className="text-3xl font-bold text-navy-900">{customers.filter(c => c.risk_level === 'at_risk').length}</div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-navy-600">Custom Deals</span>
+            <Briefcase className="w-5 h-5 text-gold-600" />
+          </div>
+          <div className="text-3xl font-bold text-navy-900">{stats.customCount}</div>
+        </div>
+      </div>
+
+      {/* Tier Distribution */}
+      <div className="grid grid-cols-4 gap-4">
+        <div className="bg-blue-50 rounded-lg p-4">
+          <p className="text-xs text-blue-600 mb-1">Enterprise Lite</p>
+          <p className="text-2xl font-bold text-blue-700">{stats.liteCount}</p>
+        </div>
+        <div className="bg-purple-50 rounded-lg p-4">
+          <p className="text-xs text-purple-600 mb-1">Enterprise Pro</p>
+          <p className="text-2xl font-bold text-purple-700">{stats.proCount}</p>
+        </div>
+        <div className="bg-gold-50 rounded-lg p-4">
+          <p className="text-xs text-gold-600 mb-1">Enterprise Unlimited</p>
+          <p className="text-2xl font-bold text-gold-700">{stats.unlimitedCount}</p>
+        </div>
+        <div className="bg-navy-50 rounded-lg p-4">
+          <p className="text-xs text-navy-600 mb-1">Custom</p>
+          <p className="text-2xl font-bold text-navy-700">{stats.customCount}</p>
         </div>
       </div>
 
@@ -188,6 +263,7 @@ export default function EnterpriseCustomersPage() {
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-navy-500 uppercase">Company</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-navy-500 uppercase">Tier</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-navy-500 uppercase">Health</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-navy-500 uppercase">Risk Level</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-navy-500 uppercase">Last Login</th>
@@ -209,6 +285,9 @@ export default function EnterpriseCustomersPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
+                        {getTierBadge(customer.subscription_tier)}
+                      </td>
+                      <td className="px-6 py-4">
                         <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getHealthColor(customer.health_score)}`}>
                           {customer.health_score}
                         </div>
@@ -220,7 +299,7 @@ export default function EnterpriseCustomersPage() {
                         {new Date(customer.last_login).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 text-sm text-navy-600">{customer.report_count}</td>
-                      <td className="px-6 py-4 text-sm text-navy-600">
+                      <td className="px-6 py-4 text-sm text-navy-600 font-medium">
                         ${(customer.contract_value || 50000).toLocaleString()}
                       </td>
                       <td className="px-6 py-4">
@@ -253,9 +332,16 @@ export default function EnterpriseCustomersPage() {
         <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
           <Crown className="w-12 h-12 text-navy-300 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-navy-900 mb-2">No enterprise customers found</h3>
-          <p className="text-navy-600">
-            {search ? 'Try adjusting your search' : 'No enterprise customers match the selected criteria'}
+          <p className="text-navy-600 mb-6">
+            {search ? 'Try adjusting your search' : 'Start by converting a lead to an enterprise deal'}
           </p>
+          <Link
+            href="/admin/customers/enterprise/builder"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gold-600 text-white rounded-lg hover:bg-gold-700"
+          >
+            <Briefcase className="w-4 h-4" />
+            Create Enterprise Deal
+          </Link>
         </div>
       )}
     </div>

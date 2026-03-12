@@ -265,14 +265,14 @@ export interface Database {
           last_updated?: string
         }
       },
-        notifications: {
+        s: {
         Row: {
           id: string
           user_id: string
           type: string
           title: string
           message: string
-          data: Json
+          data: Jsnotificationon
           is_read: boolean
           priority: string
           link: string | null
@@ -625,7 +625,7 @@ export interface Database {
           feedback_trend: 'improving' | 'declining' | 'stable' | null
           feature_requests: string[] | null
         }
-      }
+      },
       user_activity: {
         Row: {
           id: string
@@ -641,7 +641,7 @@ export interface Database {
         }
         Insert: {} // Read-only view
         Update: {} // Read-only view
-      }
+      }.
       user_subscriptions: {
         Row: {
           id: string
@@ -697,6 +697,210 @@ export interface Database {
           is_founder?: boolean
           founder_code_id?: string | null
           metadata?: any | null
+          created_at?: string
+          updated_at?: string
+        }
+      },
+      enterprise_leads: {
+        Row: {
+          id: string
+          company_name: string
+          contact_name: string
+          contact_email: string
+          contact_phone: string | null
+          company_size: string | null
+          annual_revenue: string | null
+          current_compliance_needs: string[] | null
+          message: string | null
+          source: string
+          status: 'new' | 'contacted' | 'qualified' | 'negotiating' | 'closed_won' | 'closed_lost'
+          assigned_to: string | null
+          metadata: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          company_name: string
+          contact_name: string
+          contact_email: string
+          contact_phone?: string | null
+          company_size?: string | null
+          annual_revenue?: string | null
+          current_compliance_needs?: string[] | null
+          message?: string | null
+          source?: string
+          status?: string
+          assigned_to?: string | null
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          company_name?: string
+          contact_name?: string
+          contact_email?: string
+          contact_phone?: string | null
+          company_size?: string | null
+          annual_revenue?: string | null
+          current_compliance_needs?: string[] | null
+          message?: string | null
+          source?: string
+          status?: string
+          assigned_to?: string | null
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+      },
+      enterprise_quotes: {
+        Row: {
+          id: string
+          lead_id: string | null
+          quote_number: string
+          customer_id: string | null
+          customer_email: string
+          customer_name: string
+          company_name: string
+          tier_id: string | null
+          tier_name: string
+          base_price: number
+          add_ons: Json
+          add_ons_total: number
+          custom_discount_percent: number
+          custom_discount_amount: number
+          custom_adjustment_reason: string | null
+          subtotal: number
+          total: number
+          quote_data: Json
+          quote_pdf_url: string | null
+          version: number
+          expires_at: string
+          status: 'draft' | 'sent' | 'viewed' | 'approved' | 'rejected' | 'converted'
+          sent_at: string | null
+          viewed_at: string | null
+          approved_at: string | null
+          stripe_payment_link: string | null
+          stripe_payment_intent_id: string | null
+          payment_status: string
+          paid_at: string | null
+          approval_token: string | null
+          approval_token_expires_at: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          lead_id?: string | null
+          quote_number: string
+          customer_id?: string | null
+          customer_email: string
+          customer_name: string
+          company_name: string
+          tier_id?: string | null
+          tier_name: string
+          base_price: number
+          add_ons?: Json
+          add_ons_total?: number
+          custom_discount_percent?: number
+          custom_discount_amount?: number
+          custom_adjustment_reason?: string | null
+          subtotal: number
+          total: number
+          quote_data: Json
+          quote_pdf_url?: string | null
+          version?: number
+          expires_at: string
+          status?: string
+          sent_at?: string | null
+          viewed_at?: string | null
+          approved_at?: string | null
+          stripe_payment_link?: string | null
+          stripe_payment_intent_id?: string | null
+          payment_status?: string
+          paid_at?: string | null
+          approval_token?: string | null
+          approval_token_expires_at?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          lead_id?: string | null
+          quote_number?: string
+          customer_id?: string | null
+          customer_email?: string
+          customer_name?: string
+          company_name?: string
+          tier_id?: string | null
+          tier_name?: string
+          base_price?: number
+          add_ons?: Json
+          add_ons_total?: number
+          custom_discount_percent?: number
+          custom_discount_amount?: number
+          custom_adjustment_reason?: string | null
+          subtotal?: number
+          total?: number
+          quote_data?: Json
+          quote_pdf_url?: string | null
+          version?: number
+          expires_at?: string
+          status?: string
+          sent_at?: string | null
+          viewed_at?: string | null
+          approved_at?: string | null
+          stripe_payment_link?: string | null
+          stripe_payment_intent_id?: string | null
+          payment_status?: string
+          paid_at?: string | null
+          approval_token?: string | null
+          approval_token_expires_at?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      },
+      enterprise_add_ons: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          price: number
+          price_type: 'one-time' | 'monthly' | 'yearly'
+          category: string | null
+          features: string[] | null
+          active: boolean
+          sort_order: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          price: number
+          price_type?: string
+          category?: string | null
+          features?: string[] | null
+          active?: boolean
+          sort_order?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          price?: number
+          price_type?: string
+          category?: string | null
+          features?: string[] | null
+          active?: boolean
+          sort_order?: number | null
           created_at?: string
           updated_at?: string
         }

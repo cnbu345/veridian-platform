@@ -7,7 +7,7 @@ import {
   Bell, Check, Clock, MessageSquare, Calendar, FileText, 
   CreditCard, AlertCircle, Trash2, Filter, ChevronDown,
   ExternalLink, CheckCheck, Users, Settings, User,
-  RefreshCw, X
+  RefreshCw, X, Building2
 } from 'lucide-react'
 import { cn } from '@/lib/utils/utils'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -47,9 +47,10 @@ const NOTIFICATION_ICONS: Record<string, any> = {
   ticket_created: MessageSquare,
   ticket_updated: MessageSquare,
   ticket_resolved: CheckCheck,
-  ticket_reopened: RefreshCw, // Changed from MessageSquare to RefreshCw for better visual
+  ticket_reopened: RefreshCw,
   user_registered: User,
-  new_subscription: CreditCard
+  new_subscription: CreditCard,
+  enterprise_lead: Building2,
 }
 
 const PRIORITY_COLORS = {

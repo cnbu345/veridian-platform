@@ -1,4 +1,4 @@
-// src/app/layout.tsx // app layout
+// src/app/layout.tsx
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
@@ -6,6 +6,7 @@ import { getServerUser } from '@/lib/supabase/server'
 import { Analytics } from '@vercel/analytics/react'
 import RootLayoutClient from '@/components/layout/RootLayoutClient'
 import DevToolbar from '@/components/admin/DevToolbar'
+import { Toaster } from 'react-hot-toast'
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -128,6 +129,29 @@ export default async function RootLayout({
         </RootLayoutClient>
         <Analytics />
         <DevToolbar />
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#0A2540',
+              color: '#fff',
+              borderRadius: '8px',
+            },
+            success: {
+              iconTheme: {
+                primary: '#B5944B',
+                secondary: '#fff',
+              },
+            },
+            error: {
+              iconTheme: {
+                primary: '#EF4444',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
       </body>
     </html>
   )

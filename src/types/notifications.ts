@@ -17,6 +17,7 @@ export type NotificationType =
   | 'ticket_reopened'
   | 'user_registered'
   | 'new_subscription'
+  | 'enterprise_lead'
 
 export type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent'
 

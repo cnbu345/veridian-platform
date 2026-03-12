@@ -19,7 +19,8 @@ import {
   RefreshCw,
   HelpCircle,
   Archive,
-  Inbox
+  Inbox,
+  Building2
 } from 'lucide-react'
 import { cn } from '@/lib/utils/utils'
 import { formatDistanceToNow } from 'date-fns'
@@ -63,7 +64,8 @@ const NOTIFICATION_ICONS: Record<string, any> = {
   ticket_resolved: CheckCheck,
   ticket_reopened: RefreshCw,
   user_registered: User,
-  new_subscription: CreditCard
+  new_subscription: CreditCard,
+  enterprise_lead: Building2
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -271,23 +273,28 @@ export default function NotificationBell({ isAdmin = false }: NotificationBellPr
     if (notification.link) {
       let finalLink = notification.link
       
-      if (isAdmin) {
-        if (finalLink.includes('/support?')) {
-          finalLink = finalLink.replace('/support?', '/admin/support?')
-        } else if (finalLink.includes('/dashboard/support?')) {
-          finalLink = finalLink.replace('/dashboard/support?', '/admin/support?')
-        }
-        // Also remove any stray /dashboard
-        finalLink = finalLink.replace('/dashboard/admin', '/admin')
+      // Special handling for enterprise leads
+      if (notification.type === 'enterprise_lead') {
+        finalLink = `/admin/customers/enterprise/builder?lead=${notification.data?.lead_id}`
       } else {
-        // If client, ensure link goes to client section
-        if (finalLink.includes('/admin/support?')) {
-          finalLink = finalLink.replace('/admin/support?', '/dashboard/support?')
+        // Only modify support-related links
+        if (isAdmin) {
+          if (finalLink.includes('/support?')) {
+            finalLink = finalLink.replace('/support?', '/admin/support?')
+          } else if (finalLink.includes('/dashboard/support?')) {
+            finalLink = finalLink.replace('/dashboard/support?', '/admin/support?')
+          }
+        } else {
+          if (finalLink.includes('/admin/support?')) {
+            finalLink = finalLink.replace('/admin/support?', '/dashboard/support?')
+          }
         }
       }
       
       router.push(finalLink)
       setShowDropdown(false)
+      console.log('Original link:', notification.link)
+      console.log('Final link:', finalLink)
     }
   }
 

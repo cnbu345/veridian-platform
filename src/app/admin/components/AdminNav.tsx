@@ -90,6 +90,7 @@ const navItems = [
       { title: 'All Customers', href: '/admin/customers' },
       { title: 'Health Dashboard', href: '/admin/customers/health' },
       { title: 'Enterprise', href: '/admin/customers/enterprise' },
+      { title: 'Enterprise Deal', href: '/admin/customers/enterprise/builder' },
       { title: 'Churned', href: '/admin/customers/churned' },
       { title: 'Feedback', href: '/admin/customers/feedback' }
     ]
