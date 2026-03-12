@@ -44,7 +44,7 @@ import {
 import Link from 'next/link'
 import { format, addDays } from 'date-fns'
 import toast from 'react-hot-toast'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 
 interface EnterpriseLead {
   id: string
@@ -57,6 +57,13 @@ interface EnterpriseLead {
   status: 'new' | 'contacted' | 'qualified' | 'negotiating' | 'closed_won' | 'closed_lost'
   created_at: string
   assigned_to: string | null
+  welcome_email_sent?: boolean
+  welcome_email_sent_at?: string | null
+  last_contacted_at?: string | null
+  consultation_scheduled?: boolean
+  consultation_scheduled_at?: string | null
+  consultation_id?: string | null
+  consultation_type?: string | null
 }
 
 interface EnterpriseTier {
@@ -164,12 +171,15 @@ export default function EnterpriseBuilderPage() {
   })
 
   const searchParams = useSearchParams()
+  const router = useRouter()
   const leadId = searchParams.get('lead')
 
   // Set active tab based on URL parameter and highlight lead
   useEffect(() => {
     if (leadId) {
         setActiveTab('leads')
+
+        fetchData()
         
         // Small delay to ensure DOM is ready
         setTimeout(() => {
@@ -1052,7 +1062,25 @@ This quote was prepared by Veridian Group Enterprise Sales.
                     <div className="flex-1">
                       <div className="flex items-start justify-between">
                         <div>
-                          <h3 className="text-lg font-semibold text-navy-900">{lead.company_name}</h3>
+                          {/* REPLACE THIS PART with the version below */}
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-semibold text-navy-900">{lead.company_name}</h3>
+                            {/* Add email sent indicator */}
+                            {lead.welcome_email_sent && (
+                              <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
+                                <Mail className="w-3 h-3" />
+                                Email Sent
+                              </span>
+                            )}
+
+                            {/* Consultation Scheduled Badge - ADD THIS */}
+                            {lead.consultation_scheduled && (
+                              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {lead.consultation_type === 'discovery' ? 'Discovery Call' : 'Consultation'} Scheduled
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-navy-500 mt-1">{lead.contact_name}</p>
                         </div>
                         <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(lead.status)}`}>
@@ -1590,13 +1618,13 @@ This quote was prepared by Veridian Group Enterprise Sales.
       {showLeadModal && selectedLead && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white">
-              <h2 className="text-xl font-semibold text-navy-900">Lead Details</h2>
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-navy-800">
+              <h2 className="text-xl font-semibold text-gold-500">Lead Details</h2>
               <button
                 onClick={() => setShowLeadModal(false)}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gold-500 rounded-lg transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6 text-gold-500 text-xl hover:text-navy-900" />
               </button>
             </div>
             
@@ -1661,7 +1689,8 @@ This quote was prepared by Veridian Group Enterprise Sales.
                 </div>
               )}
 
-              <div className="flex gap-3 pt-4">
+              {/* First Row - Two buttons */}
+              <div className="flex gap-3">
                 <button
                   onClick={() => {
                     setShowLeadModal(false)
@@ -1678,11 +1707,89 @@ This quote was prepared by Veridian Group Enterprise Sales.
                   Build Package
                 </button>
                 <button
-                  onClick={() => window.location.href = `mailto:${selectedLead.contact_email}`}
-                  className="flex-1 px-4 py-2 border border-slate-300 text-navy-600 rounded-lg hover:bg-slate-50"
+                  onClick={async () => {
+                    try {
+                      setSendingEmail(true)
+                      
+                      const emailResponse = await fetch('/api/admin/enterprise/leads/send-welcome', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          leadId: selectedLead.id,
+                          contact_name: selectedLead.contact_name,
+                          contact_email: selectedLead.contact_email,
+                          company_name: selectedLead.company_name
+                        })
+                      })
+
+                      if (!emailResponse.ok) {
+                        throw new Error('Failed to send email')
+                      }
+
+                      toast.success(`Welcome email sent to ${selectedLead.contact_email}`)
+                      
+                      setLeads(leads.map(l => 
+                        l.id === selectedLead.id ? { ...l, status: 'contacted' } : l
+                      ))
+                      setSelectedLead({ ...selectedLead, status: 'contacted' })
+                      
+                      await fetch('/api/admin/notifications', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          type: 'follow_up_task',
+                          title: 'Schedule Discovery Call',
+                          message: `Follow up with ${selectedLead.contact_name} at ${selectedLead.company_name} to schedule their discovery call`,
+                          link: `/admin/customers/enterprise/builder?lead=${selectedLead.id}`,
+                          priority: 'high'
+                        })
+                      })
+                      
+                    } catch (error) {
+                      console.error('Failed to send welcome email:', error)
+                      toast.error('Failed to send email. Please try again.')
+                    } finally {
+                      setSendingEmail(false)
+                    }
+                  }}
+                  disabled={sendingEmail}
+                  className="flex-1 px-4 py-2 border border-slate-300 text-navy-600 rounded-lg hover:bg-slate-50 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  Send Email
+                  {sendingEmail ? (
+                    <>
+                      <Loader className="w-4 h-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="w-4 h-4" />
+                      Send Welcome Email
+                    </>
+                  )}
                 </button>
+              </div>
+
+              {/* Second Row - Full width Schedule Discovery Call */}
+              <div className="pt-2">
+                <button
+                  onClick={() => {
+                    const params = new URLSearchParams({
+                      company: selectedLead.company_name,
+                      contact: selectedLead.contact_name,
+                      email: selectedLead.contact_email,
+                      ...(selectedLead.contact_phone && { phone: selectedLead.contact_phone }),
+                      leadId: selectedLead.id
+                    })
+                    router.push(`/admin/consultations/new?${params.toString()}`)
+                  }}
+                  className="w-full px-4 py-3 bg-gradient-to-r from-gold-600 to-gold-500 text-white font-semibold rounded-xl hover:from-gold-500 hover:to-gold-400 transition-all duration-300 shadow-lg shadow-gold-500/25 flex items-center justify-center gap-2"
+                >
+                  <Calendar className="w-5 h-5" />
+                  Schedule Discovery Call
+                </button>
+                <p className="text-xs text-navy-400 text-center mt-2">
+                  Create a consultation in the internal scheduler
+                </p>
               </div>
             </div>
           </div>

@@ -1,5 +1,6 @@
 // src/lib/google/calendar.ts
 import { google } from 'googleapis'
+import { displayName } from 'react-quill'
 
 // Determine the correct redirect URI based on environment
 const getRedirectUri = () => {
@@ -112,6 +113,9 @@ export async function createCalendarEventWithMeet(consultation: ConsultationData
       attendees: [
         { email: consultation.customer_email }
       ],
+      organizer: {
+        displayName: 'Veridian Group'
+      },
       conferenceData: {
         createRequest: {
           requestId: generateRequestId(),

@@ -1,7 +1,8 @@
+// src/app/admin/consultations/new/NewConsultationClient.tsx
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { 
   Calendar, Clock, User, Mail, Phone, Building2, FileText, 
@@ -59,6 +60,31 @@ export default function NewConsultationClient() {
     send_invite: true
   })
 
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const company = searchParams.get('company')
+    const contact = searchParams.get('contact')
+    const email = searchParams.get('email')
+    const phone = searchParams.get('phone')
+
+    if (company || contact || email || phone) {
+      setFormData(prev => ({
+        ...prev,
+        company_name: company || prev.company_name,
+        customer_name: contact || prev.customer_name,
+        customer_email: email || prev.customer_email,
+        customer_phone: phone || prev.customer_phone
+      }))
+      
+      // Optional: Show a toast notification
+      toast.success('Lead information pre-filled', {
+        icon: '📋',
+        duration: 3000
+      })
+    }
+  }, [searchParams])
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
     setFormData(prev => ({
@@ -96,7 +122,8 @@ export default function NewConsultationClient() {
         },
         body: JSON.stringify({
           ...formData,
-          consultation_date: consultationDateTime.toISOString()
+          consultation_date: consultationDateTime.toISOString(),
+          leadId: searchParams.get('leadId')
         }),
       })
 
@@ -142,6 +169,23 @@ export default function NewConsultationClient() {
           <p className="text-navy-600">Manually schedule a consultation for a client</p>
         </div>
       </div>
+
+      {/* ADD THIS VISUAL INDICATOR HERE - Right after the header */}
+      {searchParams.get('company') && (
+        <div className="bg-gold-50 border border-gold-200 rounded-lg p-4 flex items-center gap-3">
+          <div className="w-8 h-8 bg-gold-600 rounded-full flex items-center justify-center flex-shrink-0">
+            <span className="text-white text-sm font-bold">✓</span>
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-gold-800">
+              Lead information pre-filled
+            </p>
+            <p className="text-xs text-gold-600">
+              From: {searchParams.get('company')} • {searchParams.get('contact')}
+            </p>
+          </div>
+        </div>
+      )}
 
       <motion.form
         initial={{ opacity: 0, y: 20 }}

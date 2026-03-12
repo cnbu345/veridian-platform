@@ -88,8 +88,21 @@ export async function POST(request: Request) {
     }
     
     // Create consultation
+    let userId = null
+
+    // Check if this email belongs to an existing user
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', body.customer_email)
+      .maybeSingle()
+
+    if (existingUser) {
+      userId = existingUser.id
+    }
+
     const consultationData = {
-      user_id: user.id,
+      ...(userId && { user_id: userId }),
       customer_name: body.customer_name,
       customer_email: body.customer_email,
       customer_phone: body.customer_phone,
@@ -106,25 +119,67 @@ export async function POST(request: Request) {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
-    
+
     console.log('Inserting consultation data:', consultationData)
-    
-    const { data: consultation, error: consultationError } = await supabase
+
+
+    // Try the simplest insert possible - no .select(), no .single()
+    const { error: insertError } = await supabase
       .from('consultations')
-      .insert([consultationData])
-      .select()
-      .single()
-    
-    if (consultationError) {
-      console.error('Database error creating consultation:', consultationError)
+      .insert(consultationData)
+
+    if (insertError) {
+      console.error('Basic insert failed:', insertError)
       return NextResponse.json({ 
-        error: 'Failed to create consultation in database',
-        details: consultationError.message,
-        code: consultationError.code
+        error: 'Failed to create consultation',
+        details: insertError.message,
+        code: insertError.code
+      }, { status: 500 })
+    }
+
+    // If insert succeeded, fetch the newly created consultation
+    const { data: newConsultations, error: fetchError } = await supabase
+      .from('consultations')
+      .select('*')
+      .eq('customer_email', body.customer_email)
+      .eq('consultation_date', body.consultation_date)
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    if (fetchError || !newConsultations || newConsultations.length === 0) {
+      console.error('Failed to fetch created consultation:', fetchError)
+      return NextResponse.json({ 
+        error: 'Consultation created but failed to fetch',
+        details: fetchError?.message
       }, { status: 500 })
     }
     
+    const consultation = newConsultations[0]
     console.log('Consultation created successfully:', consultation.id)
+
+    const leadId = body.leadId
+      if (leadId) {
+        console.log('Updating lead record for lead:', leadId)
+        
+        const { error: leadUpdateError } = await supabase
+          .from('enterprise_leads')
+          .update({
+            consultation_scheduled: true,
+            consultation_scheduled_at: new Date().toISOString(),
+            consultation_id: consultation.id,
+            consultation_type: body.consultation_type,
+            last_contacted_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', leadId)
+
+        if (leadUpdateError) {
+          console.error('Error updating lead with consultation:', leadUpdateError)
+          // Don't fail the request, just log it
+        } else {
+          console.log('Lead updated successfully with consultation ID:', consultation.id)
+        }
+      }
     
     // Send confirmation email if requested
     if (body.send_invite) {

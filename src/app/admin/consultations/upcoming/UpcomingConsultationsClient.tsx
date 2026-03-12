@@ -28,6 +28,8 @@ interface Consultation {
   notes?: string | null
   reminder_sent: boolean
   reminder_sent_at?: string | null
+  source?: 'enterprise_lead' | 'admin_scheduled' | 'user_scheduled'
+  lead_id?: string | null
   users?: {
     full_name: string
     email: string
@@ -537,25 +539,49 @@ export default function UpcomingConsultationsClient({ initialConsultations }: Pr
                 <div className="flex-1 w-full">
                   {/* Header with badges */}
                   <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <span className={cn(
-                      "px-2 py-1 rounded-full text-xs font-medium border",
-                      type.color
-                    )}>
-                      {type.icon} {type.label}
+                  {/* ADD SOURCE BADGE HERE - at the beginning */}
+                  {consultation.source === 'enterprise_lead' && (
+                    <Link
+                      href={`/admin/customers/enterprise/builder?lead=${consultation.lead_id}`}
+                      className="px-2 py-1 bg-gold-100 text-gold-800 rounded-full text-xs font-medium border border-gold-200 flex items-center gap-1 hover:bg-gold-200 transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Briefcase className="w-3 h-3" />
+                      Enterprise Lead
+                    </Link>
+                  )}
+                  {consultation.source === 'admin_scheduled' && (
+                    <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium border border-purple-200 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      Admin Scheduled
                     </span>
-                    <span className={cn(
-                      "px-2 py-1 rounded-full text-xs font-medium border",
-                      timeStatus.color
-                    )}>
-                      {timeStatus.label}
+                  )}
+                  {(!consultation.source || consultation.source === 'user_scheduled') && (
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium border border-blue-200 flex items-center gap-1">
+                      <User className="w-3 h-3" />
+                      User Scheduled
                     </span>
-                    {consultation.reminder_sent && (
-                      <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium border border-blue-200 flex items-center gap-1">
-                        <Send className="w-3 h-3" />
-                        Reminder Sent
-                      </span>
-                    )}
-                  </div>
+                  )}
+
+                  <span className={cn(
+                    "px-2 py-1 rounded-full text-xs font-medium border",
+                    type.color
+                  )}>
+                    {type.icon} {type.label}
+                  </span>
+                  <span className={cn(
+                    "px-2 py-1 rounded-full text-xs font-medium border",
+                    timeStatus.color
+                  )}>
+                    {timeStatus.label}
+                  </span>
+                  {consultation.reminder_sent && (
+                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium border border-blue-200 flex items-center gap-1">
+                      <Send className="w-3 h-3" />
+                      Reminder Sent
+                    </span>
+                  )}
+                </div>
 
                   {/* Customer Info */}
                   <div className="flex items-start gap-3">

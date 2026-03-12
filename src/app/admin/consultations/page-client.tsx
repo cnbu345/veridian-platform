@@ -34,6 +34,8 @@ interface Consultation {
   updated_at?: string
   reminder_sent?: boolean
   reminder_sent_at?: string | null
+  source?: 'enterprise_lead' | 'admin_scheduled' | 'user_scheduled'
+  lead_id?: string | null
 }
 
 type ViewMode = 'list' | 'calendar' | 'week'
@@ -587,31 +589,66 @@ export default function ConsultationManagementClient({ initialConsultations }: P
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-3">
-                  {consultation.reminder_sent && (
-                    <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium border border-blue-200 flex items-center gap-1">
-                      <Mail className="w-3 h-3" />
-                      Reminder Sent
-                    </span>
-                  )}
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(consultation.status)}`}>
-                    {consultation.status === 'no-show' ? 'No Show' : consultation.status}
-                  </span>
-                  {consultation.converted_to_sale && (
-                    <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium border border-green-200">
-                      Sale: ${consultation.sale_amount?.toLocaleString()}
-                    </span>
-                  )}
-                  <button 
-                    onClick={() => {
-                      setSelectedConsultation(consultation)
-                      setShowDetailsModal(true)
-                    }}
-                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                <div className="flex items-center gap-3 flex-wrap">
+                {/* Source Badge - Enterprise Lead */}
+                {consultation.source === 'enterprise_lead' && (
+                  <Link
+                    href={`/admin/customers/enterprise/builder?lead=${consultation.lead_id}`}
+                    className="px-3 py-1 bg-gold-100 text-gold-800 rounded-full text-xs font-medium border border-gold-200 flex items-center gap-1 hover:bg-gold-200 transition-colors"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <MoreVertical className="w-4 h-4 text-navy-500" />
-                  </button>
-                </div>
+                    <Briefcase className="w-3 h-3" />
+                    Enterprise Lead
+                  </Link>
+                )}
+
+                {/* Source Badge - Admin Scheduled */}
+                {consultation.source === 'admin_scheduled' && (
+                  <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium border border-purple-200 flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    Admin Scheduled
+                  </span>
+                )}
+
+                {/* Source Badge - User Scheduled (default) */}
+                {(!consultation.source || consultation.source === 'user_scheduled') && (
+                  <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium border border-blue-200 flex items-center gap-1">
+                    <User className="w-3 h-3" />
+                    User Scheduled
+                  </span>
+                )}
+
+                {/* Reminder Sent Badge */}
+                {consultation.reminder_sent && (
+                  <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium border border-blue-200 flex items-center gap-1">
+                    <Mail className="w-3 h-3" />
+                    Reminder Sent
+                  </span>
+                )}
+
+                {/* Status Badge */}
+                <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(consultation.status)}`}>
+                  {consultation.status === 'no-show' ? 'No Show' : consultation.status}
+                </span>
+
+                {/* Sale Badge */}
+                {consultation.converted_to_sale && (
+                  <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium border border-green-200">
+                    Sale: ${consultation.sale_amount?.toLocaleString()}
+                  </span>
+                )}
+
+                {/* More Options Button */}
+                <button 
+                  onClick={() => {
+                    setSelectedConsultation(consultation)
+                    setShowDetailsModal(true)
+                  }}
+                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <MoreVertical className="w-4 h-4 text-navy-500" />
+                </button>
+              </div>
               </div>
               
               <div className="grid grid-cols-5 gap-4 mb-4">
