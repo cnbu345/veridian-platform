@@ -904,6 +904,152 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+      },
+      feedback_type: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          category: 'nps' | 'csat' | 'feature_request' | 'support' | 'general' | 'account_review'
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          category: 'nps' | 'csat' | 'feature_request' | 'support' | 'general' | 'account_review'
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          category?: 'nps' | 'csat' | 'feature_request' | 'support' | 'general' | 'account_review'
+          is_active?: boolean
+          created_at?: string
+        }
+      },
+      feedback_submissions: {
+        Row: {
+          id: string
+          user_id: string
+          feedback_type_id: string
+          nps_score: number | null
+          csat_score: number | null
+          comments: string | null
+          source: 'email' | 'dashboard' | 'api' | 'automated'
+          status: 'pending' | 'reviewed' | 'actioned' | 'archived'
+          priority: 'low' | 'medium' | 'high' | 'critical'
+          assigned_to: string | null
+          metadata: Json | null
+          created_at: string
+          updated_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          feedback_type_id: string
+          nps_score?: number | null
+          csat_score?: number | null
+          comments?: string | null
+          source?: 'email' | 'dashboard' | 'api' | 'automated'
+          status?: 'pending' | 'reviewed' | 'actioned' | 'archived'
+          priority?: 'low' | 'medium' | 'high' | 'critical'
+          assigned_to?: string | null
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          feedback_type_id?: string
+          nps_score?: number | null
+          csat_score?: number | null
+          comments?: string | null
+          source?: 'email' | 'dashboard' | 'api' | 'automated'
+          status?: 'pending' | 'reviewed' | 'actioned' | 'archived'
+          priority?: 'low' | 'medium' | 'high' | 'critical'
+          assigned_to?: string | null
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+        }
+      },
+      feedback_responses: {
+        Row: {
+          id: string
+          feedback_id: string
+          responder_id: string | null
+          responder_type: 'admin' | 'system' | 'ai'
+          message: string
+          is_internal: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          feedback_id: string
+          responder_id?: string | null
+          responder_type: 'admin' | 'system' | 'ai'
+          message: string
+          is_internal?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          feedback_id?: string
+          responder_id?: string | null
+          responder_type?: 'admin' | 'system' | 'ai'
+          message?: string
+          is_internal?: boolean
+          created_at?: string
+        }
+      },
+      nps_survey_schedule: {
+        Row: {
+          id: string
+          user_id: string
+          scheduled_date: string
+          sent_at: string | null
+          status: 'scheduled' | 'sent' | 'completed' | 'skipped'
+          quarter: number
+          year: number
+          metadata: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          scheduled_date: string
+          sent_at?: string | null
+          status?: 'scheduled' | 'sent' | 'completed' | 'skipped'
+          quarter: number
+          year: number
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          scheduled_date?: string
+          sent_at?: string | null
+          status?: 'scheduled' | 'sent' | 'completed' | 'skipped'
+          quarter?: number
+          year?: number
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
       }
     }
     Views: {
