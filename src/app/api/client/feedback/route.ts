@@ -1,7 +1,6 @@
 // src/app/api/client/feedback/route.ts
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { getFeedbackAcknowledgmentEmail } from '@/lib/email/templates/feedback/feedback-acknowledgment'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -16,8 +15,8 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get('limit') || '50')
     const type = searchParams.get('type')
+    const status = searchParams.get('status')
 
     let query = supabase
       .from('feedback_submissions')
@@ -27,20 +26,17 @@ export async function GET(request: Request) {
           id,
           name,
           category
-        ),
-        responses:feedback_responses (
-          id,
-          message,
-          responder_type,
-          created_at
         )
       `)
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .limit(limit)
 
     if (type && type !== 'all') {
       query = query.eq('feedback_type.category', type)
+    }
+
+    if (status && status !== 'all') {
+      query = query.eq('status', status)
     }
 
     const { data: feedback, error } = await query
@@ -50,7 +46,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Failed to fetch feedback' }, { status: 500 })
     }
 
-    return NextResponse.json({ feedback })
+    return NextResponse.json({ feedback: feedback || [] })
 
   } catch (error) {
     console.error('Error in client feedback API:', error)
@@ -73,15 +69,35 @@ export async function POST(request: Request) {
       nps_score,
       csat_score,
       comments,
-      metadata 
+      email_subject,
+      email_content,
+      feature_category,
+      metadata = {}
     } = body
 
-    // Get user details for email
+    // Get user details for context
     const { data: userDetails } = await supabase
       .from('users')
       .select('full_name, company_name, email')
       .eq('id', user.id)
       .single()
+
+    // Get feedback type for category
+    const { data: feedbackType } = await supabase
+      .from('feedback_type')
+      .select('category')
+      .eq('id', feedback_type_id)
+      .single()
+
+    // Determine priority
+    let priority: 'low' | 'medium' | 'high' | 'critical' = 'medium'
+    if (nps_score && nps_score <= 6) {
+      priority = 'high'
+    } else if (feedbackType?.category === 'support') {
+      priority = 'high'
+    } else if (metadata.priority) {
+      priority = metadata.priority
+    }
 
     // Create feedback submission
     const { data: feedback, error } = await supabase
@@ -89,15 +105,34 @@ export async function POST(request: Request) {
       .insert({
         user_id: user.id,
         feedback_type_id,
-        nps_score,
-        csat_score,
-        comments,
-        source: 'manual',
+        nps_score: nps_score || null,
+        csat_score: csat_score || null,
+        comments: comments || email_content || null,
+        email_subject: email_subject || getDefaultSubject(feedbackType?.category || 'general'),
+        email_content: email_content || comments || '',
+        feature_category: feature_category || metadata.category || null,
+        company_name: userDetails?.company_name,
+        client_name: userDetails?.full_name,
+        source: 'dashboard',
         status: 'pending',
-        priority: nps_score && nps_score <= 6 ? 'high' : 'normal',
-        metadata: metadata || {}
+        priority,
+        metadata: {
+          ...metadata,
+          submitted_at: new Date().toISOString(),
+          user_agent: request.headers.get('user-agent'),
+          ip_address: request.headers.get('x-forwarded-for')
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
-      .select()
+      .select(`
+        *,
+        feedback_type:feedback_type_id (
+          id,
+          name,
+          category
+        )
+      `)
       .single()
 
     if (error) {
@@ -105,58 +140,43 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to submit feedback' }, { status: 500 })
     }
 
-    // Get feedback type details
-    const { data: feedbackType } = await supabase
-      .from('feedback_type')
-      .select('name, category')
-      .eq('id', feedback_type_id)
-      .single()
-
-    // Send acknowledgment email
+    // Send acknowledgment email (don't block on failure)
     try {
-      const { subject, html, text } = getFeedbackAcknowledgmentEmail({
-        client_name: userDetails?.full_name || user.email?.split('@')[0] || 'Valued Client',
-        company_name: userDetails?.company_name || 'Your Company',
-        feedback_type: feedbackType?.name || 'feedback',
-        account_manager: 'Your Account Manager',
-        ticket_id: feedback.id.slice(0, 8).toUpperCase(),
-        estimated_response: 'within 2 business days'
-      })
-
       await resend.emails.send({
         from: process.env.NODE_ENV === 'production' 
           ? '"Veridian Group" <feedback@veridiangroup.com>'
           : '"Veridian Group" <onboarding@resend.dev>',
         to: [user.email!],
-        subject,
-        html,
-        text
+        subject: 'We received your feedback',
+        html: getAcknowledgmentEmailHTML(
+          userDetails?.full_name || 'Valued Client',
+          feedbackType?.category || 'feedback'
+        )
       })
     } catch (emailError) {
       console.error('Error sending acknowledgment email:', emailError)
-      // Don't fail the request if email fails
     }
 
-    // Create notification for admins
+    // Create notifications for admins
     const { data: admins } = await supabase
       .from('users')
       .select('id')
       .eq('is_admin', true)
 
-    if (admins) {
+    if (admins && admins.length > 0) {
       const adminNotifications = admins.map(admin => ({
         user_id: admin.id,
         type: 'new_feedback',
         title: 'New Client Feedback',
-        message: `${userDetails?.company_name || 'A client'} submitted ${feedbackType?.name || 'feedback'}`,
+        message: `${userDetails?.company_name || 'A client'} submitted ${feedbackType?.category || 'feedback'}`,
         data: {
           feedback_id: feedback.id,
           client_id: user.id,
           company_name: userDetails?.company_name,
-          priority: nps_score && nps_score <= 6 ? 'high' : 'normal'
+          priority
         },
-        priority: nps_score && nps_score <= 6 ? 'high' : 'normal',
-        link: `/admin/customers/feedback/${feedback.id}`,
+        priority: priority === 'critical' || priority === 'high' ? 'high' : 'normal',
+        link: `/admin/feedback/${feedback.id}`,
         created_at: new Date().toISOString()
       }))
 
@@ -175,4 +195,32 @@ export async function POST(request: Request) {
     console.error('Error in client feedback API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
+}
+
+// Helper functions
+function getDefaultSubject(type: string): string {
+  const subjects: Record<string, string> = {
+    nps: 'NPS Score Feedback',
+    csat: 'Service Experience Feedback',
+    feature_request: 'Feature Request',
+    support: 'Support Experience Feedback',
+    general: 'General Feedback',
+    account_review: 'Account Review Feedback'
+  }
+  return subjects[type] || 'Feedback Submission'
+}
+
+function getAcknowledgmentEmailHTML(name: string, type: string): string {
+  return `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1a2b3c;">Thank You for Your Feedback</h2>
+      <p>Dear ${name},</p>
+      <p>We've received your ${type} and appreciate you taking the time to share your thoughts with us.</p>
+      <p>Our team will review your feedback and respond within 2 business days if a response is needed.</p>
+      <div style="margin: 30px 0; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
+        <p style="margin: 0; color: #4a5568;">You can track the status of your feedback in your dashboard at any time.</p>
+      </div>
+      <p>Best regards,<br>The Veridian Group Team</p>
+    </div>
+  `
 }

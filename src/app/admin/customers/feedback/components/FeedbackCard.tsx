@@ -198,6 +198,15 @@ export default function FeedbackCard({ feedback, onStatusChange }: FeedbackCardP
                   <div className="py-1">
                     <button
                       onClick={() => {
+                        onStatusChange(feedback.id, 'pending_review')
+                        setShowActions(false)
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-navy-600 hover:bg-slate-50"
+                    >
+                      Mark as Pending Review
+                    </button>
+                    <button
+                      onClick={() => {
                         onStatusChange(feedback.id, 'reviewed')
                         setShowActions(false)
                       }}
@@ -207,31 +216,31 @@ export default function FeedbackCard({ feedback, onStatusChange }: FeedbackCardP
                     </button>
                     <button
                       onClick={() => {
-                        onStatusChange(feedback.id, 'in_progress')
+                        onStatusChange(feedback.id, 'action_planned')
                         setShowActions(false)
                       }}
                       className="w-full px-4 py-2 text-left text-sm text-navy-600 hover:bg-slate-50"
                     >
-                      Start Working
+                      Mark as Action Planned
                     </button>
                     <button
                       onClick={() => {
-                        onStatusChange(feedback.id, 'actioned')
+                        onStatusChange(feedback.id, 'implemented')
                         setShowActions(false)
                       }}
                       className="w-full px-4 py-2 text-left text-sm text-navy-600 hover:bg-slate-50"
                     >
-                      Mark as Actioned
+                      Mark as Implemented
                     </button>
                     <div className="border-t border-slate-100"></div>
                     <button
                       onClick={() => {
-                        onStatusChange(feedback.id, 'archived')
+                        onStatusChange(feedback.id, 'closed')
                         setShowActions(false)
                       }}
                       className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-slate-50"
                     >
-                      Archive
+                      Close
                     </button>
                   </div>
                 </div>

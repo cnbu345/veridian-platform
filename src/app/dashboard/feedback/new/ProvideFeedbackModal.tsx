@@ -1,7 +1,7 @@
-// src/app/dashboard/feedback/new/ProvideFeedbackModal.tsx
+// src/app/dashboar/feedback/new/ProvideFeedbackModal.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   X,
@@ -47,6 +47,12 @@ export default function ProvideFeedbackModal({ user, feedbackTypes }: ProvideFee
     impact: '',
     priority: 'medium'
   })
+  const [generalCategory, setGeneralCategory] = useState('')
+
+  // Filter out support and account_review since they have their own dedicated flows
+  const activeFeedbackTypes = feedbackTypes.filter(type => 
+    !['support', 'account_review'].includes(type.category)
+  )
 
   const getTypeIcon = (category: string) => {
     switch(category) {
@@ -97,6 +103,10 @@ export default function ProvideFeedbackModal({ user, feedbackTypes }: ProvideFee
           impact: featureRequest.impact,
           priority: featureRequest.priority
         }
+      } else if (selectedType.category === 'general') {
+        payload.metadata = {
+          category: generalCategory || 'uncategorized'
+        }
       }
 
       const response = await fetch('/api/client/feedback', {
@@ -123,6 +133,134 @@ export default function ProvideFeedbackModal({ user, feedbackTypes }: ProvideFee
 
   const handleClose = () => {
     router.push('/dashboard/feedback')
+  }
+
+  const canContinue = () => {
+    if (!selectedType) return false
+    
+    switch(selectedType.category) {
+      case 'nps':
+        return npsScore !== null
+      case 'csat':
+        return csatScore !== null
+      case 'feature_request':
+        return featureRequest.title.trim() !== ''
+      case 'general':
+        return comments.trim() !== ''
+      default:
+        return false
+    }
+  }
+
+  const getReviewContent = () => {
+    if (!selectedType) return null
+
+    switch(selectedType.category) {
+      case 'nps':
+        return (
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm text-navy-500 mb-1">Your Score</p>
+              <div className="flex items-center gap-2">
+                <span className={cn(
+                  "text-2xl font-bold",
+                  npsScore && npsScore >= 9 ? 'text-green-600' :
+                  npsScore && npsScore >= 7 ? 'text-amber-600' :
+                  'text-red-600'
+                )}>
+                  {npsScore}/10
+                </span>
+                <span className="text-sm text-navy-500">
+                  ({npsScore && npsScore >= 9 ? 'Promoter' : npsScore && npsScore >= 7 ? 'Passive' : 'Detractor'})
+                </span>
+              </div>
+            </div>
+            {comments && (
+              <div>
+                <p className="text-sm text-navy-500 mb-1">Comments</p>
+                <p className="text-navy-700 bg-white p-3 rounded-lg border border-slate-200">
+                  {comments}
+                </p>
+              </div>
+            )}
+          </div>
+        )
+
+      case 'csat':
+        return (
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm text-navy-500 mb-1">Your Rating</p>
+              <div className="flex items-center gap-1">
+                {[1,2,3,4,5].map((star) => (
+                  <Star
+                    key={star}
+                    className={cn(
+                      "w-6 h-6",
+                      csatScore && star <= csatScore ? 'text-gold-500 fill-gold-500' : 'text-slate-300'
+                    )}
+                  />
+                ))}
+              </div>
+            </div>
+            {comments && (
+              <div>
+                <p className="text-sm text-navy-500 mb-1">Comments</p>
+                <p className="text-navy-700 bg-white p-3 rounded-lg border border-slate-200">
+                  {comments}
+                </p>
+              </div>
+            )}
+          </div>
+        )
+
+      case 'feature_request':
+        return (
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm text-navy-500 mb-1">Feature Title</p>
+              <p className="text-navy-700 font-medium">{featureRequest.title}</p>
+            </div>
+            <div>
+              <p className="text-sm text-navy-500 mb-1">Category</p>
+              <p className="text-navy-700 capitalize">{featureRequest.category}</p>
+            </div>
+            {featureRequest.impact && (
+              <div>
+                <p className="text-sm text-navy-500 mb-1">Business Impact</p>
+                <p className="text-navy-700">{featureRequest.impact}</p>
+              </div>
+            )}
+            <div>
+              <p className="text-sm text-navy-500 mb-1">Priority</p>
+              <p className="text-navy-700 capitalize">{featureRequest.priority}</p>
+            </div>
+          </div>
+        )
+
+      case 'general':
+        return (
+          <div className="space-y-3">
+            {comments && (
+              <div>
+                <p className="text-sm text-navy-500 mb-1">Your Feedback</p>
+                <p className="text-navy-700 bg-white p-3 rounded-lg border border-slate-200">
+                  {comments}
+                </p>
+              </div>
+            )}
+            {generalCategory && (
+              <div>
+                <p className="text-sm text-navy-500 mb-1">Category</p>
+                <p className="text-navy-700 capitalize">{generalCategory}</p>
+              </div>
+            )}
+          </div>
+        )
+
+      default:
+        return null
+    }
   }
 
   return (
@@ -189,11 +327,22 @@ export default function ProvideFeedbackModal({ user, feedbackTypes }: ProvideFee
               <p className="text-navy-600">What type of feedback would you like to share?</p>
               
               <div className="grid gap-4">
-                {feedbackTypes.map((type) => (
+                {activeFeedbackTypes.map((type) => (
                   <button
                     key={type.id}
                     onClick={() => {
                       setSelectedType(type)
+                      // Reset form fields when changing type
+                      setNpsScore(null)
+                      setCsatScore(null)
+                      setComments('')
+                      setFeatureRequest({
+                        title: '',
+                        category: 'feature',
+                        impact: '',
+                        priority: 'medium'
+                      })
+                      setGeneralCategory('')
                       setStep('form')
                     }}
                     className={cn(
@@ -380,17 +529,38 @@ export default function ProvideFeedbackModal({ user, feedbackTypes }: ProvideFee
 
               {/* General Feedback */}
               {selectedType.category === 'general' && (
-                <div>
-                  <label className="block text-sm font-medium text-navy-700 mb-2">
-                    Your Feedback
-                  </label>
-                  <textarea
-                    value={comments}
-                    onChange={(e) => setComments(e.target.value)}
-                    rows={6}
-                    placeholder="Please share your thoughts, suggestions, or concerns..."
-                    className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-gold-500 focus:border-transparent"
-                  />
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-navy-700 mb-2">
+                      Your Feedback <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={comments}
+                      onChange={(e) => setComments(e.target.value)}
+                      rows={6}
+                      placeholder="Please share your thoughts, suggestions, or concerns..."
+                      className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-gold-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-navy-700 mb-2">
+                      Category (Optional)
+                    </label>
+                    <select
+                      value={generalCategory}
+                      onChange={(e) => setGeneralCategory(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-gold-500 focus:border-transparent"
+                    >
+                      <option value="">Select a category...</option>
+                      <option value="usability">Usability</option>
+                      <option value="performance">Performance</option>
+                      <option value="content">Content/Reports</option>
+                      <option value="billing">Billing/Pricing</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
                 </div>
               )}
 
@@ -404,11 +574,7 @@ export default function ProvideFeedbackModal({ user, feedbackTypes }: ProvideFee
                 </button>
                 <button
                   onClick={() => setStep('review')}
-                  disabled={
-                    (selectedType.category === 'nps' && npsScore === null) ||
-                    (selectedType.category === 'csat' && csatScore === null) ||
-                    (selectedType.category === 'feature_request' && !featureRequest.title.trim())
-                  }
+                  disabled={!canContinue()}
                   className="px-6 py-2 bg-gold-600 text-white rounded-lg hover:bg-gold-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
@@ -433,97 +599,7 @@ export default function ProvideFeedbackModal({ user, feedbackTypes }: ProvideFee
                   </div>
                 </div>
 
-                {/* NPS Review */}
-                {selectedType.category === 'nps' && npsScore !== null && (
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm text-navy-500 mb-1">Your Score</p>
-                      <div className="flex items-center gap-2">
-                        <span className={cn(
-                          "text-2xl font-bold",
-                          npsScore >= 9 ? 'text-green-600' :
-                          npsScore >= 7 ? 'text-amber-600' :
-                          'text-red-600'
-                        )}>
-                          {npsScore}/10
-                        </span>
-                        <span className="text-sm text-navy-500">
-                          ({npsScore >= 9 ? 'Promoter' : npsScore >= 7 ? 'Passive' : 'Detractor'})
-                        </span>
-                      </div>
-                    </div>
-                    {comments && (
-                      <div>
-                        <p className="text-sm text-navy-500 mb-1">Comments</p>
-                        <p className="text-navy-700 bg-white p-3 rounded-lg border border-slate-200">
-                          {comments}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* CSAT Review */}
-                {selectedType.category === 'csat' && csatScore !== null && (
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm text-navy-500 mb-1">Your Rating</p>
-                      <div className="flex items-center gap-1">
-                        {[1,2,3,4,5].map((star) => (
-                          <Star
-                            key={star}
-                            className={cn(
-                              "w-6 h-6",
-                              star <= csatScore ? 'text-gold-500 fill-gold-500' : 'text-slate-300'
-                            )}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    {comments && (
-                      <div>
-                        <p className="text-sm text-navy-500 mb-1">Comments</p>
-                        <p className="text-navy-700 bg-white p-3 rounded-lg border border-slate-200">
-                          {comments}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Feature Request Review */}
-                {selectedType.category === 'feature_request' && (
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm text-navy-500 mb-1">Feature Title</p>
-                      <p className="text-navy-700 font-medium">{featureRequest.title}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-navy-500 mb-1">Category</p>
-                      <p className="text-navy-700 capitalize">{featureRequest.category}</p>
-                    </div>
-                    {featureRequest.impact && (
-                      <div>
-                        <p className="text-sm text-navy-500 mb-1">Business Impact</p>
-                        <p className="text-navy-700">{featureRequest.impact}</p>
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-sm text-navy-500 mb-1">Priority</p>
-                      <p className="text-navy-700 capitalize">{featureRequest.priority}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* General Feedback Review */}
-                {selectedType.category === 'general' && comments && (
-                  <div>
-                    <p className="text-sm text-navy-500 mb-1">Your Feedback</p>
-                    <p className="text-navy-700 bg-white p-3 rounded-lg border border-slate-200">
-                      {comments}
-                    </p>
-                  </div>
-                )}
+                {getReviewContent()}
               </div>
 
               {/* Action Buttons */}
