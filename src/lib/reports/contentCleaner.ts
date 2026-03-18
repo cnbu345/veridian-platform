@@ -1,5 +1,5 @@
 // src/lib/reports/contentCleaner.ts
-// Ultimate content cleaner - removes ALL markdown artifacts and raw AI output
+// Ultimate content cleaner
 
 export class ContentCleaner {
   /**

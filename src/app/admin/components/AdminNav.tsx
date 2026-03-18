@@ -62,7 +62,7 @@ const navItems = [
   },
   {
     title: 'Reports',
-    href: '/admin/reports/queue',
+    href: '/admin/reports',
     icon: FileText,
     subItems: [
       { title: 'All Reports', href: '/admin/reports' },

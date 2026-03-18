@@ -136,7 +136,30 @@ export default function RecentReports() {
                 </span>
                 
                 {report.status === 'ready' && (
-                  <button className="p-2 hover:bg-slate-200 rounded-lg">
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const { PDFDownloader } = await import('@/lib/pdf/download')
+                        const fileName = PDFDownloader.generateFileName(
+                          report.company_name, 
+                          new Date(report.created_at).toISOString().split('T')[0]
+                        )
+                        
+                        // Try to get a fresh URL
+                        const freshUrl = await PDFDownloader.refreshPDFUrl(report.id)
+                        
+                        if (freshUrl) {
+                          await PDFDownloader.downloadFromUrl(freshUrl, fileName)
+                        } else {
+                          alert('PDF not available for download')
+                        }
+                      } catch (error) {
+                        console.error('Download failed:', error)
+                        alert('Failed to download PDF. Please try again.')
+                      }
+                    }}
+                    className="p-2 hover:bg-slate-200 rounded-lg"
+                  >
                     <Download className="w-4 h-4 text-navy-500" />
                   </button>
                 )}

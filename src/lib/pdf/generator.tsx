@@ -1285,26 +1285,66 @@ export async function generateReportPDF(report: GeneratedReport): Promise<Blob> 
   }
 }
 
-// Download function for client-side
+// Download function with storage check
 export async function downloadReportPDF(report: GeneratedReport): Promise<Blob> {
   try {
-    console.log('📥 Generating PDF for report:', report.id)
+    console.log('📥 Starting PDF download for report:', report.id)
     
     if (!report || !report.id || !report.company_name) {
       throw new Error('Invalid report data')
     }
 
+    // Check if we already have a stored PDF URL
+    if (report.pdf_url) {
+      console.log('📎 Found existing PDF URL, downloading...')
+      
+      // Fetch the existing PDF
+      const response = await fetch(report.pdf_url)
+      
+      if (response.ok) {
+        const blob = await response.blob()
+        console.log('✅ Downloaded existing PDF, size:', blob.size, 'bytes')
+        return blob
+      } else {
+        console.log('⚠️  Failed to download existing PDF, will regenerate')
+      }
+    }
+
+    // Generate new PDF
+    console.log('🔄 Generating new PDF...')
     const blob = await generateReportPDF(report)
     
     if (!blob || blob.size === 0) {
       throw new Error('Generated PDF is empty')
     }
     
-    console.log('✅ PDF generated successfully, size:', blob.size, 'bytes')
+    // Note: Saving to storage happens on the server side via an API route
+    // We'll trigger that separately
+    
+    console.log('✅ PDF generation complete, size:', blob.size, 'bytes')
     return blob
     
   } catch (error) {
-    console.error('❌ PDF generation error:', error)
+    console.error('❌ PDF download error:', error)
     throw error
+  }
+}
+
+// New function to save PDF to storage via API
+export async function savePDFToStorage(report: GeneratedReport, blob: Blob): Promise<boolean> {
+  try {
+    const formData = new FormData()
+    formData.append('reportId', report.id)
+    formData.append('file', blob, `${report.company_name}_Report.pdf`)
+
+    const response = await fetch('/api/reports/save-pdf', {
+      method: 'POST',
+      body: formData
+    })
+
+    return response.ok
+  } catch (error) {
+    console.error('Failed to save PDF to storage:', error)
+    return false
   }
 }
