@@ -7,7 +7,8 @@ import {
   Bell, Check, Clock, MessageSquare, Calendar, FileText, 
   CreditCard, AlertCircle, Trash2, Filter, ChevronDown,
   ExternalLink, CheckCheck, Users, Settings, User,
-  RefreshCw, X, Building2
+  RefreshCw, X, Building2,
+  MessageCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils/utils'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -51,6 +52,7 @@ const NOTIFICATION_ICONS: Record<string, any> = {
   user_registered: User,
   new_subscription: CreditCard,
   enterprise_lead: Building2,
+   feedback_received: MessageCircle
 }
 
 const PRIORITY_COLORS = {

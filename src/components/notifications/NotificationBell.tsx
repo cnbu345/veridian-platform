@@ -20,7 +20,8 @@ import {
   HelpCircle,
   Archive,
   Inbox,
-  Building2
+  Building2,
+  MessageCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils/utils'
 import { formatDistanceToNow } from 'date-fns'
@@ -65,7 +66,10 @@ const NOTIFICATION_ICONS: Record<string, any> = {
   ticket_reopened: RefreshCw,
   user_registered: User,
   new_subscription: CreditCard,
-  enterprise_lead: Building2
+  enterprise_lead: Building2,
+  feedback_received: MessageCircle,
+  feedback_response: Check,
+  feedback_status_updated: RefreshCw
 }
 
 const PRIORITY_COLORS: Record<string, string> = {

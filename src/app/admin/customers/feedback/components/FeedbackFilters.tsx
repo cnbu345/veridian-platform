@@ -50,7 +50,7 @@ export default function FeedbackFilters({
     { value: 'all', label: 'All Priorities' },
     { value: 'critical', label: 'Critical', color: 'red' },
     { value: 'high', label: 'High', color: 'orange' },
-    { value: 'medium', label: 'Medium', color: 'amber' },
+    { value: 'normal', label: 'Normal', color: 'amber' },
     { value: 'low', label: 'Low', color: 'green' }
   ]
 
@@ -163,7 +163,7 @@ export default function FeedbackFilters({
                       priority === p.value
                         ? p.value === 'critical' ? 'bg-red-600 text-white'
                         : p.value === 'high' ? 'bg-orange-600 text-white'
-                        : p.value === 'medium' ? 'bg-amber-600 text-white'
+                        : p.value === 'normal' ? 'bg-amber-600 text-white'
                         : p.value === 'low' ? 'bg-green-600 text-white'
                         : 'bg-navy-900 text-white'
                         : 'bg-white text-navy-600 border border-slate-200'
@@ -224,7 +224,7 @@ export default function FeedbackFilters({
                 priority === p.value
                   ? p.value === 'critical' ? 'bg-red-600 text-white'
                   : p.value === 'high' ? 'bg-orange-600 text-white'
-                  : p.value === 'medium' ? 'bg-amber-600 text-white'
+                  : p.value === 'normal' ? 'bg-amber-600 text-white'
                   : p.value === 'low' ? 'bg-green-600 text-white'
                   : 'bg-navy-900 text-white'
                   : 'bg-white text-navy-600 border border-slate-200 hover:bg-slate-50'

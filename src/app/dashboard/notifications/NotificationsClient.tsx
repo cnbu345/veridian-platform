@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 import { 
   Bell, Check, Clock, MessageSquare, Calendar, FileText, 
   CreditCard, AlertCircle, Trash2, Filter, ChevronDown,
-  ExternalLink, CheckCheck
+  ExternalLink, CheckCheck, RefreshCw
 } from 'lucide-react'
 import { cn } from '@/lib/utils/utils'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -39,7 +39,9 @@ const NOTIFICATION_ICONS: Record<string, any> = {
   welcome: Check,
   ticket_created: MessageSquare,
   ticket_updated: MessageSquare,
-  ticket_resolved: CheckCheck
+  ticket_resolved: CheckCheck,
+  feedback_response: Check,
+  feedback_status_updated: RefreshCw
 }
 
 const PRIORITY_COLORS = {

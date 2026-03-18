@@ -45,11 +45,26 @@ export class FeedbackService {
       .single();
 
     // Determine priority
-    let priority: 'low' | 'medium' | 'high' | 'critical' = 'medium';
-    if (data.nps_score && data.nps_score <= 6) {
-      priority = 'high';
+    let priority: 'low' | 'normal' | 'high' | 'critical' = 'normal'
+
+    if (nps_score && nps_score <= 6) {
+      priority = 'high'
     } else if (feedbackType?.category === 'support') {
-      priority = 'high';
+      priority = 'high'
+    } else if (metadata.priority) {
+      // Map any custom priority values to valid enum values
+      const incomingPriority = metadata.priority.toLowerCase()
+      if (incomingPriority === 'critical') {
+        priority = 'critical'
+      } else if (incomingPriority === 'high') {
+        priority = 'high'
+      } else if (incomingPriority === 'medium' || incomingPriority === 'normal') {
+        priority = 'normal'  // Map both 'medium' and 'normal' to 'normal'
+      } else if (incomingPriority === 'low') {
+        priority = 'low'
+      } else {
+        priority = 'normal'
+      }
     }
 
     const { data: feedback, error } = await supabase

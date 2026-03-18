@@ -67,7 +67,7 @@ export default function FeedbackCard({ feedback, onStatusChange }: FeedbackCardP
         return 'bg-red-100 text-red-800 border-red-200'
       case 'high':
         return 'bg-orange-100 text-orange-800 border-orange-200'
-      case 'medium':
+      case 'normal':
         return 'bg-amber-100 text-amber-800 border-amber-200'
       case 'low':
         return 'bg-green-100 text-green-800 border-green-200'

@@ -18,6 +18,9 @@ export type NotificationType =
   | 'user_registered'
   | 'new_subscription'
   | 'enterprise_lead'
+  | 'feedback_received'   
+  | 'feedback_response'
+  | 'feedback_status_updated'
 
 export type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent'
 

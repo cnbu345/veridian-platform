@@ -1,4 +1,3 @@
-// src/app/api/client/feedback/route.ts
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
@@ -89,15 +88,30 @@ export async function POST(request: Request) {
       .eq('id', feedback_type_id)
       .single()
 
-    // Determine priority
-    let priority: 'low' | 'medium' | 'high' | 'critical' = 'medium'
+    // Determine priority - using correct enum values
+    let priority: 'low' | 'normal' | 'high' | 'critical' = 'normal'  // Default is 'normal'
+
     if (nps_score && nps_score <= 6) {
       priority = 'high'
     } else if (feedbackType?.category === 'support') {
       priority = 'high'
     } else if (metadata.priority) {
-      priority = metadata.priority
+      // Map any custom priority values to valid enum values
+      const incomingPriority = metadata.priority.toLowerCase()
+      if (incomingPriority === 'critical') {
+        priority = 'critical'
+      } else if (incomingPriority === 'high') {
+        priority = 'high'
+      } else if (incomingPriority === 'medium' || incomingPriority === 'normal') {
+        priority = 'normal'  // Map both 'medium' and 'normal' to 'normal'
+      } else if (incomingPriority === 'low') {
+        priority = 'low'
+      } else {
+        priority = 'normal'
+      }
     }
+
+    console.log('Priority being sent to database:', priority) // Debug log
 
     // Create feedback submission
     const { data: feedback, error } = await supabase
@@ -114,7 +128,7 @@ export async function POST(request: Request) {
         company_name: userDetails?.company_name,
         client_name: userDetails?.full_name,
         source: 'dashboard',
-        status: 'pending',
+        status: 'pending_review',
         priority,
         metadata: {
           ...metadata,
@@ -158,31 +172,59 @@ export async function POST(request: Request) {
     }
 
     // Create notifications for admins
-    const { data: admins } = await supabase
+    console.log('Creating notifications for admins about new feedback...')
+    
+    // Get all admin users
+    const { data: admins, error: adminsError } = await supabase
       .from('users')
       .select('id')
       .eq('is_admin', true)
 
-    if (admins && admins.length > 0) {
+    if (adminsError) {
+      console.error('Error fetching admins:', adminsError)
+    } else if (admins && admins.length > 0) {
+      console.log(`Found ${admins.length} admins to notify`)
+      
+      // Create a preview of the feedback message (truncate if too long)
+      const messagePreview = comments || email_content || 'No message provided'
+      const truncatedPreview = messagePreview.length > 100 
+        ? messagePreview.substring(0, 100) + '...' 
+        : messagePreview
+
+      // Build notification for each admin
       const adminNotifications = admins.map(admin => ({
         user_id: admin.id,
-        type: 'new_feedback',
-        title: 'New Client Feedback',
-        message: `${userDetails?.company_name || 'A client'} submitted ${feedbackType?.category || 'feedback'}`,
+        type: 'feedback_received',
+        title: 'New Client Feedback Received',
+        message: `${userDetails?.company_name || 'A client'} submitted ${feedbackType?.category || 'feedback'} feedback`,
         data: {
           feedback_id: feedback.id,
           client_id: user.id,
+          client_name: userDetails?.full_name,
           company_name: userDetails?.company_name,
-          priority
+          client_email: userDetails?.email,
+          feedback_type: feedbackType?.category,
+          priority: priority,
+          preview: truncatedPreview,
+          submitted_at: new Date().toISOString()
         },
         priority: priority === 'critical' || priority === 'high' ? 'high' : 'normal',
-        link: `/admin/feedback/${feedback.id}`,
+        link: `/admin/customers/feedback/${feedback.id}`,
         created_at: new Date().toISOString()
       }))
 
-      await supabase
+      // Insert all admin notifications
+      const { error: notificationError } = await supabase
         .from('notifications')
         .insert(adminNotifications)
+
+      if (notificationError) {
+        console.error('Error creating admin notifications:', notificationError)
+      } else {
+        console.log(`✅ Successfully created ${adminNotifications.length} admin notifications for new feedback`)
+      }
+    } else {
+      console.log('No admin users found to notify')
     }
 
     return NextResponse.json({ 

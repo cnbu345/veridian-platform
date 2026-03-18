@@ -75,7 +75,7 @@ export default function AdminFeedbackDetail({ feedback: initialFeedback }: Feedb
     const styles: Record<string, string> = {
       critical: 'bg-red-100 text-red-800 border-red-200',
       high: 'bg-orange-100 text-orange-800 border-orange-200',
-      medium: 'bg-amber-100 text-amber-800 border-amber-200',
+      normal: 'bg-amber-100 text-amber-800 border-amber-200',
       low: 'bg-green-100 text-green-800 border-green-200'
     }
     return styles[priority] || 'bg-slate-100 text-slate-800'
@@ -344,7 +344,7 @@ export default function AdminFeedbackDetail({ feedback: initialFeedback }: Feedb
                     className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-gold-500 focus:border-transparent"
                   >
                     <option value="low">Low</option>
-                    <option value="medium">Medium</option>
+                    <option value="normal">Normal</option>
                     <option value="high">High</option>
                     <option value="critical">Critical</option>
                   </select>
