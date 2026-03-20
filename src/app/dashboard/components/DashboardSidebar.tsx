@@ -22,7 +22,8 @@ import {
   ChevronUp,
   Star,
   StarIcon,
-  HistoryIcon
+  HistoryIcon,
+  Layout
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useState, useRef, useEffect } from 'react'
@@ -125,6 +126,11 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
       icon: FileText
     },
     {
+      name: 'Templates',
+      href: '/dashboard/templates',
+      icon: Layout
+    },
+    {
       name: 'Consultations',
       href: '/dashboard/consultations',
       icon: Calendar
@@ -132,11 +138,11 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
     {
       name: 'Feedback',
       href: '/dashboard/feedback',
-      icon: StarIcon, // You can import a more specific icon like 'Star' or 'ThumbsUp'
+      icon: StarIcon,
       subItems: [
         { title: 'My Feedback', href: '/dashboard/feedback', icon: MessageCircle },
         { title: 'Feature Requests', href: '/dashboard/feedback/requests', icon: FileText },
-        { title: 'NPS History', href: '/dashboard/feedback/nps', icon: HistoryIcon }, // Add Star to imports
+        { title: 'NPS History', href: '/dashboard/feedback/nps', icon: HistoryIcon },
       ]
     },
     {

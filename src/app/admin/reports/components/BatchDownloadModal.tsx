@@ -9,7 +9,8 @@ import {
   AlertCircle,
   Archive
 } from 'lucide-react'
-import { BatchDownloader } from '@/lib/storage/batch-download'
+import JSZip from 'jszip'
+import { saveAs } from 'file-saver'
 
 interface BatchDownloadModalProps {
   reports: any[]
@@ -19,6 +20,7 @@ interface BatchDownloadModalProps {
 export default function BatchDownloadModal({ reports, onClose }: BatchDownloadModalProps) {
   const [downloading, setDownloading] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [currentReport, setCurrentReport] = useState('')
   const [results, setResults] = useState<{
     total: number
     success: number
@@ -35,43 +37,98 @@ export default function BatchDownloadModal({ reports, onClose }: BatchDownloadMo
     setProgress(0)
 
     try {
-        // First, refresh all PDF URLs
-        const refreshedReports = []
-        
-        for (let i = 0; i < readyReports.length; i++) {
+      const zip = new JSZip()
+      
+      let successCount = 0
+      let failCount = 0
+      const errors: Array<{ reportId: string; error: string }> = []
+
+      // Process each report sequentially
+      for (let i = 0; i < readyReports.length; i++) {
         const report = readyReports[i]
-        setProgress(Math.round((i / readyReports.length) * 50))
+        const progressPercent = Math.round((i / readyReports.length) * 100)
+        setProgress(progressPercent)
+        setCurrentReport(report.company_name)
         
         try {
-            // Try to get a fresh URL
-            const freshUrl = await PDFDownloader.refreshPDFUrl(report.id)
-            
-            if (freshUrl) {
-            refreshedReports.push({
-                ...report,
-                pdf_url: freshUrl
-            })
-            } else {
-            refreshedReports.push(report)
+          console.log(`[${i + 1}/${readyReports.length}] 📥 Fetching PDF for: ${report.company_name} (ID: ${report.id})`)
+          
+          const response = await fetch(`/api/reports/${report.id}/pdf`, {
+            method: 'GET',
+            headers: {
+              'Cache-Control': 'no-cache'
             }
-        } catch {
-            refreshedReports.push(report)
+          })
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+          }
+          
+          const blob = await response.blob()
+          
+          if (blob.size === 0) {
+            throw new Error('Empty PDF (0 bytes)')
+          }
+          
+          // Generate a UNIQUE filename using report ID to prevent overwrites
+          const safeCompanyName = report.company_name.replace(/[^a-zA-Z0-9]/g, '_')
+          const dateStr = new Date(report.created_at).toISOString().split('T')[0]
+          const uniqueId = report.id.slice(0, 8) // First 8 chars of UUID for uniqueness
+          const fileName = `${safeCompanyName}_${dateStr}_${uniqueId}.pdf`
+          
+          console.log(`[${i + 1}/${readyReports.length}] 📄 Adding file: ${fileName} (${blob.size} bytes)`)
+          
+          // Add to ZIP - use the unique filename
+          zip.file(`reports/${fileName}`, blob)
+          
+          console.log(`[${i + 1}/${readyReports.length}] ✅ Successfully added ${fileName}`)
+          successCount++
+          
+        } catch (error) {
+          console.error(`[${i + 1}/${readyReports.length}] ❌ Failed for ${report.company_name}:`, error)
+          failCount++
+          errors.push({
+            reportId: report.id,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          })
         }
-        }
+      }
 
-        // Then download the ZIP with fresh URLs
-        const result = await BatchDownloader.downloadReportsAsZip(refreshedReports, {
-        zipName: `reports-export-${new Date().toISOString().split('T')[0]}.zip`,
-        onProgress: (progress) => {
-            setProgress(50 + Math.round(progress * 0.5))
-        }
+      setProgress(100)
+      setCurrentReport('')
+
+      // Generate and download ZIP
+      if (successCount > 0) {
+        console.log(`📦 Creating ZIP with ${successCount} files...`)
+        
+        // Log all files that will be in the ZIP
+        const files = Object.keys(zip.files)
+        console.log('Files in ZIP:', files)
+        
+        const content = await zip.generateAsync({ 
+          type: 'blob',
+          compression: 'DEFLATE',
+          compressionOptions: { level: 6 }
         })
         
-        setResults(result)
+        const zipFileName = `reports-export-${new Date().toISOString().split('T')[0]}.zip`
+        saveAs(content, zipFileName)
+        
+        console.log(`✅ ZIP downloaded: ${content.size} bytes (${successCount} files)`)
+      } else {
+        console.log('❌ No PDFs were successfully downloaded')
+      }
+
+      setResults({
+        total: readyReports.length,
+        success: successCount,
+        failed: failCount,
+        errors
+      })
     } catch (error) {
-        console.error('Batch download failed:', error)
+      console.error('Batch download failed:', error)
     } finally {
-        setDownloading(false)
+      setDownloading(false)
     }
   }
 
@@ -108,7 +165,9 @@ export default function BatchDownloadModal({ reports, onClose }: BatchDownloadMo
               {downloading && (
                 <div className="mb-4">
                   <div className="flex items-center justify-between text-sm text-navy-600 mb-2">
-                    <span>Preparing reports...</span>
+                    <span>
+                      {currentReport ? `Downloading: ${currentReport}` : 'Preparing reports...'}
+                    </span>
                     <span>{progress}%</span>
                   </div>
                   <div className="w-full bg-slate-200 rounded-full h-2">

@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function POST(
   request: Request,
-  { params }: { params: { templateId: string } }
+  { params }: { params: Promise<{ templateId: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -26,7 +26,8 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { templateId } = params
+    // CRITICAL: MUST await params BEFORE accessing templateId
+    const { templateId } = await params
 
     // First, remove default from all templates
     await supabase

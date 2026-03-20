@@ -251,32 +251,39 @@ export default function ReportsPage() {
           <p className="text-navy-600 mt-1">View and manage all generated reports</p>
         </div>
         <div className="flex items-center gap-3">
-          {selectedReports.length > 0 && (
-            <>
+        {selectedReports.length > 0 && (
+          <div className="relative flex items-center gap-3">
+            <div className="relative">
               <button
-                onClick={() => handleExport('pdf')}
+                onClick={() => {
+                  // Default to CSV for detailed data
+                  handleExport('csv')
+                }}
                 disabled={exporting}
                 className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm hover:bg-slate-50 disabled:opacity-50"
               >
                 <FileDown className="w-4 h-4" />
-                Export Selected ({selectedReports.length})
+                Export Selected ({selectedReports.length}) as CSV
               </button>
-              <button
-                onClick={() => setShowBatchDownload(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gold-600 text-white rounded-lg text-sm hover:bg-gold-700"
-              >
-                <Archive className="w-4 h-4" />
-                Download PDFs ({selectedReports.length})
-              </button>
-              <button
-                onClick={handleBulkDelete}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete Selected
-              </button>
-            </>
-          )}
+            </div>
+            
+            <button
+              onClick={() => setShowBatchDownload(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gold-600 text-white rounded-lg text-sm hover:bg-gold-700"
+            >
+              <Archive className="w-4 h-4" />
+              Download PDFs ({selectedReports.length})
+            </button>
+            
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete Selected
+            </button>
+          </div>
+        )}
           <button
             onClick={fetchReports}
             className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm hover:bg-slate-50"
@@ -490,39 +497,33 @@ export default function ReportsPage() {
                           >
                             <Eye className="w-4 h-4 text-navy-600" />
                           </Link>
-                          {report.status === 'ready' && (
-                            <button
-                                onClick={async (e) => {
-                                e.preventDefault()
-                                try {
-                                    const { PDFDownloader } = await import('@/lib/pdf/download')
-                                    const fileName = PDFDownloader.generateFileName(
-                                    report.company_name, 
-                                    new Date(report.created_at).toISOString().split('T')[0]
-                                    )
-                                    
-                                    if (report.pdf_url) {
-                                    await PDFDownloader.downloadFromUrl(report.pdf_url, fileName)
-                                    } else {
-                                    // Try to refresh the URL
-                                    const freshUrl = await PDFDownloader.refreshPDFUrl(report.id)
-                                    if (freshUrl) {
-                                        await PDFDownloader.downloadFromUrl(freshUrl, fileName)
-                                    } else {
-                                        alert('PDF not available for download')
-                                    }
-                                    }
-                                } catch (error) {
-                                    console.error('Download failed:', error)
-                                    alert('Failed to download PDF. Please try again.')
+                          <button
+                            onClick={async (e) => {
+                              e.preventDefault()
+                              try {
+                                const { PDFDownloader } = await import('@/lib/pdf/download')
+                                const fileName = PDFDownloader.generateFileName(
+                                  report.company_name, 
+                                  new Date(report.created_at).toISOString().split('T')[0]
+                                )
+                                
+                                // Use the same PDF download method that works in RecentReports
+                                const freshUrl = await PDFDownloader.refreshPDFUrl(report.id)
+                                if (freshUrl) {
+                                  await PDFDownloader.downloadFromUrl(freshUrl, fileName)
+                                } else {
+                                  alert('PDF not available for download')
                                 }
-                                }}
-                                className="p-1 hover:bg-slate-200 rounded transition-colors"
-                                title="Download PDF"
-                            >
-                                <Download className="w-4 h-4 text-navy-600" />
-                            </button>
-                            )}
+                              } catch (error) {
+                                console.error('Download failed:', error)
+                                alert('Failed to download PDF. Please try again.')
+                              }
+                            }}
+                            className="p-1 hover:bg-slate-200 rounded transition-colors"
+                            title="Download PDF"
+                          >
+                            <Download className="w-4 h-4 text-navy-600" />
+                          </button>
                         </>
                       )}
                       <button

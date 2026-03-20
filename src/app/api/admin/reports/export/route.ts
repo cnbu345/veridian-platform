@@ -4,6 +4,22 @@ import { createClient } from '@/lib/supabase/server'
 import * as XLSX from 'xlsx'
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 
+// Helper function to format date safely
+const formatDateSafe = (dateValue: any): string => {
+  if (!dateValue) return 'N/A'
+  try {
+    const date = new Date(dateValue)
+    if (isNaN(date.getTime())) return 'Invalid Date'
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  } catch (e) {
+    return 'Invalid Date'
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
@@ -30,22 +46,23 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { reportIds, filters } = body
 
-    // Build query
+    // Build query - fetch reports with user data separately to avoid alias issues
     let query = supabase
       .from('reports')
       .select(`
         *,
-        users:user_id (
+        users!user_id (
           email,
           full_name,
-          company_name
+          company_name,
+          subscription_tier,
+          created_at
         )
       `)
 
     if (reportIds && reportIds.length > 0) {
       query = query.in('id', reportIds)
     } else {
-      // Apply filters
       if (filters?.status) {
         query = query.eq('status', filters.status)
       }
@@ -59,29 +76,82 @@ export async function POST(request: Request) {
 
     const { data: reports, error } = await query.order('created_at', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      console.error('Query error:', error)
+      throw error
+    }
 
-    if (format === 'csv') {
-      // Transform data for CSV
-      const csvData = reports.map(report => ({
+    // Enhanced data for export
+    const exportData = reports.map(report => {
+      const content = report.report_content || {}
+      const strategyFocus = content.strategy_focus || {}
+      const locationData = content.location_analysis || {}
+      const licensingData = content.licensing_matrix || {}
+      const riskData = content.risk_assessment || {}
+      const userData = report.users || {}
+      
+      return {
+        // Basic Info
         'Report ID': report.id,
         'Company Name': report.company_name,
         'Industry': report.industry,
         'City': report.city,
         'State': report.state,
-        'Location Tier': report.location_tier,
+        'Location Tier': report.location_tier || locationData.marketTier || 'N/A',
+        
+        // Status & Dates
         'Status': report.status,
         'Created At': new Date(report.created_at).toLocaleString(),
-        'User Email': report.users?.email || 'N/A',
-        'User Name': report.users?.full_name || 'N/A',
-        'PDF URL': report.pdf_url || 'N/A',
-        'Stripe Payment ID': report.stripe_payment_id || 'N/A'
-      }))
+        'Completed At': report.updated_at ? new Date(report.updated_at).toLocaleString() : 'N/A',
+        
+        // User Info
+        'User Email': userData?.email || 'N/A',
+        'User Name': userData?.full_name || 'N/A',
+        'User Company': userData?.company_name || 'N/A',
+        'User Subscription': userData?.subscription_tier || 'N/A',
+        'User Since': formatDateSafe(userData?.created_at),
 
+        // Regulatory Analysis
+        'Regulatory Climate': content.regulatory_analysis?.climate || locationData.regulatoryClimate || (report.regulatory_climate || 'N/A'),
+        'License Required': content.regulatory_analysis?.licenseRequired ||  licensingData.licenseType ||  (report.license_required || 'N/A'),
+        'Money Transmitter Required': content.regulatory_analysis?.moneyTransmitter || content.stateRegulation?.moneyTransmitter || 'N/A',
+        
+        // Strategy Focus
+        'Primary Focus': strategyFocus.primary || content.primaryFocus || 'N/A',
+        'Secondary Focus': Array.isArray(strategyFocus.secondary) 
+          ? strategyFocus.secondary.join(', ') 
+          : (strategyFocus.secondary || content.secondaryFocus || 'N/A'),
+        'Timeline': strategyFocus.timeline || content.timeline || 'N/A',
+        
+        // Client Input
+        'Client Concerns': content.concerns ? content.concerns.substring(0, 200) : 'N/A',
+        'Client Goals': content.goals ? content.goals.substring(0, 200) : 'N/A',
+        
+        // Risk Assessment
+        'Overall Risk': riskData.overall || content.risk_assessment?.overallRisk || 'N/A',
+        'Risk Level': riskData.riskLevel || content.risk_assessment?.riskLevel || 'N/A',
+        
+        // Financial
+        'Payment ID': report.stripe_payment_id || 'N/A',
+        'File Size': report.file_size ? `${(report.file_size / 1024).toFixed(2)} KB` : 'N/A',
+        
+        // Storage
+        'Storage Path': report.storage_path || 'N/A',
+      }
+    })
+
+    if (format === 'csv') {
       // Create workbook and worksheet
       const wb = XLSX.utils.book_new()
-      const ws = XLSX.utils.json_to_sheet(csvData)
-      XLSX.utils.book_append_sheet(wb, ws, 'Reports')
+      const ws = XLSX.utils.json_to_sheet(exportData)
+      
+      // Auto-size columns (optional)
+      const colWidths = Object.keys(exportData[0] || {}).map(key => ({
+        wch: Math.min(Math.max(key.length, 20), 50)
+      }))
+      ws['!cols'] = colWidths
+      
+      XLSX.utils.book_append_sheet(wb, ws, 'Reports Export')
       
       // Generate buffer
       const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'csv' })
@@ -98,110 +168,131 @@ export async function POST(request: Request) {
       const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
       const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
       
-      let page = pdfDoc.addPage([612, 792]) // US Letter size
+      let page = pdfDoc.addPage([612, 792])
       const { width, height } = page.getSize()
       
+      let yPosition = height - 50
+      
       // Title
-      page.drawText('Reports Export', {
+      page.drawText('Reports Export - Detailed Analysis', {
         x: 50,
-        y: height - 50,
+        y: yPosition,
         size: 18,
         font: boldFont,
-        color: rgb(0.12, 0.16, 0.23) // navy-900
+        color: rgb(0.12, 0.16, 0.23)
       })
+      yPosition -= 25
       
+      // Summary stats
       page.drawText(`Generated: ${new Date().toLocaleString()}`, {
         x: 50,
-        y: height - 70,
+        y: yPosition,
         size: 10,
         font: font,
         color: rgb(0.4, 0.45, 0.55)
       })
+      yPosition -= 20
+      
+      page.drawText(`Total Reports: ${reports.length}`, {
+        x: 50,
+        y: yPosition,
+        size: 11,
+        font: boldFont,
+        color: rgb(0.12, 0.16, 0.23)
+      })
+      yPosition -= 15
+      
+      // Status breakdown
+      const statusCounts = reports.reduce((acc, r) => {
+        acc[r.status] = (acc[r.status] || 0) + 1
+        return acc
+      }, {} as Record<string, number>)
+      
+      page.drawText(`Status Breakdown:`, {
+        x: 50,
+        y: yPosition,
+        size: 10,
+        font: boldFont,
+        color: rgb(0.12, 0.16, 0.23)
+      })
+      yPosition -= 15
+      
+      Object.entries(statusCounts).forEach(([status, count]) => {
+        page.drawText(`  • ${status}: ${count}`, {
+          x: 50,
+          y: yPosition,
+          size: 9,
+          font: font,
+          color: rgb(0.3, 0.3, 0.3)
+        })
+        yPosition -= 12
+      })
+      
+      yPosition -= 10
       
       // Table headers
-      const headers = ['Company', 'Industry', 'Location', 'Status', 'Date']
-      let yPosition = height - 100
+      const headers = ['Report ID', 'Company', 'State', 'Status', 'Primary Focus', 'Created']
       let xPosition = 50
+      
+      page.drawLine({
+        start: { x: 50, y: yPosition + 5 },
+        end: { x: width - 50, y: yPosition + 5 },
+        thickness: 1,
+        color: rgb(0.8, 0.8, 0.8)
+      })
       
       headers.forEach(header => {
         page.drawText(header, {
           x: xPosition,
           y: yPosition,
-          size: 10,
+          size: 9,
           font: boldFont,
           color: rgb(0.12, 0.16, 0.23)
         })
-        xPosition += 100
+        xPosition += 90
       })
       
-      // Draw line under headers
+      yPosition -= 12
       page.drawLine({
-        start: { x: 50, y: yPosition - 5 },
-        end: { x: width - 50, y: yPosition - 5 },
+        start: { x: 50, y: yPosition + 5 },
+        end: { x: width - 50, y: yPosition + 5 },
         thickness: 1,
         color: rgb(0.8, 0.8, 0.8)
       })
+      yPosition -= 5
       
       // Table rows
-      yPosition -= 20
       reports.forEach((report, index) => {
         if (yPosition < 50) {
-          // New page
           page = pdfDoc.addPage([612, 792])
           yPosition = height - 50
         }
         
+        const content = report.report_content || {}
+        const strategyFocus = content.strategy_focus || {}
+        
         const rowData = [
-          report.company_name,
-          report.industry,
-          `${report.city}, ${report.state}`,
+          report.id.slice(0, 8),
+          report.company_name.length > 20 ? report.company_name.slice(0, 17) + '...' : report.company_name,
+          report.state,
           report.status,
+          (strategyFocus.primary || content.primaryFocus || 'N/A').slice(0, 15),
           new Date(report.created_at).toLocaleDateString()
         ]
         
         xPosition = 50
         rowData.forEach(cell => {
-          page.drawText(cell.substring(0, 20), {
+          page.drawText(String(cell), {
             x: xPosition,
             y: yPosition,
-            size: 9,
+            size: 8,
             font: font,
             color: rgb(0.2, 0.2, 0.2)
           })
-          xPosition += 100
+          xPosition += 90
         })
         
         yPosition -= 15
-      })
-      
-      // Add summary page
-      page = pdfDoc.addPage([612, 792])
-      page.drawText('Export Summary', {
-        x: 50,
-        y: height - 50,
-        size: 16,
-        font: boldFont,
-        color: rgb(0.12, 0.16, 0.23)
-      })
-      
-      const summary = [
-        `Total Reports: ${reports.length}`,
-        `Date Range: ${filters?.startDate || 'All'} to ${filters?.endDate || 'All'}`,
-        `Status Filter: ${filters?.status || 'All'}`,
-        `Generated By: ${user.email}`,
-        `Export Format: PDF`
-      ]
-      
-      let summaryY = height - 80
-      summary.forEach(line => {
-        page.drawText(line, {
-          x: 50,
-          y: summaryY,
-          size: 11,
-          font: font,
-          color: rgb(0.3, 0.3, 0.3)
-        })
-        summaryY -= 20
       })
       
       const pdfBytes = await pdfDoc.save()

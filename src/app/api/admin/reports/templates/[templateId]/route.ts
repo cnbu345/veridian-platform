@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function PUT(
   request: Request,
-  { params }: { params: { templateId: string } }
+  { params }: { params: Promise<{ templateId: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -26,15 +26,9 @@ export async function PUT(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { templateId } = params
+    // CRITICAL: MUST await params BEFORE accessing templateId
+    const { templateId } = await params
     const updates = await request.json()
-
-    // Get current template for versioning
-    const { data: currentTemplate } = await supabase
-      .from('report_templates')
-      .select('*')
-      .eq('id', templateId)
-      .single()
 
     // Update template
     const { data, error } = await supabase
@@ -44,6 +38,7 @@ export async function PUT(
         description: updates.description,
         type: updates.type,
         thumbnail: updates.thumbnail,
+        logo_url: updates.logo_url,
         sections: updates.sections,
         styles: updates.styles,
         is_active: updates.is_active,
@@ -90,7 +85,7 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { templateId: string } }
+  { params }: { params: Promise<{ templateId: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -112,7 +107,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { templateId } = params
+    // CRITICAL: MUST await params BEFORE accessing templateId
+    const { templateId } = await params
 
     // Check if template is default
     const { data: template } = await supabase

@@ -48,28 +48,34 @@ export class PDFDownloader {
   }
 
   /**
-   * Get a fresh signed URL for a report
+   * Get a PDF URL for a report
    */
   static async refreshPDFUrl(reportId: string): Promise<string | null> {
     try {
-        const response = await fetch(`/api/reports/${reportId}/refresh-pdf-url`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-        })
-        
-        if (!response.ok) {
-        const error = await response.text()
-        console.error('Failed to refresh URL:', response.status, error)
+      console.log('🔍 Fetching PDF for report:', reportId)
+
+      // Use GET to fetch the PDF
+      const response = await fetch(`/api/reports/${reportId}/pdf`, {
+        method: 'GET'
+      })
+
+      console.log('📡 Response status:', response.status)
+      console.log('📡 Response headers:', response.headers)
+      
+      if (!response.ok) {
+        console.error('Failed to get PDF:', response.status)
         return null
-        }
-        
-        const data = await response.json()
-        return data.url
+      }
+      
+      // Get the PDF blob and create a local object URL
+      const blob = await response.blob()
+      console.log('📄 PDF blob size:', blob.size)
+
+      const localUrl = URL.createObjectURL(blob)
+      return localUrl
     } catch (error) {
-        console.error('Failed to refresh PDF URL:', error)
-        return null
+      console.error('Failed to refresh PDF URL:', error)
+      return null
     }
   }
 

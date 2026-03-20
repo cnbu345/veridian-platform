@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: Request,
-  { params }: { params: { templateId: string } }
+  { params }: { params: Promise<{ templateId: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -26,7 +26,8 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { templateId } = params
+    // CRITICAL: MUST await params BEFORE accessing templateId
+    const { templateId } = await params
 
     const { data: versions, error } = await supabase
       .from('template_versions')

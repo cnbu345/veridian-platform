@@ -26,7 +26,9 @@ import {
   Settings,
   Smartphone,
   Tablet,
-  Monitor
+  Monitor,
+  UploadCloud,
+  Image as ImageIcon
 } from 'lucide-react'
 import { cn } from '@/lib/utils/utils'
 
@@ -36,6 +38,7 @@ interface Template {
   description: string
   type: 'standard' | 'premium' | 'enterprise'
   thumbnail: string | null
+  logo_url: string | null
   sections: TemplateSection[]
   styles: TemplateStyles
   is_active: boolean
@@ -48,9 +51,9 @@ interface Template {
 interface TemplateSection {
   id: string
   name: string
-  type: 'header' | 'executive_summary' | 'location_analysis' | 'regulatory_analysis' | 
+  type: 'cover' | 'header' | 'executive_summary' | 'location_analysis' | 'regulatory_analysis' | 
         'talent_analysis' | 'licensing_matrix' | 'compliance_roadmap' | 'risk_assessment' |
-        'budget_guide' | 'next_steps' | 'footer'
+        'budget_guide' | 'next_steps' | 'footer' | 'disclaimer'
   order: number
   is_required: boolean
   is_visible: boolean
@@ -81,6 +84,40 @@ interface TemplateVersion {
   comment: string
 }
 
+// Section type to display name mapping
+const sectionTypeToName: Record<string, string> = {
+  'cover': 'Cover Page',
+  'header': 'Header',
+  'executive_summary': 'Executive Summary',
+  'location_analysis': 'Location Analysis',
+  'regulatory_analysis': 'Regulatory Analysis',
+  'talent_analysis': 'Talent Analysis',
+  'licensing_matrix': 'Licensing Matrix',
+  'compliance_roadmap': 'Compliance Roadmap',
+  'risk_assessment': 'Risk Assessment',
+  'budget_guide': 'Budget Guide',
+  'next_steps': 'Next Steps',
+  'footer': 'Footer',
+  'disclaimer': 'Disclaimer'
+}
+
+// Complete section list matching actual report
+const completeSections: TemplateSection[] = [
+  { id: 'cover', name: 'Cover Page', type: 'cover', order: 1, is_required: true, is_visible: true, settings: {} },
+  { id: 'header', name: 'Header', type: 'header', order: 2, is_required: true, is_visible: true, settings: {} },
+  { id: 'executive_summary', name: 'Executive Summary', type: 'executive_summary', order: 3, is_required: true, is_visible: true, settings: {} },
+  { id: 'location_analysis', name: 'Location Analysis', type: 'location_analysis', order: 4, is_required: true, is_visible: true, settings: {} },
+  { id: 'regulatory_analysis', name: 'Regulatory Analysis', type: 'regulatory_analysis', order: 5, is_required: true, is_visible: true, settings: {} },
+  { id: 'talent_analysis', name: 'Talent Analysis', type: 'talent_analysis', order: 6, is_required: true, is_visible: true, settings: {} },
+  { id: 'licensing_matrix', name: 'Licensing Matrix', type: 'licensing_matrix', order: 7, is_required: true, is_visible: true, settings: {} },
+  { id: 'compliance_roadmap', name: 'Compliance Roadmap', type: 'compliance_roadmap', order: 8, is_required: true, is_visible: true, settings: {} },
+  { id: 'risk_assessment', name: 'Risk Assessment', type: 'risk_assessment', order: 9, is_required: true, is_visible: true, settings: {} },
+  { id: 'budget_guide', name: 'Budget Guide', type: 'budget_guide', order: 10, is_required: true, is_visible: true, settings: {} },
+  { id: 'next_steps', name: 'Next Steps', type: 'next_steps', order: 11, is_required: true, is_visible: true, settings: {} },
+  { id: 'footer', name: 'Footer', type: 'footer', order: 12, is_required: false, is_visible: true, settings: {} },
+  { id: 'disclaimer', name: 'Disclaimer', type: 'disclaimer', order: 13, is_required: true, is_visible: true, settings: {} }
+]
+
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
@@ -91,6 +128,7 @@ export default function TemplatesPage() {
   const [versions, setVersions] = useState<TemplateVersion[]>([])
   const [showVersions, setShowVersions] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
   const [formData, setFormData] = useState<Partial<Template>>({})
 
   useEffect(() => {
@@ -120,64 +158,44 @@ export default function TemplatesPage() {
     }
   }
 
+  const uploadLogo = async (file: File): Promise<string | null> => {
+    try {
+      setUploadingLogo(true)
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('type', 'template-logo')
+      
+      const response = await fetch('/api/upload/logo', {
+        method: 'POST',
+        body: formData
+      })
+      
+      if (!response.ok) throw new Error('Upload failed')
+      
+      const data = await response.json()
+      return data.url
+    } catch (error) {
+      console.error('Logo upload failed:', error)
+      alert('Failed to upload logo')
+      return null
+    } finally {
+      setUploadingLogo(false)
+    }
+  }
+
   const handleCreateTemplate = () => {
     const newTemplate: Partial<Template> = {
       name: 'New Template',
       description: '',
       type: 'standard',
       thumbnail: null,
-      sections: [
-        {
-          id: `section-${Date.now()}-1`,
-          name: 'Header',
-          type: 'header',
-          order: 1,
-          is_required: true,
-          is_visible: true,
-          settings: {}
-        },
-        {
-          id: `section-${Date.now()}-2`,
-          name: 'Executive Summary',
-          type: 'executive_summary',
-          order: 2,
-          is_required: true,
-          is_visible: true,
-          settings: {}
-        },
-        {
-          id: `section-${Date.now()}-3`,
-          name: 'Location Analysis',
-          type: 'location_analysis',
-          order: 3,
-          is_required: true,
-          is_visible: true,
-          settings: {}
-        },
-        {
-          id: `section-${Date.now()}-4`,
-          name: 'Regulatory Analysis',
-          type: 'regulatory_analysis',
-          order: 4,
-          is_required: true,
-          is_visible: true,
-          settings: {}
-        },
-        {
-          id: `section-${Date.now()}-5`,
-          name: 'Footer',
-          type: 'footer',
-          order: 5,
-          is_required: false,
-          is_visible: true,
-          settings: {}
-        }
-      ],
+      logo_url: null,
+      sections: [...completeSections],
       styles: {
         font_family: 'Inter',
-        primary_color: '#1e2b3c',
-        secondary_color: '#b4945c',
-        accent_color: '#e53e3e',
+        primary_color: '#0A1A2F',
+        secondary_color: '#D4AF37',
+        accent_color: '#E53E3E',
         header_style: 'modern',
         table_style: 'bordered',
         spacing: 'normal',
@@ -352,6 +370,21 @@ export default function TemplatesPage() {
     setFormData({ ...formData, sections: newSections })
   }
 
+  // Update section name when type changes
+  const updateSectionType = (sectionId: string, newType: string) => {
+    const newSections = formData.sections?.map(section => {
+      if (section.id === sectionId) {
+        return {
+          ...section,
+          type: newType as any,
+          name: sectionTypeToName[newType] || section.name
+        }
+      }
+      return section
+    })
+    setFormData({ ...formData, sections: newSections })
+  }
+
   return (
     <div className="space-y-6 px-4 sm:px-6 lg:px-8">
       {/* Header */}
@@ -383,6 +416,12 @@ export default function TemplatesPage() {
         <div className="text-center py-12 bg-white rounded-xl border border-slate-200">
           <div className="w-16 h-16 border-4 border-navy-200 border-t-gold-600 rounded-full animate-spin mx-auto mb-4" />
           <p className="text-navy-600">Loading templates...</p>
+        </div>
+      ) : templates.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-xl border border-slate-200">
+          <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+          <p className="text-navy-600">No templates yet</p>
+          <p className="text-sm text-navy-400 mt-1">Create your first template to get started</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -580,6 +619,71 @@ export default function TemplatesPage() {
                     </div>
                   </div>
 
+                  {/* Logo Upload */}
+                  <div className="bg-slate-50 p-4 rounded-lg">
+                    <h3 className="text-sm font-medium text-navy-700 mb-3">Company Logo</h3>
+                    <div className="flex items-center gap-4">
+                      <div className="w-24 h-24 bg-white border border-slate-200 rounded-lg flex items-center justify-center overflow-hidden">
+                        {formData.logo_url ? (
+                          <img 
+                            src={formData.logo_url} 
+                            alt="Company Logo" 
+                            className="max-w-full max-h-full object-contain"
+                            onError={(e) => {
+                              // If image fails to load, show broken image placeholder
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.parentElement?.querySelector('.fallback')?.classList.remove('hidden');
+                            }}
+                          />
+                        ) : null}
+                        <div className={`flex flex-col items-center justify-center ${formData.logo_url ? 'hidden' : ''} fallback`}>
+                          <ImageIcon className="w-8 h-8 text-slate-400 mb-1" />
+                          <span className="text-xs text-slate-400">No logo</span>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-sm text-navy-600 mb-2">Upload logo (PNG, JPG, or WebP)</label>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (file) {
+                              // Show preview immediately
+                              const previewUrl = URL.createObjectURL(file)
+                              const preview = document.createElement('img')
+                              preview.src = previewUrl
+                              
+                              // Upload to server
+                              const url = await uploadLogo(file)
+                              if (url) {
+                                setFormData({ ...formData, logo_url: url })
+                              }
+                              // Clean up preview URL
+                              URL.revokeObjectURL(previewUrl)
+                            }
+                          }}
+                          disabled={uploadingLogo}
+                          className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gold-50 file:text-gold-700 hover:file:bg-gold-100 disabled:opacity-50"
+                        />
+                        {uploadingLogo && (
+                          <p className="text-xs text-navy-500 mt-1 flex items-center gap-1">
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                            Uploading...
+                          </p>
+                        )}
+                        {formData.logo_url && (
+                          <button
+                            onClick={() => setFormData({ ...formData, logo_url: null })}
+                            className="text-xs text-red-500 hover:text-red-600 mt-2"
+                          >
+                            Remove logo
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Sections */}
                   <div className="bg-slate-50 p-4 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
@@ -602,10 +706,10 @@ export default function TemplatesPage() {
                         }}
                         className="text-xs text-gold-600 hover:text-gold-700"
                       >
-                        + Add Section
+                        + Add Custom Section
                       </button>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
                       {formData.sections?.sort((a, b) => a.order - b.order).map((section, index) => (
                         <div key={section.id} className="bg-white p-3 rounded-lg border border-slate-200">
                           <div className="flex items-center justify-between mb-2">
@@ -630,29 +734,28 @@ export default function TemplatesPage() {
                               >
                                 ↓
                               </button>
-                              <button
-                                onClick={() => {
-                                  const newSections = formData.sections?.filter(s => s.id !== section.id)
-                                  newSections?.forEach((s, i) => { s.order = i + 1 })
-                                  setFormData({ ...formData, sections: newSections })
-                                }}
-                                className="p-1 hover:bg-red-50 rounded text-red-500"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              {!section.is_required && (
+                                <button
+                                  onClick={() => {
+                                    const newSections = formData.sections?.filter(s => s.id !== section.id)
+                                    newSections?.forEach((s, i) => { s.order = i + 1 })
+                                    setFormData({ ...formData, sections: newSections })
+                                  }}
+                                  className="p-1 hover:bg-red-50 rounded text-red-500"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-2">
                             <select
                               value={section.type}
-                              onChange={(e) => {
-                                const newSections = formData.sections?.map(s =>
-                                  s.id === section.id ? { ...s, type: e.target.value as any } : s
-                                )
-                                setFormData({ ...formData, sections: newSections })
-                              }}
-                              className="text-xs px-2 py-1 border border-slate-200 rounded"
+                              onChange={(e) => updateSectionType(section.id, e.target.value)}
+                              disabled={section.is_required && section.type === 'cover'}
+                              className="text-xs px-2 py-1 border border-slate-200 rounded disabled:opacity-50"
                             >
+                              <option value="cover">Cover Page</option>
                               <option value="header">Header</option>
                               <option value="executive_summary">Executive Summary</option>
                               <option value="location_analysis">Location Analysis</option>
@@ -664,6 +767,7 @@ export default function TemplatesPage() {
                               <option value="budget_guide">Budget Guide</option>
                               <option value="next_steps">Next Steps</option>
                               <option value="footer">Footer</option>
+                              <option value="disclaimer">Disclaimer</option>
                             </select>
                             <label className="flex items-center gap-1 text-xs">
                               <input
@@ -711,7 +815,7 @@ export default function TemplatesPage() {
                           <label className="block text-sm text-navy-600 mb-1">Primary Color</label>
                           <input
                             type="color"
-                            value={formData.styles?.primary_color || '#1e2b3c'}
+                            value={formData.styles?.primary_color || '#0A1A2F'}
                             onChange={(e) => setFormData({
                               ...formData,
                               styles: { ...formData.styles, primary_color: e.target.value } as TemplateStyles
@@ -723,7 +827,7 @@ export default function TemplatesPage() {
                           <label className="block text-sm text-navy-600 mb-1">Secondary Color</label>
                           <input
                             type="color"
-                            value={formData.styles?.secondary_color || '#b4945c'}
+                            value={formData.styles?.secondary_color || '#D4AF37'}
                             onChange={(e) => setFormData({
                               ...formData,
                               styles: { ...formData.styles, secondary_color: e.target.value } as TemplateStyles
@@ -857,52 +961,85 @@ export default function TemplatesPage() {
                       previewMode === 'mobile' && 'max-w-[375px] mx-auto',
                       previewMode === 'tablet' && 'max-w-[768px] mx-auto'
                     )}>
-                      {/* Preview Content */}
+                      {/* Preview Content - Matches actual PDF header style */}
                       <div className="p-6" style={{
                         fontFamily: formData.styles?.font_family || 'Inter'
                       }}>
-                        {/* Header */}
+                        {/* Header - Matches PDFHeader component style */}
                         <div className="mb-6 pb-4 border-b" style={{
-                          borderColor: formData.styles?.secondary_color || '#b4945c'
+                          borderBottomWidth: 2,
+                          borderBottomColor: formData.styles?.secondary_color || '#D4AF37'
                         }}>
-                          {formData.styles?.show_logo && (
-                            <div className="w-12 h-12 bg-navy-100 rounded-full mb-2" />
-                          )}
-                          <h1 style={{ color: formData.styles?.primary_color || '#1e2b3c' }}>
-                            Sample Report Title
-                          </h1>
+                          <div className="flex justify-between items-start">
+                            <div>
+                              {formData.styles?.show_logo && formData.logo_url && (
+                                <img 
+                                  src={formData.logo_url} 
+                                  alt="Company Logo" 
+                                  className="h-12 w-auto mb-2 object-contain"
+                                  style={{ maxHeight: '48px' }}
+                                />
+                              )}
+                              <h1 style={{ 
+                                fontSize: 24, 
+                                fontWeight: 'bold',
+                                color: formData.styles?.primary_color || '#0A1A2F',
+                                marginBottom: 8
+                              }}>
+                                Regulatory Compliance Report
+                              </h1>
+                              <p style={{ fontSize: 11, color: '#64748B' }}>
+                                Prepared for: Sample Company • Report ID: SAMPLE-001 • Date: {new Date().toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
                         </div>
 
                         {/* Sample Sections */}
-                        {formData.sections?.filter(s => s.is_visible).map((section, i) => (
+                        {formData.sections?.filter(s => s.is_visible && s.type !== 'header' && s.type !== 'footer').map((section, i) => (
                           <div key={section.id} className="mb-6">
-                            <h2 className="text-lg font-semibold mb-2" style={{
-                              color: formData.styles?.primary_color || '#1e2b3c'
+                            <h2 className="text-lg font-semibold mb-3 pb-1" style={{
+                              color: formData.styles?.primary_color || '#0A1A2F',
+                              borderBottomWidth: 1,
+                              borderBottomColor: '#E2E8F0'
                             }}>
                               {section.name}
                             </h2>
                             <div className="space-y-2">
                               <p className="text-sm text-navy-600">
-                                Sample content for {section.name} section. This demonstrates how the section will appear in the final report.
+                                Sample content for {section.name.toLowerCase()}. This demonstrates how the section will appear in the final report.
                               </p>
                               {/* Sample table for licensing matrix */}
                               {section.type === 'licensing_matrix' && (
-                                <table className="w-full text-sm border-collapse">
+                                <table className="w-full text-sm border-collapse mt-3">
                                   <thead>
                                     <tr className={formData.styles?.table_style === 'striped' ? 'bg-slate-100' : 'border-b'}>
-                                      <th className="p-2 text-left">License Type</th>
-                                      <th className="p-2 text-left">Status</th>
-                                      <th className="p-2 text-left">Timeline</th>
+                                      <th className="p-2 text-left font-semibold">License Type</th>
+                                      <th className="p-2 text-left font-semibold">Status</th>
+                                      <th className="p-2 text-left font-semibold">Timeline</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     <tr className={formData.styles?.table_style === 'striped' ? 'bg-white' : 'border-b'}>
-                                      <td className="p-2">Money Transmitter</td>
+                                      <td className="p-2">Money Transmitter License</td>
                                       <td className="p-2">Required</td>
                                       <td className="p-2">4-8 months</td>
                                     </tr>
                                   </tbody>
                                 </table>
+                              )}
+                              {/* Sample for compliance roadmap */}
+                              {section.type === 'compliance_roadmap' && (
+                                <div className="mt-3 space-y-2">
+                                  <div className="border-l-4 pl-3" style={{ borderLeftColor: formData.styles?.secondary_color || '#D4AF37' }}>
+                                    <h4 className="font-semibold text-sm">Phase 1: Foundation (Month 1)</h4>
+                                    <ul className="list-disc ml-5 text-sm text-navy-600">
+                                      <li>Engage legal counsel</li>
+                                      <li>Begin license applications</li>
+                                      <li>Designate compliance officer</li>
+                                    </ul>
+                                  </div>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -910,10 +1047,10 @@ export default function TemplatesPage() {
 
                         {/* Footer */}
                         {formData.styles?.show_footer && (
-                          <div className="mt-6 pt-4 border-t text-center text-sm text-navy-400" style={{
-                            borderColor: formData.styles?.secondary_color || '#b4945c'
+                          <div className="mt-8 pt-4 border-t text-center text-xs text-navy-400" style={{
+                            borderColor: formData.styles?.secondary_color || '#D4AF37'
                           }}>
-                            <p>© 2024 Veridian Compliance. All rights reserved.</p>
+                            <p>© {new Date().getFullYear()} Veridian Group. All rights reserved.</p>
                             {formData.styles?.show_page_numbers && (
                               <p className="mt-1">Page 1 of 1</p>
                             )}
@@ -995,29 +1132,37 @@ export default function TemplatesPage() {
               <div className="bg-white border border-slate-200 rounded-lg p-8" style={{
                 fontFamily: selectedTemplate.styles.font_family
               }}>
-                {/* Header */}
+                {/* Header - Matches PDFHeader */}
                 <div className="mb-8 pb-4 border-b" style={{
-                  borderColor: selectedTemplate.styles.secondary_color
+                  borderBottomWidth: 2,
+                  borderBottomColor: selectedTemplate.styles.secondary_color
                 }}>
-                  {selectedTemplate.styles.show_logo && (
-                    <div className="w-16 h-16 bg-navy-100 rounded-full mb-4" />
-                  )}
-                  <h1 className="text-3xl font-bold" style={{
-                    color: selectedTemplate.styles.primary_color
-                  }}>
-                    Regulatory Compliance Report
-                  </h1>
-                  <p className="text-navy-500 mt-2">Prepared for Sample Company</p>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      {selectedTemplate.styles.show_logo && selectedTemplate.logo_url && (
+                        <img src={selectedTemplate.logo_url} alt="Logo" className="h-12 mb-4" />
+                      )}
+                      <h1 className="text-3xl font-bold" style={{
+                        color: selectedTemplate.styles.primary_color
+                      }}>
+                        Regulatory Compliance Report
+                      </h1>
+                      <p className="text-navy-500 mt-2">Prepared for Sample Company</p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Render all sections */}
                 {selectedTemplate.sections
-                  .filter(s => s.is_visible)
+                  .filter(s => s.is_visible && s.type !== 'header' && s.type !== 'footer')
                   .sort((a, b) => a.order - b.order)
                   .map((section) => (
                     <div key={section.id} className="mb-8">
                       <h2 className="text-xl font-semibold mb-4" style={{
-                        color: selectedTemplate.styles.primary_color
+                        color: selectedTemplate.styles.primary_color,
+                        borderBottomWidth: 1,
+                        borderBottomColor: '#E2E8F0',
+                        paddingBottom: 8
                       }}>
                         {section.name}
                       </h2>
@@ -1031,10 +1176,10 @@ export default function TemplatesPage() {
                           <table className="w-full mt-4 border-collapse">
                             <thead>
                               <tr className={selectedTemplate.styles.table_style === 'striped' ? 'bg-slate-100' : 'border-b'}>
-                                <th className="p-3 text-left">License Type</th>
-                                <th className="p-3 text-left">Required</th>
-                                <th className="p-3 text-left">Timeline</th>
-                                <th className="p-3 text-left">Fee Range</th>
+                                <th className="p-3 text-left font-semibold">License Type</th>
+                                <th className="p-3 text-left font-semibold">Required</th>
+                                <th className="p-3 text-left font-semibold">Timeline</th>
+                                <th className="p-3 text-left font-semibold">Fee Range</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -1056,7 +1201,7 @@ export default function TemplatesPage() {
                         {section.type === 'compliance_roadmap' && (
                           <div className="mt-4 space-y-4">
                             <div className="border-l-4 pl-4" style={{
-                              borderColor: selectedTemplate.styles.accent_color
+                              borderLeftColor: selectedTemplate.styles.secondary_color
                             }}>
                               <h3 className="font-semibold">Phase 1: Foundation (Month 1)</h3>
                               <ul className="list-disc ml-5 mt-2">
@@ -1076,7 +1221,7 @@ export default function TemplatesPage() {
                   <div className="mt-8 pt-4 border-t text-center text-sm text-navy-400" style={{
                     borderColor: selectedTemplate.styles.secondary_color
                   }}>
-                    <p>© 2024 Veridian Compliance. All rights reserved.</p>
+                    <p>© {new Date().getFullYear()} Veridian Group. All rights reserved.</p>
                     {selectedTemplate.styles.show_page_numbers && (
                       <p className="mt-1">Page 1 of 1</p>
                     )}
@@ -1102,31 +1247,34 @@ export default function TemplatesPage() {
               </button>
             </div>
             <div className="p-6">
-              <div className="space-y-4">
-                {versions.map((version) => (
-                  <div key={version.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-lg font-semibold text-navy-900">Version {version.version}</span>
-                      <span className="text-sm text-navy-500">
-                        {new Date(version.created_at).toLocaleString()}
-                      </span>
+              {versions.length === 0 ? (
+                <p className="text-center text-navy-500 py-8">No version history available</p>
+              ) : (
+                <div className="space-y-4">
+                  {versions.map((version) => (
+                    <div key={version.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-lg font-semibold text-navy-900">Version {version.version}</span>
+                        <span className="text-sm text-navy-500">
+                          {new Date(version.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                      <p className="text-sm text-navy-600 mb-2">{version.comment}</p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setFormData(version.content)
+                            setShowVersions(false)
+                          }}
+                          className="text-xs text-gold-600 hover:text-gold-700"
+                        >
+                          Restore this version
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-sm text-navy-600 mb-2">{version.comment}</p>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          // Restore version
-                          setFormData(version.content)
-                          setShowVersions(false)
-                        }}
-                        className="text-xs text-gold-600 hover:text-gold-700"
-                      >
-                        Restore this version
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
