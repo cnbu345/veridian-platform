@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       })
     }
 
-    // Reset each failed job to queued status
+    // Reset all failed jobs to queued status
     const { error: updateError } = await supabase
       .from('report_generation_queue')
       .update({
@@ -46,8 +46,7 @@ export async function POST(request: Request) {
         attempts: 0,
         error: null,
         started_at: null,
-        completed_at: null,
-        updated_at: new Date().toISOString()
+        completed_at: null
       })
       .eq('status', 'failed')
 

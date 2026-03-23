@@ -4,9 +4,11 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function POST(
   request: Request,
-  { params }: { params: { jobId: string } }
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
+    const { jobId } = await params
+    
     const supabase = await createClient()
     
     // Verify admin access
@@ -26,9 +28,6 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { jobId } = params
-
-    // Delete the queued job (since it hasn't started)
     const { error } = await supabase
       .from('report_generation_queue')
       .delete()

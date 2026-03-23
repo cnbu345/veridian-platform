@@ -50,6 +50,238 @@ interface Template {
   created_at: string
 }
 
+// Rich preview content renderer
+const renderRichPreviewContent = (sectionType: string, styles: any) => {
+  switch (sectionType) {
+    case 'executive_summary':
+      return (
+        <div className="mt-4 p-5 bg-gradient-to-br from-navy-50 to-slate-50 rounded-xl border border-navy-100">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-gold-100 flex items-center justify-center text-gold-700 text-xs font-bold">✓</div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-navy-900">Strategic Overview</p>
+              <p className="text-sm text-navy-600 mt-2 leading-relaxed">
+                Comprehensive regulatory analysis for your organization, identifying key compliance requirements and strategic opportunities across your operating jurisdictions.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="text-xs bg-navy-100 text-navy-700 px-2.5 py-1 rounded-full">Risk Profile: Moderate</span>
+                <span className="text-xs bg-navy-100 text-navy-700 px-2.5 py-1 rounded-full">Timeline: 6 Months</span>
+                <span className="text-xs bg-navy-100 text-navy-700 px-2.5 py-1 rounded-full">Priority: High</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    
+    case 'client_input':
+      return (
+        <div className="mt-4 p-5 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200">
+          <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide mb-3">Your Custom Compliance Request</p>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <p className="text-xs font-semibold text-amber-700">Primary Focus</p>
+              <p className="text-sm font-medium text-amber-900">Regulatory Compliance</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-amber-700">Timeline</p>
+              <p className="text-sm font-medium text-amber-900">6 Months (Standard)</p>
+            </div>
+          </div>
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-amber-700 mb-2">Secondary Focus Areas</p>
+            <div className="flex gap-2">
+              <span className="text-xs bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full">Licensing</span>
+              <span className="text-xs bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full">Risk Assessment</span>
+              <span className="text-xs bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full">Compliance Monitoring</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white/80 rounded-lg p-3">
+              <p className="text-xs font-semibold text-amber-700">Your Concerns</p>
+              <p className="text-xs text-amber-800 italic mt-1">"Regulatory compliance across multiple states and jurisdictions..."</p>
+            </div>
+            <div className="bg-white/80 rounded-lg p-3">
+              <p className="text-xs font-semibold text-amber-700">Your Goals</p>
+              <p className="text-xs text-amber-800 italic mt-1">"Achieve full compliance within 6 months with scalable infrastructure..."</p>
+            </div>
+          </div>
+          <div className="mt-4 pt-3 border-t border-amber-200">
+            <p className="text-xs font-semibold text-amber-700">✓ How This Report Addresses Your Needs</p>
+            <p className="text-xs text-amber-800 mt-1">Tailored to your regulatory compliance priorities within your 6-month timeline.</p>
+          </div>
+        </div>
+      )
+    
+    case 'market_analysis':
+      return (
+        <div className="mt-4 p-5 bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-200">
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div className="text-center p-3 border-r border-slate-200">
+              <p className="text-3xl font-bold text-gold-600">15%</p>
+              <p className="text-xs text-navy-500 mt-1">Market Growth</p>
+            </div>
+            <div className="text-center p-3 border-r border-slate-200">
+              <p className="text-3xl font-bold text-gold-600">High</p>
+              <p className="text-xs text-navy-500 mt-1">Talent Density</p>
+            </div>
+            <div className="text-center p-3">
+              <p className="text-3xl font-bold text-gold-600">85/100</p>
+              <p className="text-xs text-navy-500 mt-1">Opportunity Score</p>
+            </div>
+          </div>
+          <p className="text-sm text-navy-600 leading-relaxed">
+            Your location offers strong market opportunities with a growing compliance talent pool. 
+            Competitive landscape analysis indicates favorable conditions for market entry.
+          </p>
+        </div>
+      )
+    
+    case 'multi_state_licensing':
+      return (
+        <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
+          <table className="w-full text-sm">
+            <thead className="bg-navy-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-navy-700">State</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-navy-700">License Type</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-navy-700">Timeline</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-navy-700">Fee</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              <tr className="hover:bg-slate-50 transition-colors">
+                <td className="px-4 py-3 text-xs text-navy-600">Texas</td>
+                <td className="px-4 py-3 text-xs text-navy-600">Money Services Business</td>
+                <td className="px-4 py-3 text-xs text-navy-600">3-4 months</td>
+                <td className="px-4 py-3 text-xs text-navy-600">$500</td>
+              </tr>
+              <tr className="hover:bg-slate-50 transition-colors">
+                <td className="px-4 py-3 text-xs text-navy-600">New York</td>
+                <td className="px-4 py-3 text-xs text-navy-600">BitLicense</td>
+                <td className="px-4 py-3 text-xs text-navy-600">6-12 months</td>
+                <td className="px-4 py-3 text-xs text-navy-600">$5,000</td>
+              </tr>
+              <tr className="hover:bg-slate-50 transition-colors">
+                <td className="px-4 py-3 text-xs text-navy-600">California</td>
+                <td className="px-4 py-3 text-xs text-navy-600">DFPI License</td>
+                <td className="px-4 py-3 text-xs text-navy-600">4-8 months</td>
+                <td className="px-4 py-3 text-xs text-navy-600">$1,000</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )
+    
+    case 'compliance_roadmap':
+      return (
+        <div className="mt-4 space-y-3">
+          <div className="p-4 border-l-4 rounded-r-xl bg-slate-50" style={{ borderLeftColor: styles?.secondary_color || '#D4AF37' }}>
+            <p className="text-sm font-semibold text-navy-800">Phase 1: Foundation</p>
+            <p className="text-xs text-navy-500 mt-1">Days 1-30</p>
+            <ul className="mt-3 space-y-1.5">
+              <li className="text-xs text-navy-600 flex items-start gap-2">
+                <span className="text-gold-600">•</span>
+                Engage qualified compliance counsel
+              </li>
+              <li className="text-xs text-navy-600 flex items-start gap-2">
+                <span className="text-gold-600">•</span>
+                Submit initial license applications
+              </li>
+              <li className="text-xs text-navy-600 flex items-start gap-2">
+                <span className="text-gold-600">•</span>
+                Designate Chief Compliance Officer
+              </li>
+            </ul>
+          </div>
+          <div className="p-4 border-l-4 rounded-r-xl bg-slate-50" style={{ borderLeftColor: styles?.secondary_color || '#D4AF37' }}>
+            <p className="text-sm font-semibold text-navy-800">Phase 2: Licensing & Development</p>
+            <p className="text-xs text-navy-500 mt-1">Days 31-60</p>
+            <ul className="mt-3 space-y-1.5">
+              <li className="text-xs text-navy-600 flex items-start gap-2">
+                <span className="text-gold-600">•</span>
+                Complete remaining license applications
+              </li>
+              <li className="text-xs text-navy-600 flex items-start gap-2">
+                <span className="text-gold-600">•</span>
+                Finalize compliance policies
+              </li>
+              <li className="text-xs text-navy-600 flex items-start gap-2">
+                <span className="text-gold-600">•</span>
+                Select compliance technology
+              </li>
+            </ul>
+          </div>
+        </div>
+      )
+    
+    case 'technology_tools':
+      return (
+        <div className="mt-4 space-y-3">
+          <div className="p-4 rounded-xl bg-gradient-to-r from-slate-50 to-white border border-slate-200">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-semibold text-navy-800">Chainalysis</p>
+                <p className="text-xs text-navy-500 mt-1">Blockchain analytics and transaction monitoring</p>
+              </div>
+              <p className="text-xs text-gold-600 font-medium">4-6 weeks</p>
+            </div>
+          </div>
+          <div className="p-4 rounded-xl bg-gradient-to-r from-slate-50 to-white border border-slate-200">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-semibold text-navy-800">ComplyAdvantage</p>
+                <p className="text-xs text-navy-500 mt-1">AML screening and sanctions monitoring</p>
+              </div>
+              <p className="text-xs text-gold-600 font-medium">3-5 weeks</p>
+            </div>
+          </div>
+          <div className="p-4 rounded-xl bg-gradient-to-r from-slate-50 to-white border border-slate-200">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-semibold text-navy-800">Elliptic</p>
+                <p className="text-xs text-navy-500 mt-1">Blockchain analytics and compliance screening</p>
+              </div>
+              <p className="text-xs text-gold-600 font-medium">4-6 weeks</p>
+            </div>
+          </div>
+        </div>
+      )
+    
+    case 'risk_assessment':
+      return (
+        <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
+          <table className="w-full text-sm">
+            <thead className="bg-navy-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-navy-700">Risk Category</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-navy-700">Likelihood</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-navy-700">Impact</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-navy-700">Mitigation</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              <tr className="hover:bg-slate-50 transition-colors">
+                <td className="px-4 py-3 text-xs text-navy-600">Regulatory Change</td>
+                <td className="px-4 py-3 text-xs text-amber-600 font-medium">Medium</td>
+                <td className="px-4 py-3 text-xs text-red-600 font-medium">High</td>
+                <td className="px-4 py-3 text-xs text-navy-600">Continuous monitoring, legal counsel retainer</td>
+              </tr>
+              <tr className="hover:bg-slate-50 transition-colors">
+                <td className="px-4 py-3 text-xs text-navy-600">License Delays</td>
+                <td className="px-4 py-3 text-xs text-amber-600 font-medium">Medium</td>
+                <td className="px-4 py-3 text-xs text-orange-600 font-medium">Medium</td>
+                <td className="px-4 py-3 text-xs text-navy-600">Early application, expedited options</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )
+    
+    default:
+      return null
+  }
+}
+
 export default function ClientTemplatesPage() {
   const router = useRouter()
   const [templates, setTemplates] = useState<Template[]>([])
@@ -123,7 +355,6 @@ export default function ClientTemplatesPage() {
       if (!user) throw new Error('Not authenticated')
 
       if (editingTemplate?.id) {
-        // Update existing template
         const { error } = await supabase
           .from('user_templates')
           .update({
@@ -139,7 +370,6 @@ export default function ClientTemplatesPage() {
 
         if (error) throw error
       } else {
-        // Create new template
         const { error } = await supabase
           .from('user_templates')
           .insert({
@@ -235,9 +465,7 @@ export default function ClientTemplatesPage() {
     }
   }
 
-  // Preview handler - make sure this is defined
   const handlePreview = (template: Template) => {
-    console.log('Previewing template:', template.name)
     setPreviewTemplate(template)
     setShowPreview(true)
   }
@@ -439,22 +667,24 @@ export default function ClientTemplatesPage() {
         </div>
       )}
 
-      {/* Preview Modal */}
+      {/* Enhanced Preview Modal */}
       {showPreview && previewTemplate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-slate-200 p-4 flex items-center justify-between z-10">
+            <div className="sticky top-0 bg-white border-b border-slate-200 p-5 flex items-center justify-between z-10">
               <div>
                 <h2 className="text-xl font-bold text-navy-900">Preview: {previewTemplate.name}</h2>
-                <p className="text-sm text-navy-500 mt-1">See how your reports will look</p>
+                <p className="text-sm text-navy-500 mt-1">See how your reports will look with this template</p>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 border border-slate-200 rounded-lg p-1 mr-2">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1 border border-slate-200 rounded-lg p-1 bg-slate-50">
                   <button
                     onClick={() => setPreviewMode('mobile')}
                     className={cn(
-                      "p-1.5 rounded",
-                      previewMode === 'mobile' ? 'bg-navy-900 text-white' : 'hover:bg-slate-100'
+                      "p-2 rounded-md transition-all",
+                      previewMode === 'mobile' 
+                        ? 'bg-navy-900 text-white shadow-sm' 
+                        : 'text-navy-500 hover:bg-slate-100'
                     )}
                   >
                     <Smartphone className="w-4 h-4" />
@@ -462,8 +692,10 @@ export default function ClientTemplatesPage() {
                   <button
                     onClick={() => setPreviewMode('tablet')}
                     className={cn(
-                      "p-1.5 rounded",
-                      previewMode === 'tablet' ? 'bg-navy-900 text-white' : 'hover:bg-slate-100'
+                      "p-2 rounded-md transition-all",
+                      previewMode === 'tablet' 
+                        ? 'bg-navy-900 text-white shadow-sm' 
+                        : 'text-navy-500 hover:bg-slate-100'
                     )}
                   >
                     <Tablet className="w-4 h-4" />
@@ -471,8 +703,10 @@ export default function ClientTemplatesPage() {
                   <button
                     onClick={() => setPreviewMode('desktop')}
                     className={cn(
-                      "p-1.5 rounded",
-                      previewMode === 'desktop' ? 'bg-navy-900 text-white' : 'hover:bg-slate-100'
+                      "p-2 rounded-md transition-all",
+                      previewMode === 'desktop' 
+                        ? 'bg-navy-900 text-white shadow-sm' 
+                        : 'text-navy-500 hover:bg-slate-100'
                     )}
                   >
                     <Monitor className="w-4 h-4" />
@@ -483,17 +717,17 @@ export default function ClientTemplatesPage() {
                     setShowPreview(false)
                     setPreviewTemplate(null)
                   }}
-                  className="p-2 hover:bg-slate-100 rounded-lg"
+                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                 >
                   <X className="w-5 h-5 text-navy-400" />
                 </button>
               </div>
             </div>
 
-            <div className="p-6 bg-slate-50">
+            <div className="p-8 bg-gradient-to-br from-slate-50 to-white">
               <div className={cn(
-                "bg-white rounded-lg shadow-lg overflow-hidden transition-all mx-auto",
-                previewMode === 'mobile' && 'max-w-[375px]',
+                "bg-white rounded-2xl shadow-2xl overflow-hidden transition-all mx-auto border border-slate-200",
+                previewMode === 'mobile' && 'max-w-[380px]',
                 previewMode === 'tablet' && 'max-w-[768px]',
                 previewMode === 'desktop' && 'max-w-full'
               )}>
@@ -501,56 +735,64 @@ export default function ClientTemplatesPage() {
                   fontFamily: previewTemplate.styles?.font_family || 'Inter'
                 }}>
                   {/* Header */}
-                  <div className="mb-8 pb-4 border-b" style={{
+                  <div className="mb-8 pb-5 border-b" style={{
                     borderBottomWidth: 2,
                     borderBottomColor: previewTemplate.styles?.secondary_color || '#D4AF37'
                   }}>
-                    <div>
-                      {previewTemplate.styles?.show_logo && previewTemplate.logo_url && (
-                        <img 
-                          src={previewTemplate.logo_url} 
-                          alt="Company Logo" 
-                          className="h-12 mb-4 object-contain"
-                        />
-                      )}
-                      <h1 className="text-3xl font-bold" style={{
-                        color: previewTemplate.styles?.primary_color || '#0A1A2F'
-                      }}>
-                        Regulatory Compliance Report
-                      </h1>
-                      <p className="text-navy-500 mt-2" style={{ fontSize: 11 }}>
-                        Prepared for: Sample Company • Date: {new Date().toLocaleDateString()}
-                      </p>
-                    </div>
+                    {previewTemplate.styles?.show_logo && previewTemplate.logo_url && (
+                      <img 
+                        src={previewTemplate.logo_url} 
+                        alt="Company Logo" 
+                        className="h-14 mb-4 object-contain"
+                      />
+                    )}
+                    <h1 className="text-3xl font-bold tracking-tight" style={{
+                      color: previewTemplate.styles?.primary_color || '#0A1A2F'
+                    }}>
+                      Regulatory Compliance Report
+                    </h1>
+                    <p className="text-navy-500 mt-2" style={{ fontSize: 12 }}>
+                      Prepared for: Sample Company • Report Date: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    </p>
                   </div>
 
-                  {/* Visible Sections */}
-                  {previewTemplate.sections?.filter(s => s.is_visible && s.type !== 'header').map((section) => (
-                    <div key={section.id} className="mb-8">
-                      <h2 className="text-xl font-semibold mb-3 pb-1" style={{
-                        color: previewTemplate.styles?.primary_color || '#0A1A2F',
-                        borderBottomWidth: 1,
-                        borderBottomColor: '#E2E8F0'
-                      }}>
-                        {section.name}
-                      </h2>
-                      <div className="prose max-w-none">
-                        <p className="text-navy-700" style={{ fontSize: 11, lineHeight: 1.5 }}>
-                          Sample content for {section.name.toLowerCase()}. This demonstrates how this section will appear in your actual report.
-                        </p>
+                  {/* Visible Sections with Rich Content */}
+                  {previewTemplate.sections?.filter(s => s.is_visible && s.type !== 'header' && s.type !== 'footer').map((section) => {
+                    const richContent = renderRichPreviewContent(section.type, previewTemplate.styles)
+                    
+                    return (
+                      <div key={section.id} className="mb-10">
+                        <h2 className="text-xl font-semibold mb-4 pb-2" style={{
+                          color: previewTemplate.styles?.primary_color || '#0A1A2F',
+                          borderBottomWidth: 1,
+                          borderBottomColor: '#E2E8F0'
+                        }}>
+                          {section.name}
+                        </h2>
+                        {richContent ? (
+                          richContent
+                        ) : (
+                          <div className="mt-4 p-5 bg-slate-50 rounded-xl border border-slate-200">
+                            <p className="text-sm text-navy-600 leading-relaxed">
+                              Sample content for {section.name.toLowerCase()}. This section will contain detailed information relevant to your report.
+                            </p>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
 
                   {/* Footer */}
-                  <div className="mt-8 pt-4 border-t text-center text-xs text-navy-400" style={{
-                    borderColor: previewTemplate.styles?.secondary_color || '#D4AF37'
-                  }}>
-                    <p>© {new Date().getFullYear()} Veridian Group. All rights reserved.</p>
-                    {previewTemplate.styles?.show_page_numbers && (
-                      <p className="mt-1">Page 1 of 1</p>
-                    )}
-                  </div>
+                  {previewTemplate.styles?.show_footer !== false && (
+                    <div className="mt-10 pt-5 border-t text-center text-xs text-navy-400" style={{
+                      borderColor: previewTemplate.styles?.secondary_color || '#D4AF37'
+                    }}>
+                      <p>© {new Date().getFullYear()} Veridian Group. All rights reserved.</p>
+                      {previewTemplate.styles?.show_page_numbers && (
+                        <p className="mt-2">Page 1 of 1</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -561,7 +803,7 @@ export default function ClientTemplatesPage() {
                   setShowPreview(false)
                   setPreviewTemplate(null)
                 }}
-                className="px-4 py-2 bg-navy-900 text-white rounded-lg text-sm hover:bg-navy-800"
+                className="px-5 py-2.5 bg-navy-900 text-white rounded-xl text-sm font-medium hover:bg-navy-800 transition-colors shadow-sm"
               >
                 Close Preview
               </button>

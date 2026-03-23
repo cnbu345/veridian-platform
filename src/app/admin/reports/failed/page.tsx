@@ -68,6 +68,16 @@ interface ErrorAnalytics {
   top_errors: Array<{ error: string; count: number }>
 }
 
+interface QueueResponse {
+  items: FailedReport[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    pages: number
+  }
+}
+
 export default function FailedReportsPage() {
   const [failedReports, setFailedReports] = useState<FailedReport[]>([])
   const [analytics, setAnalytics] = useState<ErrorAnalytics | null>(null)
@@ -77,7 +87,7 @@ export default function FailedReportsPage() {
   const [selectedReport, setSelectedReport] = useState<FailedReport | null>(null)
   const [showErrorDetails, setShowErrorDetails] = useState(false)
   const [processing, setProcessing] = useState<string | null>(null)
-  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0 })
+  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 })
 
   // Debounce search
   useEffect(() => {
@@ -95,18 +105,42 @@ export default function FailedReportsPage() {
     try {
       setLoading(true)
       const params = new URLSearchParams({
+        status: 'failed',
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
         ...(debouncedSearch && { search: debouncedSearch })
       })
 
-      const response = await fetch(`/api/admin/reports/queue?status=failed&${params}`)
-      const data = await response.json()
+      const response = await fetch(`/api/admin/reports/queue?${params}`)
       
-      setFailedReports(data)
-      setPagination(prev => ({ ...prev, total: data.total || 0 }))
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+      
+      const data: QueueResponse = await response.json()
+      
+      // Extract items array from the response
+      const reports = data.items || []
+      
+      if (Array.isArray(reports)) {
+        setFailedReports(reports)
+      } else {
+        console.error('Failed reports data is not an array:', reports)
+        setFailedReports([])
+      }
+      
+      // Update pagination with data from API
+      if (data.pagination) {
+        setPagination({
+          page: data.pagination.page,
+          limit: data.pagination.limit,
+          total: data.pagination.total,
+          pages: data.pagination.pages
+        })
+      }
     } catch (error) {
       console.error('Failed to fetch failed reports:', error)
+      setFailedReports([])
     } finally {
       setLoading(false)
     }
@@ -115,6 +149,11 @@ export default function FailedReportsPage() {
   const fetchErrorAnalytics = async () => {
     try {
       const response = await fetch('/api/admin/reports/queue/analytics')
+      
+      if (!response.ok) {
+        throw new Error(`Analytics API error: ${response.status}`)
+      }
+      
       const data = await response.json()
       setAnalytics(data)
     } catch (error) {
@@ -131,9 +170,13 @@ export default function FailedReportsPage() {
 
       if (response.ok) {
         // Remove from list after successful retry
-        setFailedReports(failedReports.filter(r => r.id !== jobId))
+        setFailedReports(prev => prev.filter(r => r.id !== jobId))
+        // Update pagination total
+        setPagination(prev => ({ ...prev, total: prev.total - 1 }))
         // Refresh analytics
         fetchErrorAnalytics()
+      } else {
+        console.error('Failed to retry job:', await response.text())
       }
     } catch (error) {
       console.error('Failed to retry job:', error)
@@ -155,8 +198,10 @@ export default function FailedReportsPage() {
 
       if (response.ok) {
         // Refresh the list
-        fetchFailedReports()
+        await fetchFailedReports()
         fetchErrorAnalytics()
+      } else {
+        console.error('Failed to retry all:', await response.text())
       }
     } catch (error) {
       console.error('Failed to retry all:', error)
@@ -177,7 +222,10 @@ export default function FailedReportsPage() {
 
       if (response.ok) {
         setFailedReports([])
+        setPagination(prev => ({ ...prev, total: 0 }))
         fetchErrorAnalytics()
+      } else {
+        console.error('Failed to clear failed:', await response.text())
       }
     } catch (error) {
       console.error('Failed to clear failed reports:', error)
@@ -188,13 +236,16 @@ export default function FailedReportsPage() {
     if (!confirm('Delete this failed report from the queue?')) return
 
     try {
-      const response = await fetch(`/api/admin/reports/queue/${jobId}`, {
-        method: 'DELETE'
+      const response = await fetch(`/api/admin/reports/queue/${jobId}/cancel`, {
+        method: 'POST'
       })
 
       if (response.ok) {
-        setFailedReports(failedReports.filter(r => r.id !== jobId))
+        setFailedReports(prev => prev.filter(r => r.id !== jobId))
+        setPagination(prev => ({ ...prev, total: prev.total - 1 }))
         fetchErrorAnalytics()
+      } else {
+        console.error('Failed to delete:', await response.text())
       }
     } catch (error) {
       console.error('Failed to delete:', error)
@@ -208,6 +259,7 @@ export default function FailedReportsPage() {
     if (error.includes('validation')) return 'Validation'
     if (error.includes('database')) return 'Database'
     if (error.includes('network')) return 'Network'
+    if (error.includes('OpenAI') || error.includes('AI')) return 'AI Service'
     return 'Unknown'
   }
 
@@ -219,6 +271,7 @@ export default function FailedReportsPage() {
       'Validation': 'bg-purple-100 text-purple-800',
       'Database': 'bg-blue-100 text-blue-800',
       'Network': 'bg-slate-100 text-slate-800',
+      'AI Service': 'bg-indigo-100 text-indigo-800',
       'Unknown': 'bg-gray-100 text-gray-800'
     }
     return colors[errorType] || 'bg-gray-100 text-gray-800'
@@ -578,7 +631,7 @@ export default function FailedReportsPage() {
             <span className="px-4 py-2 text-sm">Page {pagination.page}</span>
             <button
               onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-              disabled={pagination.page * pagination.limit >= pagination.total}
+              disabled={pagination.page >= pagination.pages}
               className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50"
             >
               <ChevronRight className="w-4 h-4" />

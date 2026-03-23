@@ -36,10 +36,12 @@ import {
   AlertCircle,
   LifeBuoy,
   MessageCircle,
-  User
+  User,
+  Layout
 } from 'lucide-react'
 import { format, addDays, parseISO } from 'date-fns'
 import toast from 'react-hot-toast'
+import { id } from 'zod/v4/locales'
 
 interface CustomerDetail {
   id: string
@@ -106,6 +108,30 @@ interface SupportMessage {
   }
 }
 
+interface ClientTemplate {
+  id: string
+  name: string
+  description: string
+  logo_url: string | null
+  styles: {
+    primary_color: string
+    secondary_color: string
+    font_family: string
+    show_logo: boolean
+    show_page_numbers: boolean
+  }
+  sections: {
+    id: string
+    name: string
+    type: string
+    is_visible: boolean
+  }[]
+  is_default: boolean
+  created_at: string
+  updated_at: string
+  usage_count: number
+}
+
 export default function CustomerDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -140,6 +166,10 @@ export default function CustomerDetailPage() {
     urgent: 0
   })
   
+  // Client templates states
+  const [clientTemplates, setClientTemplates] = useState<ClientTemplate[]>([])
+  const [loadingTemplates, setLoadingTemplates] = useState(false)
+  
   // Form states
   const [emailSubject, setEmailSubject] = useState('')
   const [emailBody, setEmailBody] = useState('')
@@ -155,6 +185,7 @@ export default function CustomerDetailPage() {
       fetchCustomerDetail()
       fetchRecentActivity()
       fetchSupportTickets()
+      fetchClientTemplates()
     } else {
       setError('Invalid customer ID')
       setLoading(false)
@@ -244,6 +275,22 @@ export default function CustomerDetailPage() {
       console.error('Failed to fetch support tickets:', error)
     } finally {
       setLoadingTickets(false)
+    }
+  }
+
+  const fetchClientTemplates = async () => {
+    try {
+      setLoadingTemplates(true)
+      const response = await fetch(`/api/admin/customers/${customerId}/templates`)
+      const data = await response.json()
+      
+      if (response.ok) {
+        setClientTemplates(data.templates || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch client templates:', error)
+    } finally {
+      setLoadingTemplates(false)
     }
   }
 
@@ -571,6 +618,27 @@ The Veridian Group Team`
       case 'low': return <MessageCircle className="w-4 h-4 text-green-600" />
       default: return <MessageCircle className="w-4 h-4" />
     }
+  }
+
+  const getSectionName = (type: string): string => {
+    const sectionNames: Record<string, string> = {
+      cover: 'Cover',
+      header: 'Header',
+      executive_summary: 'Executive Summary',
+      client_input: 'Client Input',
+      location_analysis: 'Location Analysis',
+      regulatory_analysis: 'Regulatory Analysis',
+      talent_analysis: 'Talent Analysis',
+      licensing_matrix: 'Licensing',
+      compliance_roadmap: 'Roadmap',
+      technology_tools: 'Technology',
+      risk_assessment: 'Risk',
+      budget_guide: 'Budget',
+      next_steps: 'Next Steps',
+      footer: 'Footer',
+      disclaimer: 'Disclaimer'
+    }
+    return sectionNames[type] || type
   }
 
   if (loading) {
@@ -1093,6 +1161,167 @@ The Veridian Group Team`
             )}
           </div>
 
+          {/* CLIENT TEMPLATES SECTION */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-navy-900">Report Templates</h2>
+              {(customer.subscription_tier === 'monthly' || customer.subscription_tier === 'custom') ? (
+                <span className="px-2 py-1 bg-gold-50 text-gold-700 rounded-full text-xs font-medium">
+                  Enterprise Feature
+                </span>
+              ) : (
+                <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-medium">
+                  Upgrade to Enterprise
+                </span>
+              )}
+            </div>
+            
+            {loadingTemplates ? (
+              <div className="flex justify-center py-6">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gold-600"></div>
+              </div>
+            ) : clientTemplates.length > 0 ? (
+              <div className="space-y-4">
+                {/* Default Template Badge */}
+                {clientTemplates.some(t => t.is_default) && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-800">Active Template</span>
+                      <span className="text-xs text-green-600 ml-auto">
+                        {clientTemplates.find(t => t.is_default)?.name || 'Default Template'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Template List */}
+                <div className="space-y-3">
+                  {clientTemplates.slice(0, 3).map(template => (
+                    <div 
+                      key={template.id}
+                      className={`p-4 rounded-xl border transition-all ${
+                        template.is_default 
+                          ? 'border-gold-200 bg-gold-50/30' 
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-navy-900">{template.name}</h3>
+                            {template.is_default && (
+                              <span className="text-xs bg-gold-100 text-gold-700 px-2 py-0.5 rounded-full">
+                                Active
+                              </span>
+                            )}
+                          </div>
+                          {template.description && (
+                            <p className="text-xs text-navy-500 mt-1">{template.description}</p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => window.open(`/admin/customers/${customerId}/templates/${template.id}`, '_blank')}
+                          className="text-xs text-gold-600 hover:text-gold-700 flex items-center gap-1"
+                        >
+                          View Details
+                          <ExternalLink className="w-3 h-3" />
+                        </button>
+                      </div>
+                      
+                      {/* Template Preview */}
+                      <div className="mt-3 pt-3 border-t border-slate-100">
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          <div className="flex items-center gap-1 text-xs text-navy-500">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: template.styles?.primary_color || '#0A1A2F' }}
+                            />
+                            <span>Primary</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-navy-500">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: template.styles?.secondary_color || '#D4AF37' }}
+                            />
+                            <span>Accent</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-navy-500">
+                            <span className="text-navy-400">•</span>
+                            <span>{template.styles?.font_family || 'Inter'}</span>
+                          </div>
+                        </div>
+                        
+                        {/* Logo Preview */}
+                        {template.logo_url && (
+                          <div className="flex items-center gap-2 mt-2">
+                            <div className="text-xs text-navy-500">Logo:</div>
+                            <div className="w-8 h-8 bg-slate-100 rounded-md flex items-center justify-center overflow-hidden">
+                              <img src={template.logo_url} alt="Logo" className="max-w-full max-h-full object-contain" />
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Sections Summary */}
+                        <div className="mt-2">
+                          <div className="flex items-center justify-between text-xs text-navy-500">
+                            <span>Sections</span>
+                            <span>{template.sections?.filter(s => s.is_visible).length || 0} visible</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {template.sections?.filter(s => s.is_visible).slice(0, 4).map(section => (
+                              <span key={section.id} className="text-xs bg-slate-100 text-navy-600 px-2 py-0.5 rounded">
+                                {getSectionName(section.type)}
+                              </span>
+                            ))}
+                            {(template.sections?.filter(s => s.is_visible).length || 0) > 4 && (
+                              <span className="text-xs text-navy-400">
+                                +{(template.sections?.filter(s => s.is_visible).length || 0) - 4} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Template Metadata */}
+                        <div className="flex items-center gap-3 mt-3 text-xs text-navy-400">
+                          <span>Created {new Date(template.created_at).toLocaleDateString()}</span>
+                          <span>•</span>
+                          <span>Updated {new Date(template.updated_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {clientTemplates.length > 3 && (
+                  <button
+                    onClick={() => window.open(`/admin/customers/${customerId}/templates`, '_blank')}
+                    className="w-full text-center text-sm text-gold-600 hover:text-gold-700 py-2 border-t border-slate-200 pt-3"
+                  >
+                    View all {clientTemplates.length} templates
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Layout className="w-6 h-6 text-navy-400" />
+                </div>
+                <p className="text-sm text-navy-500">No custom templates created</p>
+                {(customer.subscription_tier === 'monthly' || customer.subscription_tier === 'custom') ? (
+                  <p className="text-xs text-navy-400 mt-1">Enterprise clients can create branded templates</p>
+                ) : (
+                  <Link
+                    href={`/admin/customers/${customerId}/upgrade`}
+                    className="inline-block mt-2 text-xs text-gold-600 hover:text-gold-700"
+                  >
+                    Upgrade to Enterprise
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Activity Summary */}
           <div className="bg-white rounded-xl border border-slate-200 p-6">
             <h2 className="text-lg font-semibold text-navy-900 mb-4">Activity Summary</h2>
@@ -1105,31 +1334,31 @@ The Veridian Group Team`
                 <span className="text-sm text-navy-600">Support Tickets</span>
                 <span className="font-medium text-navy-900">{supportTickets.length}</span>
               </div>
-             <div className="flex items-center justify-between pt-1 text-xs border-t border-slate-100">
+              <div className="flex items-center justify-between pt-1 text-xs border-t border-slate-100">
                 <span className="text-blue-600">Open: {ticketStats.open}</span>
                 <span className="text-amber-600">In Progress: {ticketStats.inProgress}</span>
-                
-                {/* This div wraps both the urgent text AND the tooltip with group and relative classes */}
                 <div className="relative group">
-                    <span className="text-red-600 flex items-center gap-1 cursor-help">
+                  <span className="text-red-600 flex items-center gap-1 cursor-help">
                     <AlertCircle className="w-3 h-3" />
                     Urgent: {ticketStats.urgent}
-                    </span>
-                    
-                    {/* Tooltip - appears on hover */}
-                    <div className="absolute bottom-full right-0 mb-2 min-w-[300px] p-3 bg-navy-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg" style={{ width: 'max-content', maxWidth: '350px' }}>
-                        <p className="font-medium mb-1">⚠️ Urgent Tickets</p>
-                        <p className="text-navy-200 leading-relaxed">
-                            Tickets that are reopened or marked as high priority require immediate attention.
-                        </p>
-                        {/* Tooltip arrow */}
-                        <div className="absolute bottom-[-4px] right-4 w-2 h-2 bg-navy-900 transform rotate-45"></div>
-                    </div>
+                  </span>
+                  {/* Tooltip */}
+                  <div className="absolute bottom-full right-0 mb-2 min-w-[300px] p-3 bg-navy-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                    <p className="font-medium mb-1">⚠️ Urgent Tickets</p>
+                    <p className="text-navy-200 leading-relaxed">
+                      Tickets that are reopened or marked as high priority require immediate attention.
+                    </p>
+                    <div className="absolute bottom-[-4px] right-4 w-2 h-2 bg-navy-900 transform rotate-45"></div>
+                  </div>
                 </div>
-                </div>
+              </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-navy-600">Consultations</span>
                 <span className="font-medium text-navy-900">{recentConsultations.length}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-navy-600">Templates</span>
+                <span className="font-medium text-navy-900">{clientTemplates.length}</span>
               </div>
             </div>
           </div>

@@ -4,9 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function POST(
   request: Request,
-  { params }: { params: { jobId: string } }
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
+    // Unwrap params with await (Next.js 15 requirement)
+    const { jobId } = await params
+    
     const supabase = await createClient()
     
     // Verify admin access
@@ -26,9 +29,8 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { jobId } = params
-
     // Update job status to queued for retry
+    // The database trigger will automatically set updated_at
     const { error } = await supabase
       .from('report_generation_queue')
       .update({
@@ -36,8 +38,7 @@ export async function POST(
         attempts: 0,
         error: null,
         started_at: null,
-        completed_at: null,
-        updated_at: new Date().toISOString()
+        completed_at: null
       })
       .eq('id', jobId)
       .eq('status', 'failed')

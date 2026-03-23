@@ -51,9 +51,9 @@ interface Template {
 interface TemplateSection {
   id: string
   name: string
-  type: 'cover' | 'header' | 'executive_summary' | 'location_analysis' | 'regulatory_analysis' | 
-        'talent_analysis' | 'licensing_matrix' | 'compliance_roadmap' | 'risk_assessment' |
-        'budget_guide' | 'next_steps' | 'footer' | 'disclaimer'
+  type: 'cover' | 'header' | 'executive_summary' | 'client_input' | 'location_analysis' | 
+        'regulatory_analysis' | 'talent_analysis' | 'licensing_matrix' | 'compliance_roadmap' | 
+        'technology_tools' | 'risk_assessment' | 'budget_guide' | 'next_steps' | 'footer' | 'disclaimer'
   order: number
   is_required: boolean
   is_visible: boolean
@@ -84,16 +84,18 @@ interface TemplateVersion {
   comment: string
 }
 
-// Section type to display name mapping
+// Section type to display name mapping - ADDED client_input
 const sectionTypeToName: Record<string, string> = {
   'cover': 'Cover Page',
   'header': 'Header',
   'executive_summary': 'Executive Summary',
+  'client_input': 'Client Input Summary',
   'location_analysis': 'Location Analysis',
   'regulatory_analysis': 'Regulatory Analysis',
   'talent_analysis': 'Talent Analysis',
   'licensing_matrix': 'Licensing Matrix',
   'compliance_roadmap': 'Compliance Roadmap',
+  'technology_tools': 'Technology & Tools',
   'risk_assessment': 'Risk Assessment',
   'budget_guide': 'Budget Guide',
   'next_steps': 'Next Steps',
@@ -101,21 +103,23 @@ const sectionTypeToName: Record<string, string> = {
   'disclaimer': 'Disclaimer'
 }
 
-// Complete section list matching actual report
+// Complete section list matching actual report - ADDED client_input
 const completeSections: TemplateSection[] = [
   { id: 'cover', name: 'Cover Page', type: 'cover', order: 1, is_required: true, is_visible: true, settings: {} },
   { id: 'header', name: 'Header', type: 'header', order: 2, is_required: true, is_visible: true, settings: {} },
   { id: 'executive_summary', name: 'Executive Summary', type: 'executive_summary', order: 3, is_required: true, is_visible: true, settings: {} },
-  { id: 'location_analysis', name: 'Location Analysis', type: 'location_analysis', order: 4, is_required: true, is_visible: true, settings: {} },
-  { id: 'regulatory_analysis', name: 'Regulatory Analysis', type: 'regulatory_analysis', order: 5, is_required: true, is_visible: true, settings: {} },
-  { id: 'talent_analysis', name: 'Talent Analysis', type: 'talent_analysis', order: 6, is_required: true, is_visible: true, settings: {} },
-  { id: 'licensing_matrix', name: 'Licensing Matrix', type: 'licensing_matrix', order: 7, is_required: true, is_visible: true, settings: {} },
-  { id: 'compliance_roadmap', name: 'Compliance Roadmap', type: 'compliance_roadmap', order: 8, is_required: true, is_visible: true, settings: {} },
-  { id: 'risk_assessment', name: 'Risk Assessment', type: 'risk_assessment', order: 9, is_required: true, is_visible: true, settings: {} },
-  { id: 'budget_guide', name: 'Budget Guide', type: 'budget_guide', order: 10, is_required: true, is_visible: true, settings: {} },
-  { id: 'next_steps', name: 'Next Steps', type: 'next_steps', order: 11, is_required: true, is_visible: true, settings: {} },
-  { id: 'footer', name: 'Footer', type: 'footer', order: 12, is_required: false, is_visible: true, settings: {} },
-  { id: 'disclaimer', name: 'Disclaimer', type: 'disclaimer', order: 13, is_required: true, is_visible: true, settings: {} }
+  { id: 'client_input', name: 'Client Input Summary', type: 'client_input', order: 4, is_required: false, is_visible: true, settings: {} },
+  { id: 'location_analysis', name: 'Location Analysis', type: 'location_analysis', order: 5, is_required: true, is_visible: true, settings: {} },
+  { id: 'regulatory_analysis', name: 'Regulatory Analysis', type: 'regulatory_analysis', order: 6, is_required: true, is_visible: true, settings: {} },
+  { id: 'talent_analysis', name: 'Talent Analysis', type: 'talent_analysis', order: 7, is_required: true, is_visible: true, settings: {} },
+  { id: 'licensing_matrix', name: 'Licensing Matrix', type: 'licensing_matrix', order: 8, is_required: true, is_visible: true, settings: {} },
+  { id: 'compliance_roadmap', name: 'Compliance Roadmap', type: 'compliance_roadmap', order: 9, is_required: true, is_visible: true, settings: {} },
+  { id: 'technology_tools', name: 'Technology & Tools', type: 'technology_tools', order: 10, is_required: true, is_visible: true, settings: {} },
+  { id: 'risk_assessment', name: 'Risk Assessment', type: 'risk_assessment', order: 11, is_required: true, is_visible: true, settings: {} },
+  { id: 'budget_guide', name: 'Budget Guide', type: 'budget_guide', order: 12, is_required: true, is_visible: true, settings: {} },
+  { id: 'next_steps', name: 'Next Steps', type: 'next_steps', order: 13, is_required: true, is_visible: true, settings: {} },
+  { id: 'footer', name: 'Footer', type: 'footer', order: 14, is_required: false, is_visible: true, settings: {} },
+  { id: 'disclaimer', name: 'Disclaimer', type: 'disclaimer', order: 15, is_required: true, is_visible: true, settings: {} }
 ]
 
 export default function TemplatesPage() {
@@ -370,7 +374,7 @@ export default function TemplatesPage() {
     setFormData({ ...formData, sections: newSections })
   }
 
-  // Update section name when type changes
+  // Update section name when type changes - ADDED client_input case
   const updateSectionType = (sectionId: string, newType: string) => {
     const newSections = formData.sections?.map(section => {
       if (section.id === sectionId) {
@@ -383,6 +387,159 @@ export default function TemplatesPage() {
       return section
     })
     setFormData({ ...formData, sections: newSections })
+  }
+
+  // Helper to render section preview content based on type - ADDED client_input
+  const renderSectionPreview = (section: TemplateSection, styles: any) => {
+    switch (section.type) {
+      case 'client_input':
+        return (
+          <div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                <span className="text-amber-600 text-sm font-bold">✓</span>
+              </div>
+              <h4 className="font-semibold text-amber-800">Your Custom Compliance Request</h4>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mb-3">
+              <div>
+                <p className="text-xs text-amber-600 font-medium">PRIMARY FOCUS</p>
+                <p className="text-sm text-amber-900">Regulatory Compliance</p>
+              </div>
+              <div>
+                <p className="text-xs text-amber-600 font-medium">TIMELINE</p>
+                <p className="text-sm text-amber-900">6 Months (Standard)</p>
+              </div>
+            </div>
+            <div className="mb-3">
+              <p className="text-xs text-amber-600 font-medium">SECONDARY FOCUS (2 areas)</p>
+              <div className="flex gap-2 mt-1">
+                <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded">Licensing</span>
+                <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded">Risk Assessment</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white rounded p-2">
+                <p className="text-xs text-amber-600 font-medium">YOUR CONCERNS</p>
+                <p className="text-xs text-amber-800 italic">"Regulatory compliance across multiple states..."</p>
+              </div>
+              <div className="bg-white rounded p-2">
+                <p className="text-xs text-amber-600 font-medium">YOUR GOALS</p>
+                <p className="text-xs text-amber-800 italic">"Achieve full compliance within 6 months..."</p>
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-amber-200">
+              <p className="text-xs text-amber-600 font-medium">✓ HOW THIS REPORT ADDRESSES YOUR NEEDS</p>
+              <p className="text-xs text-amber-700 mt-1">
+                Tailored to your regulatory compliance priorities within your 6-month timeline.
+              </p>
+            </div>
+          </div>
+        )
+      
+      case 'licensing_matrix':
+        return (
+          <table className="w-full text-sm border-collapse mt-3">
+            <thead>
+              <tr className={styles?.table_style === 'striped' ? 'bg-slate-100' : 'border-b'}>
+                <th className="p-2 text-left font-semibold">License Type</th>
+                <th className="p-2 text-left font-semibold">Status</th>
+                <th className="p-2 text-left font-semibold">Timeline</th>
+                <th className="p-2 text-left font-semibold">Fee Range</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className={styles?.table_style === 'striped' ? 'bg-white' : 'border-b'}>
+                <td className="p-2">Money Transmitter License</td>
+                <td className="p-2">Required</td>
+                <td className="p-2">4-8 months</td>
+                <td className="p-2">$1,000 - $5,000</td>
+              </tr>
+              <tr className={styles?.table_style === 'striped' ? 'bg-slate-50' : 'border-b'}>
+                <td className="p-2">BitLicense</td>
+                <td className="p-2">Required (NY only)</td>
+                <td className="p-2">6-12 months</td>
+                <td className="p-2">$5,000</td>
+              </tr>
+            </tbody>
+          </table>
+        )
+      
+      case 'compliance_roadmap':
+        return (
+          <div className="mt-3 space-y-2">
+            <div className="border-l-4 pl-3" style={{ borderLeftColor: styles?.secondary_color || '#D4AF37' }}>
+              <h4 className="font-semibold text-sm">Phase 1: Foundation (Month 1)</h4>
+              <ul className="list-disc ml-5 text-sm text-navy-600">
+                <li>Engage legal counsel</li>
+                <li>Begin license applications</li>
+                <li>Designate compliance officer</li>
+              </ul>
+            </div>
+            <div className="border-l-4 pl-3" style={{ borderLeftColor: styles?.secondary_color || '#D4AF37' }}>
+              <h4 className="font-semibold text-sm">Phase 2: Licensing (Month 2-3)</h4>
+              <ul className="list-disc ml-5 text-sm text-navy-600">
+                <li>Submit license applications</li>
+                <li>Finalize compliance policies</li>
+                <li>Select compliance technology</li>
+              </ul>
+            </div>
+          </div>
+        )
+      
+      case 'technology_tools':
+        return (
+          <div className="mt-3 space-y-3">
+            <div className="bg-slate-50 p-3 rounded-lg">
+              <h4 className="font-semibold text-sm text-gold-600">Chainalysis</h4>
+              <p className="text-xs text-navy-600 mt-1">Blockchain analytics and transaction monitoring</p>
+              <p className="text-xs text-navy-400 mt-1">Implementation: 4-6 weeks</p>
+            </div>
+            <div className="bg-slate-50 p-3 rounded-lg">
+              <h4 className="font-semibold text-sm text-gold-600">ComplyAdvantage</h4>
+              <p className="text-xs text-navy-600 mt-1">AML screening and sanctions monitoring</p>
+              <p className="text-xs text-navy-400 mt-1">Implementation: 3-5 weeks</p>
+            </div>
+            <div className="bg-slate-50 p-3 rounded-lg">
+              <h4 className="font-semibold text-sm text-gold-600">Elliptic</h4>
+              <p className="text-xs text-navy-600 mt-1">Blockchain analytics and compliance screening</p>
+              <p className="text-xs text-navy-400 mt-1">Implementation: 4-6 weeks</p>
+            </div>
+          </div>
+        )
+      
+      case 'risk_assessment':
+        return (
+          <table className="w-full text-sm border-collapse mt-3">
+            <thead>
+              <tr className={styles?.table_style === 'striped' ? 'bg-slate-100' : 'border-b'}>
+                <th className="p-2 text-left font-semibold">Risk Category</th>
+                <th className="p-2 text-left font-semibold">Likelihood</th>
+                <th className="p-2 text-left font-semibold">Impact</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className={styles?.table_style === 'striped' ? 'bg-white' : 'border-b'}>
+                <td className="p-2">Regulatory Change</td>
+                <td className="p-2 text-amber-600">Medium</td>
+                <td className="p-2 text-red-600">High</td>
+              </tr>
+              <tr className={styles?.table_style === 'striped' ? 'bg-slate-50' : 'border-b'}>
+                <td className="p-2">License Delays</td>
+                <td className="p-2 text-amber-600">Medium</td>
+                <td className="p-2 text-orange-600">Medium</td>
+              </tr>
+            </tbody>
+          </table>
+        )
+      
+      default:
+        return (
+          <p className="text-sm text-navy-600">
+            Sample content for {section.name.toLowerCase()}. This demonstrates how the section will appear in the final report.
+          </p>
+        )
+    }
   }
 
   return (
@@ -630,7 +787,6 @@ export default function TemplatesPage() {
                             alt="Company Logo" 
                             className="max-w-full max-h-full object-contain"
                             onError={(e) => {
-                              // If image fails to load, show broken image placeholder
                               e.currentTarget.style.display = 'none';
                               e.currentTarget.parentElement?.querySelector('.fallback')?.classList.remove('hidden');
                             }}
@@ -649,18 +805,10 @@ export default function TemplatesPage() {
                           onChange={async (e) => {
                             const file = e.target.files?.[0]
                             if (file) {
-                              // Show preview immediately
-                              const previewUrl = URL.createObjectURL(file)
-                              const preview = document.createElement('img')
-                              preview.src = previewUrl
-                              
-                              // Upload to server
                               const url = await uploadLogo(file)
                               if (url) {
                                 setFormData({ ...formData, logo_url: url })
                               }
-                              // Clean up preview URL
-                              URL.revokeObjectURL(previewUrl)
                             }
                           }}
                           disabled={uploadingLogo}
@@ -758,11 +906,13 @@ export default function TemplatesPage() {
                               <option value="cover">Cover Page</option>
                               <option value="header">Header</option>
                               <option value="executive_summary">Executive Summary</option>
+                              <option value="client_input">Client Input Summary</option>
                               <option value="location_analysis">Location Analysis</option>
                               <option value="regulatory_analysis">Regulatory Analysis</option>
                               <option value="talent_analysis">Talent Analysis</option>
                               <option value="licensing_matrix">Licensing Matrix</option>
                               <option value="compliance_roadmap">Compliance Roadmap</option>
+                              <option value="technology_tools">Technology & Tools</option>
                               <option value="risk_assessment">Risk Assessment</option>
                               <option value="budget_guide">Budget Guide</option>
                               <option value="next_steps">Next Steps</option>
@@ -961,11 +1111,10 @@ export default function TemplatesPage() {
                       previewMode === 'mobile' && 'max-w-[375px] mx-auto',
                       previewMode === 'tablet' && 'max-w-[768px] mx-auto'
                     )}>
-                      {/* Preview Content - Matches actual PDF header style */}
                       <div className="p-6" style={{
                         fontFamily: formData.styles?.font_family || 'Inter'
                       }}>
-                        {/* Header - Matches PDFHeader component style */}
+                        {/* Header */}
                         <div className="mb-6 pb-4 border-b" style={{
                           borderBottomWidth: 2,
                           borderBottomColor: formData.styles?.secondary_color || '#D4AF37'
@@ -995,7 +1144,7 @@ export default function TemplatesPage() {
                           </div>
                         </div>
 
-                        {/* Sample Sections */}
+                        {/* Sample Sections - Now includes client_input */}
                         {formData.sections?.filter(s => s.is_visible && s.type !== 'header' && s.type !== 'footer').map((section, i) => (
                           <div key={section.id} className="mb-6">
                             <h2 className="text-lg font-semibold mb-3 pb-1" style={{
@@ -1006,41 +1155,7 @@ export default function TemplatesPage() {
                               {section.name}
                             </h2>
                             <div className="space-y-2">
-                              <p className="text-sm text-navy-600">
-                                Sample content for {section.name.toLowerCase()}. This demonstrates how the section will appear in the final report.
-                              </p>
-                              {/* Sample table for licensing matrix */}
-                              {section.type === 'licensing_matrix' && (
-                                <table className="w-full text-sm border-collapse mt-3">
-                                  <thead>
-                                    <tr className={formData.styles?.table_style === 'striped' ? 'bg-slate-100' : 'border-b'}>
-                                      <th className="p-2 text-left font-semibold">License Type</th>
-                                      <th className="p-2 text-left font-semibold">Status</th>
-                                      <th className="p-2 text-left font-semibold">Timeline</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    <tr className={formData.styles?.table_style === 'striped' ? 'bg-white' : 'border-b'}>
-                                      <td className="p-2">Money Transmitter License</td>
-                                      <td className="p-2">Required</td>
-                                      <td className="p-2">4-8 months</td>
-                                    </tr>
-                                  </tbody>
-                                </table>
-                              )}
-                              {/* Sample for compliance roadmap */}
-                              {section.type === 'compliance_roadmap' && (
-                                <div className="mt-3 space-y-2">
-                                  <div className="border-l-4 pl-3" style={{ borderLeftColor: formData.styles?.secondary_color || '#D4AF37' }}>
-                                    <h4 className="font-semibold text-sm">Phase 1: Foundation (Month 1)</h4>
-                                    <ul className="list-disc ml-5 text-sm text-navy-600">
-                                      <li>Engage legal counsel</li>
-                                      <li>Begin license applications</li>
-                                      <li>Designate compliance officer</li>
-                                    </ul>
-                                  </div>
-                                </div>
-                              )}
+                              {renderSectionPreview(section, formData.styles)}
                             </div>
                           </div>
                         ))}
@@ -1132,7 +1247,7 @@ export default function TemplatesPage() {
               <div className="bg-white border border-slate-200 rounded-lg p-8" style={{
                 fontFamily: selectedTemplate.styles.font_family
               }}>
-                {/* Header - Matches PDFHeader */}
+                {/* Header */}
                 <div className="mb-8 pb-4 border-b" style={{
                   borderBottomWidth: 2,
                   borderBottomColor: selectedTemplate.styles.secondary_color
@@ -1152,7 +1267,7 @@ export default function TemplatesPage() {
                   </div>
                 </div>
 
-                {/* Render all sections */}
+                {/* Render all sections - includes client_input */}
                 {selectedTemplate.sections
                   .filter(s => s.is_visible && s.type !== 'header' && s.type !== 'footer')
                   .sort((a, b) => a.order - b.order)
@@ -1167,51 +1282,7 @@ export default function TemplatesPage() {
                         {section.name}
                       </h2>
                       <div className="prose max-w-none">
-                        <p className="text-navy-700">
-                          This is a preview of the {section.name.toLowerCase()} section. 
-                          The actual content will be dynamically generated based on the 
-                          specific company and location data.
-                        </p>
-                        {section.type === 'licensing_matrix' && (
-                          <table className="w-full mt-4 border-collapse">
-                            <thead>
-                              <tr className={selectedTemplate.styles.table_style === 'striped' ? 'bg-slate-100' : 'border-b'}>
-                                <th className="p-3 text-left font-semibold">License Type</th>
-                                <th className="p-3 text-left font-semibold">Required</th>
-                                <th className="p-3 text-left font-semibold">Timeline</th>
-                                <th className="p-3 text-left font-semibold">Fee Range</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr className={selectedTemplate.styles.table_style === 'striped' ? 'bg-white' : 'border-b'}>
-                                <td className="p-3">Money Transmitter License</td>
-                                <td className="p-3">Yes</td>
-                                <td className="p-3">4-8 months</td>
-                                <td className="p-3">$1,000 - $5,000</td>
-                              </tr>
-                              <tr className={selectedTemplate.styles.table_style === 'striped' ? 'bg-slate-50' : 'border-b'}>
-                                <td className="p-3">BitLicense</td>
-                                <td className="p-3">Yes (NY only)</td>
-                                <td className="p-3">6-12 months</td>
-                                <td className="p-3">$5,000</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        )}
-                        {section.type === 'compliance_roadmap' && (
-                          <div className="mt-4 space-y-4">
-                            <div className="border-l-4 pl-4" style={{
-                              borderLeftColor: selectedTemplate.styles.secondary_color
-                            }}>
-                              <h3 className="font-semibold">Phase 1: Foundation (Month 1)</h3>
-                              <ul className="list-disc ml-5 mt-2">
-                                <li>Engage legal counsel</li>
-                                <li>Begin license applications</li>
-                                <li>Designate compliance officer</li>
-                              </ul>
-                            </div>
-                          </div>
-                        )}
+                        {renderSectionPreview(section, selectedTemplate.styles)}
                       </div>
                     </div>
                   ))}

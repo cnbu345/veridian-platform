@@ -8,8 +8,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "backfill-reports": "tsx src/scripts/backfill-report-storage.ts"
+    "start": "next start"
+    
   },
   "dependencies": {
     "@calcom/embed-react": "^1.5.3",
