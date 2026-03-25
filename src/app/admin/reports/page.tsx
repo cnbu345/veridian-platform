@@ -28,7 +28,41 @@ import { cn } from '@/lib/utils/utils'
 import BatchDownloadModal from './components/BatchDownloadModal'
 import { ForceCompleteModal } from './components/ForceCompleteModal'
 
-// ... keep existing interfaces (Report, ReportsResponse)
+interface Report {
+  id: string
+  user_id: string
+  company_name: string
+  industry: string
+  city: string
+  state: string
+  location_tier: string
+  status: 'pending' | 'generating' | 'ready' | 'failed'
+  created_at: string
+  pdf_url: string | null
+  users?: {
+    email: string
+    full_name: string
+    company_name: string
+  }
+}
+
+interface ReportsResponse {
+  reports: Report[]
+  statistics: {
+    total: number
+    pending: number
+    generating: number
+    ready: number
+    failed: number
+    pages: number
+  }
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    pages: number
+  }
+}
 
 export default function ReportsPage() {
   const [reports, setReports] = useState<Report[]>([])
@@ -88,15 +122,18 @@ export default function ReportsPage() {
     }
   }
 
-  // Force complete handler
+  // Force complete click handler - opens modal
   const handleForceCompleteClick = (report: Report) => {
     setSelectedReport(report)
     setShowForceModal(true)
   }
 
+  // Force complete confirmation handler - calls API
   const handleForceCompleteConfirm = async () => {
     if (!selectedReport) return
     
+    console.log('🔍 Force completing report:', selectedReport.id, selectedReport.company_name)
+
     setForceCompleting(selectedReport.id)
     setShowForceModal(false)
     
@@ -104,24 +141,31 @@ export default function ReportsPage() {
       const response = await fetch(`/api/admin/reports/${selectedReport.id}/refresh-pdf-url`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'force-complete' })
+        body: JSON.stringify({ 
+          action: 'force-complete',
+          reason: 'Manual admin override from reports dashboard'
+        })
       })
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`)
-      }
 
       const data = await response.json()
 
-      if (data.success) {
-        alert(`✅ "${selectedReport.company_name}" has been marked as READY!`)
+      if (response.ok && data.success) {
+        let message = `✅ Success! "${selectedReport.company_name}" has been force completed.\n\n`
+        message += `Status: Ready\n`
+        if (data.content_generated) {
+          message += `📝 AI content was generated for this report.\n`
+        }
+        if (data.pdf_generated) {
+          message += `📄 PDF has been generated.\n`
+        }
+        alert(message)
         await fetchReports()
       } else {
-        throw new Error(data.error || 'Failed to force complete')
+        throw new Error(data.error || data.message || 'Failed to force complete')
       }
     } catch (error) {
       console.error('Failed to force complete:', error)
-      alert(`❌ Failed to force complete "${selectedReport.company_name}". Please try again.`)
+      alert(`❌ Failed to force complete "${selectedReport.company_name}".\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}\n\nPlease check the server logs for details.`)
     } finally {
       setForceCompleting(null)
       setSelectedReport(null)
@@ -143,6 +187,8 @@ export default function ReportsPage() {
         setSelectedReports(selectedReports.filter(id => id !== reportId))
         fetchReports()
         alert('✅ Report deleted successfully')
+      } else {
+        throw new Error('Failed to delete')
       }
     } catch (error) {
       console.error('Failed to delete report:', error)
@@ -153,7 +199,7 @@ export default function ReportsPage() {
   const handleBulkDelete = async () => {
     if (selectedReports.length === 0) return
     
-    if (!confirm(`Are you sure you want to delete ${selectedReports.length} reports?`)) {
+    if (!confirm(`Are you sure you want to delete ${selectedReports.length} reports? This action cannot be undone.`)) {
       return
     }
 
@@ -169,6 +215,8 @@ export default function ReportsPage() {
         setSelectedReports([])
         fetchReports()
         alert(`✅ ${selectedReports.length} reports deleted successfully`)
+      } else {
+        throw new Error('Failed to delete')
       }
     } catch (error) {
       console.error('Failed to delete reports:', error)
@@ -501,13 +549,13 @@ export default function ReportsPage() {
                           </>
                         )}
                         
-                        {/* Force Complete Button */}
+                        {/* Force Complete Button - Only for pending/generating reports */}
                         {(report.status === 'pending' || report.status === 'generating') && (
                           <button
                             onClick={() => handleForceCompleteClick(report)}
                             disabled={forceCompleting === report.id}
                             className="p-1 hover:bg-amber-50 rounded transition-colors group"
-                            title="Force Complete"
+                            title="Force Complete - Mark as Ready and Generate PDF"
                           >
                             {forceCompleting === report.id ? (
                               <Loader2 className="w-4 h-4 text-amber-600 animate-spin" />

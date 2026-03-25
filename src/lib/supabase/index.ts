@@ -1,3 +1,4 @@
+// src/lib/supabase/index.ts
 // Re-export everything from client and server
 export { 
   createClient as createBrowserClient,
