@@ -1,4 +1,4 @@
-// src/app/generate/components/ReviewStep.tsx // Review and payment initiation
+// src/app/generate/components/ReviewStep.tsx - Review and payment initiation with template support
 'use client'
 
 import { useState } from 'react'
@@ -24,7 +24,9 @@ import {
   Scale,
   Landmark,
   Gavel,
-  AlertTriangle
+  AlertTriangle,
+  Layout,
+  Palette
 } from 'lucide-react'
 import { CompanyFormData, LocationFormData, StrategyFormData } from '@/lib/reports/validation'
 import { createClient } from '@/lib/supabase/client'
@@ -32,8 +34,14 @@ import { createClient } from '@/lib/supabase/client'
 interface ReviewStepProps {
   user: User
   companyData: CompanyFormData
-  locationData: LocationFormData
+  locationData: LocationFormData & {
+    tier?: string;
+    nearestRegulatoryHub?: string;
+    regulatoryClimate?: string;
+    licenseRequired?: string;
+  }
   strategyData: StrategyFormData
+  selectedTemplateId: string | null
   onBack: () => void
   onComplete: () => void
 }
@@ -43,6 +51,7 @@ export default function ReviewStep({
   companyData, 
   locationData, 
   strategyData, 
+  selectedTemplateId,
   onBack,
   onComplete 
 }: ReviewStepProps) {
@@ -118,101 +127,119 @@ export default function ReviewStep({
     return timelines[timeline] || timeline
   }
 
-  // Handle report generation
-const handleGenerateReport = async () => {
-  setIsProcessing(true)
-  setError(null)
-  setStep('payment')
-
-  try {
-    // Get location tier from locationData or determine based on city/state
-    const locationTierValue = locationData.tier || 
-      (locationData.city?.toLowerCase() === 'austin' && locationData.state === 'TX' ? 'major' :
-       locationData.city?.toLowerCase() === 'dallas' && locationData.state === 'TX' ? 'major' :
-       locationData.city?.toLowerCase() === 'houston' && locationData.state === 'TX' ? 'major' :
-       locationData.city?.toLowerCase() === 'new york' && locationData.state === 'NY' ? 'major' :
-       locationData.city?.toLowerCase() === 'los angeles' && locationData.state === 'CA' ? 'major' :
-       locationData.city?.toLowerCase() === 'san francisco' && locationData.state === 'CA' ? 'major' :
-       locationData.city?.toLowerCase() === 'chicago' && locationData.state === 'IL' ? 'major' :
-       locationData.city?.toLowerCase() === 'miami' && locationData.state === 'FL' ? 'major' :
-       'rural')
-
-    // CRITICAL: Truncate long fields to stay under Stripe's 500 char limit
-    const concerns = strategyData.concerns || ''
-    const goals = strategyData.goals || ''
-    
-    // Truncate to 200 characters each to be safe
-    const truncatedConcerns = concerns.length > 200 
-      ? concerns.substring(0, 197) + '...' 
-      : concerns
-      
-    const truncatedGoals = goals.length > 200 
-      ? goals.substring(0, 197) + '...' 
-      : goals
-
-    // Structure the metadata with ALL fields at the top level
-    const reportMetadata = {
-      // User info
-      userId: user.id,
-      productType: 'single',
-      
-      // Company info
-      companyName: companyData.name,
-      industry: companyData.industry,
-      companySize: companyData.size,
-      budget: companyData.budget,
-      
-      // Location info
-      city: locationData.city,
-      state: locationData.state,
-      locationTier: locationTierValue,
-      
-      // Strategy info
-      primaryFocus: strategyData.primary,
-      secondaryFocus: JSON.stringify(strategyData.secondary),
-      timeline: strategyData.timeline,
-      concerns: truncatedConcerns,
-      goals: truncatedGoals,
-      
-      // Metadata
-      timestamp: new Date().toISOString()
+  // Helper to format location tier
+  const formatLocationTier = (tier: string) => {
+    const tiers: Record<string, string> = {
+      'major': 'Major Market',
+      'suburban': 'Suburban Market',
+      'rural': 'Rural Market',
+      'unknown': 'Analysis Pending'
     }
-
-    console.log('📤 Sending to checkout API with locationTier:', locationTierValue)
-    console.log('📤 Sending to checkout API with secondaryFocus:', strategyData.secondary)
-
-    const checkoutResponse = await fetch('/api/checkout', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        type: 'single',
-        metadata: reportMetadata
-      }),
-    })
-
-    const checkoutData = await checkoutResponse.json()
-
-    if (!checkoutResponse.ok) {
-      console.error('❌ Checkout response error:', checkoutData)
-      throw new Error(checkoutData.error || 'Failed to create checkout session')
-    }
-
-    // Redirect to Stripe checkout
-    if (checkoutData.url) {
-      window.location.href = checkoutData.url
-    } else {
-      throw new Error('No checkout URL received')
-    }
-
-  } catch (err: any) {
-    console.error('❌ Generation error:', err)
-    setError(err.message || 'Failed to generate report. Please try again.')
-    setIsProcessing(false)
-    setStep('review')
+    return tiers[tier] || tier
   }
-}
+
+  // Handle report generation with template support
+  const handleGenerateReport = async () => {
+    setIsProcessing(true)
+    setError(null)
+    setStep('payment')
+
+    try {
+      // Determine location tier
+      const locationTierValue = locationData.tier || 
+        (locationData.city?.toLowerCase() === 'austin' && locationData.state === 'TX' ? 'major' :
+         locationData.city?.toLowerCase() === 'dallas' && locationData.state === 'TX' ? 'major' :
+         locationData.city?.toLowerCase() === 'houston' && locationData.state === 'TX' ? 'major' :
+         locationData.city?.toLowerCase() === 'new york' && locationData.state === 'NY' ? 'major' :
+         locationData.city?.toLowerCase() === 'los angeles' && locationData.state === 'CA' ? 'major' :
+         locationData.city?.toLowerCase() === 'san francisco' && locationData.state === 'CA' ? 'major' :
+         locationData.city?.toLowerCase() === 'chicago' && locationData.state === 'IL' ? 'major' :
+         locationData.city?.toLowerCase() === 'miami' && locationData.state === 'FL' ? 'major' :
+         'rural')
+
+      // Truncate long fields to stay under Stripe's 500 char limit
+      const concerns = strategyData.concerns || ''
+      const goals = strategyData.goals || ''
+      
+      const truncatedConcerns = concerns.length > 200 
+        ? concerns.substring(0, 197) + '...' 
+        : concerns
+      
+      const truncatedGoals = goals.length > 200 
+        ? goals.substring(0, 197) + '...' 
+        : goals
+
+      // Structure the metadata with template ID
+      const reportMetadata = {
+        // User info
+        userId: user.id,
+        productType: 'single',
+        
+        // Company info
+        companyName: companyData.name,
+        industry: companyData.industry,
+        companySize: companyData.size,
+        budget: companyData.budget,
+        
+        // Location info
+        city: locationData.city,
+        state: locationData.state,
+        locationTier: locationTierValue,
+        nearestRegulatoryHub: locationData.nearestRegulatoryHub || '',
+        regulatoryClimate: locationData.regulatoryClimate || '',
+        
+        // Strategy info
+        primaryFocus: strategyData.primary,
+        secondaryFocus: JSON.stringify(strategyData.secondary),
+        timeline: strategyData.timeline,
+        concerns: truncatedConcerns,
+        goals: truncatedGoals,
+        
+        // Template info - CRITICAL: Pass template ID to Stripe
+        templateId: selectedTemplateId,
+        
+        // Metadata
+        timestamp: new Date().toISOString()
+      }
+
+      console.log('📤 Sending to checkout API with:', {
+        templateId: selectedTemplateId,
+        locationTier: locationTierValue,
+        secondaryFocusCount: strategyData.secondary.length
+      })
+
+      const checkoutResponse = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'single',
+          metadata: reportMetadata
+        }),
+      })
+
+      const checkoutData = await checkoutResponse.json()
+
+      if (!checkoutResponse.ok) {
+        console.error('❌ Checkout response error:', checkoutData)
+        throw new Error(checkoutData.error || 'Failed to create checkout session')
+      }
+
+      // Redirect to Stripe checkout
+      if (checkoutData.url) {
+        window.location.href = checkoutData.url
+      } else {
+        throw new Error('No checkout URL received')
+      }
+
+    } catch (err: any) {
+      console.error('❌ Generation error:', err)
+      setError(err.message || 'Failed to generate report. Please try again.')
+      setIsProcessing(false)
+      setStep('review')
+    }
+  }
 
   // Loading state for payment processing
   if (step === 'payment' || step === 'processing') {
@@ -250,24 +277,22 @@ const handleGenerateReport = async () => {
           />
         </div>
 
-        <div className="mt-8 space-y-2 text-sm text-navy-500">
-          {step === 'processing' && (
-            <>
-              <p className="flex items-center justify-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600" />
-                Analyzing {locationData.state} regulatory framework
-              </p>
-              <p className="flex items-center justify-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600" />
-                Identifying license requirements
-              </p>
-              <p className="flex items-center justify-center gap-2">
-                <Loader2 className="w-4 h-4 text-gold-600 animate-spin" />
-                Generating compliance roadmap
-              </p>
-            </>
-          )}
-        </div>
+        {step === 'processing' && (
+          <div className="mt-8 space-y-2 text-sm text-navy-500">
+            <p className="flex items-center justify-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+              Analyzing {locationData.state} regulatory framework
+            </p>
+            <p className="flex items-center justify-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+              Identifying license requirements
+            </p>
+            <p className="flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 text-gold-600 animate-spin" />
+              Generating compliance roadmap
+            </p>
+          </div>
+        )}
 
         {error && (
           <div className="mt-8 p-4 bg-red-50 border border-red-200 rounded-xl max-w-md mx-auto">
@@ -330,7 +355,7 @@ const handleGenerateReport = async () => {
           </div>
           <button
             onClick={onBack}
-            className="text-sm text-white/80 hover:text-white flex items-center gap-1"
+            className="text-sm text-white/80 hover:text-white flex items-center gap-1 transition-colors"
           >
             <Edit className="w-4 h-4" />
             Edit
@@ -403,8 +428,14 @@ const handleGenerateReport = async () => {
               <p className="text-sm text-navy-600">{locationData.state}</p>
             </div>
             <div className="flex-1">
-              <p className="text-sm text-navy-600 mb-1">What we'll analyze:</p>
-              <ul className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-medium text-navy-500">Market Classification:</span>
+                <span className="text-xs font-semibold text-gold-600 bg-gold-50 px-2 py-0.5 rounded-full">
+                  {formatLocationTier(locationData.tier || 'unknown')}
+                </span>
+              </div>
+              <p className="text-sm text-navy-600">What we'll analyze:</p>
+              <ul className="grid grid-cols-2 gap-2 mt-2">
                 <li className="flex items-center gap-1 text-sm text-navy-700">
                   <CheckCircle className="w-4 h-4 text-green-600" />
                   State regulations
@@ -486,6 +517,41 @@ const handleGenerateReport = async () => {
         </div>
       </div>
 
+      {/* Template Summary Card - NEW */}
+      {selectedTemplateId && (
+        <div className="bg-gradient-to-br from-gold-50 to-amber-50 rounded-2xl 
+                        border border-gold-200 overflow-hidden">
+          <div className="bg-gold-600 px-6 py-4">
+            <div className="flex items-center gap-3">
+              <Layout className="w-5 h-5 text-white" />
+              <h3 className="text-white font-semibold">Template Applied</h3>
+            </div>
+          </div>
+          <div className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                <Palette className="w-6 h-6 text-gold-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-navy-900 mb-1">
+                  Custom Brand Template Selected
+                </p>
+                <p className="text-sm text-navy-600">
+                  Your report will include your custom branding, logo, and selected sections.
+                </p>
+              </div>
+              <button
+                onClick={() => onBack()}
+                className="text-xs text-gold-600 hover:text-gold-700 font-medium flex items-center gap-1"
+              >
+                <Edit className="w-3 h-3" />
+                Change
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* What's Included */}
       <div className="bg-gradient-to-r from-navy-800 to-navy-900 rounded-2xl p-8 text-white">
         <h3 className="text-xl font-bold mb-4">Your Report Includes:</h3>
@@ -527,6 +593,16 @@ const handleGenerateReport = async () => {
             </div>
           </div>
         </div>
+        
+        {/* Template-specific feature badge */}
+        {selectedTemplateId && (
+          <div className="mt-4 pt-4 border-t border-navy-700">
+            <div className="flex items-center gap-2 text-sm text-gold-400">
+              <Layout className="w-4 h-4" />
+              <span>✓ White-label branding included</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Pricing Summary */}
@@ -590,6 +666,12 @@ const handleGenerateReport = async () => {
           <p className="text-xs text-center text-navy-400">
             Regular price $2,497 • Founder's pricing for first 50 customers
           </p>
+          
+          {selectedTemplateId && (
+            <p className="text-xs text-center text-gold-400">
+              ✓ Custom template branding will be applied to your report
+            </p>
+          )}
         </div>
       </div>
 

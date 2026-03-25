@@ -199,6 +199,7 @@ export interface Database {
           status: 'pending' | 'generating' | 'ready' | 'failed'
           created_at: string
           updated_at: string
+          template_id: string | null
         }
         Insert: {
           id?: string
@@ -215,6 +216,7 @@ export interface Database {
           status?: 'pending' | 'generating' | 'ready' | 'failed'
           created_at?: string
           updated_at?: string
+          template_id: string | null
         }
         Update: {
           id?: string
@@ -231,6 +233,7 @@ export interface Database {
           status?: 'pending' | 'generating' | 'ready' | 'failed'
           created_at?: string
           updated_at?: string
+          template_id: string | null
         }
       },
       state_regulations: {
@@ -1049,6 +1052,126 @@ export interface Database {
           metadata?: Json | null
           created_at?: string
           updated_at?: string
+        }
+      },
+      // Admin-created templates (system-wide)
+      report_templates: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          type: string | null
+          thumbnail: string | null
+          sections: Json
+          styles: Json
+          is_active: boolean
+          is_default: boolean
+          usage_count: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+          logo_url: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          type?: string | null
+          thumbnail?: string | null
+          sections?: Json
+          styles?: Json
+          is_active?: boolean
+          is_default?: boolean
+          usage_count?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          logo_url?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          type?: string | null
+          thumbnail?: string | null
+          sections?: Json
+          styles?: Json
+          is_active?: boolean
+          is_default?: boolean
+          usage_count?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          logo_url?: string | null
+        }
+      }
+      // Client-created templates (user white-label templates)
+      user_templates: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          description: string | null
+          logo_url: string | null
+          styles: Json
+          sections: Json
+          is_default: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          description?: string | null
+          logo_url?: string | null
+          styles?: Json
+          sections?: Json
+          is_default?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          description?: string | null
+          logo_url?: string | null
+          styles?: Json
+          sections?: Json
+          is_default?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      // Template version history
+      template_versions: {
+        Row: {
+          id: string
+          template_id: string
+          version: number
+          content: Json
+          created_by: string | null
+          comment: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          template_id: string
+          version: number
+          content: Json
+          created_by?: string | null
+          comment?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          template_id?: string
+          version?: number
+          content?: Json
+          created_by?: string | null
+          comment?: string | null
+          created_at?: string
         }
       }
     }

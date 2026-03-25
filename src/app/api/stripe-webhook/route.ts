@@ -1,4 +1,4 @@
-// src/app/api/stripe-webhook/route.ts - COMPLETE FIXED VERSION
+// src/app/api/stripe-webhook/route.ts
 console.log('\n' + '='.repeat(80))
 console.log('🚨🚨🚨 WEBHOOK FILE LOADED/RELOADED 🚨🚨🚨')
 console.log('Time:', new Date().toISOString())
@@ -95,13 +95,14 @@ export async function POST(req: Request) {
       console.log('- companyName:', metadata.companyName)
       console.log('- city:', metadata.city)
       console.log('- state:', metadata.state)
+      console.log('- templateId:', metadata.templateId || 'none')  // NEW: Log template ID
       
       if (!metadata.userId) {
         console.log('❌ No userId in metadata!')
         return NextResponse.json({ received: true })
       }
       
-      // Process the checkout
+      // Process the checkout with template support
       console.log('\n🚀 Calling debugHandleCheckout...')
       const result = await debugHandleCheckout(session, metadata)
       console.log('🚀 debugHandleCheckout completed:', result)
@@ -143,7 +144,8 @@ async function debugHandleCheckout(session: any, metadata: any) {
     timeline,
     concerns,
     goals,
-    locationTier
+    locationTier,
+    templateId  // NEW: Extract template ID from metadata
   } = metadata
   
   console.log('📋 Processing with metadata:', {
@@ -152,7 +154,8 @@ async function debugHandleCheckout(session: any, metadata: any) {
     companyName,
     city,
     state,
-    industry
+    industry,
+    templateId: templateId || 'none'  // NEW: Log template ID
   })
   
   // Create Supabase client
@@ -267,7 +270,8 @@ async function debugHandleCheckout(session: any, metadata: any) {
       status: 'succeeded',
       metadata: {
         sessionId: session.id,
-        customerId: session.customer
+        customerId: session.customer,
+        templateId: templateId || null
       },
       created_at: new Date().toISOString()
     }
@@ -289,7 +293,7 @@ async function debugHandleCheckout(session: any, metadata: any) {
     console.log('❌ Exception recording payment:', paymentException)
   }
   
-  // STEP 5: Create report
+  // STEP 5: Create report with template_id
   console.log('\n📄 STEP 5: Creating report record...')
   let reportId = null
   
@@ -313,7 +317,32 @@ async function debugHandleCheckout(session: any, metadata: any) {
         }
       }
       
-      // Prepare report insert with validated values
+      // Validate template ID if provided
+      let validTemplateId = null
+      if (templateId) {
+        console.log('🔍 Validating template ID:', templateId)
+        try {
+          const { data: templateCheck, error: templateError } = await supabase
+            .from('user_templates')
+            .select('id, user_id')
+            .eq('id', templateId)
+            .eq('user_id', userId)
+            .maybeSingle()
+          
+          if (templateError) {
+            console.log('⚠️ Error checking template:', templateError)
+          } else if (templateCheck) {
+            validTemplateId = templateId
+            console.log('✅ Template validated successfully:', validTemplateId)
+          } else {
+            console.log('⚠️ Template not found or not owned by user, ignoring')
+          }
+        } catch (templateCheckError) {
+          console.log('⚠️ Exception checking template:', templateCheckError)
+        }
+      }
+      
+      // Prepare report insert with template_id
       const reportInsert = {
         user_id: userId,
         company_name: companyName || 'Unknown Company',
@@ -321,6 +350,7 @@ async function debugHandleCheckout(session: any, metadata: any) {
         city: city || '',
         state: state || '',
         location_tier: tierValue,
+        template_id: validTemplateId,
         report_content: {
           companyName: companyName,
           industry: industry,
@@ -334,6 +364,7 @@ async function debugHandleCheckout(session: any, metadata: any) {
           companySize: companySize,
           budget: budget,
           locationTier: tierValue,
+          templateId: validTemplateId,
           status: 'pending',
           created_at: new Date().toISOString()
         },
@@ -360,8 +391,9 @@ async function debugHandleCheckout(session: any, metadata: any) {
       } else {
         reportId = report?.id
         console.log('✅✅✅ REPORT CREATED SUCCESSFULLY with ID:', reportId)
+        console.log('📋 Template ID saved:', validTemplateId || 'none')
         
-        // STEP 6: Add to queue
+        // STEP 6: Add to queue with template_id
         console.log('\n⏱️ STEP 6: Adding to queue...')
         
         const queueParams = {
@@ -377,7 +409,8 @@ async function debugHandleCheckout(session: any, metadata: any) {
           secondaryFocus: secondaryFocusArray,
           timeline: timeline || '6-months',
           concerns: concerns || '',
-          goals: goals || ''
+          goals: goals || '',
+          templateId: validTemplateId
         }
         
         console.log('Queue params:', JSON.stringify(queueParams, null, 2))
@@ -386,9 +419,10 @@ async function debugHandleCheckout(session: any, metadata: any) {
           report.id,
           userId,
           queueParams,
-          1
+          1,
+          validTemplateId
         )
-        console.log('✅ Queue add completed')
+        console.log('✅ Queue add completed with template ID:', validTemplateId || 'none')
       }
       
     } catch (insertError) {
@@ -408,6 +442,7 @@ async function debugHandleCheckout(session: any, metadata: any) {
   console.log('User ID:', userId)
   console.log('Report Created:', reportId ? 'YES - ' + reportId : 'NO')
   console.log('Payment Recorded:', paymentId ? 'YES' : 'NO')
+  console.log('Template Applied:', templateId ? 'YES - ' + templateId : 'NO')  // NEW: Log template status
   console.log('='.repeat(60) + '\n')
   
   return { success: !!reportId, reportId }

@@ -121,9 +121,18 @@ export default function ReportViewClient({ report }: ReportViewClientProps) {
       const interval = setInterval(() => {
         router.refresh()
         setRefreshCount(prev => prev + 1)
-      }, 5000) 
+      }, 5000)
       
-      return () => clearInterval(interval)
+      // Stop refreshing after 3 minutes (36 refreshes)
+      const timeout = setTimeout(() => {
+        clearInterval(interval)
+        console.log('⏰ Stopped auto-refresh after 3 minutes')
+      }, 180000)
+      
+      return () => {
+        clearInterval(interval)
+        clearTimeout(timeout)
+      }
     }
   }, [status, router])
 
