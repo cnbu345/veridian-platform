@@ -30,9 +30,12 @@ import {
   PlusCircleIcon,
   PlusSquareIcon,
   BarChart3Icon,
-  Newspaper
+  Newspaper,
+  Activity,
+  HeartPulse,
+  Monitor,
+  Zap
 } from 'lucide-react'
-import { title } from 'process'
 
 const navItems = [
   {
@@ -88,7 +91,7 @@ const navItems = [
     icon: Users,
     subItems: [
       { title: 'All Customers', href: '/admin/customers' },
-      { title: 'Health Dashboard', href: '/admin/customers/health' },
+      { title: 'Customer Health', href: '/admin/customers/health' },
       { title: 'Enterprise', href: '/admin/customers/enterprise' },
       { title: 'Enterprise Deal', href: '/admin/customers/enterprise/builder' },
       { title: 'Churned', href: '/admin/customers/churned' },
@@ -119,12 +122,15 @@ const navItems = [
     ]
   },
   {
-    title: 'Health',
-    href: '/admin/health/alerts',
-    icon: PlusSquareIcon,
+    title: 'System Health',
+    href: '/admin/health',
+    icon: Activity,
     subItems: [
-      { title: 'Alerts', href: '/admin/health/alerts' },
-  
+      { title: 'Overview', href: '/admin/health' },
+      { title: 'Alert Rules', href: '/admin/health/alerts' },
+      { title: 'Notification Channels', href: '/admin/health/channels' },
+      { title: 'Service Status', href: '/admin/health/services' },
+      { title: 'Incident History', href: '/admin/health/incidents' }
     ]
   },
   {
@@ -164,13 +170,21 @@ const navItems = [
 export default function AdminNav() {
   const pathname = usePathname()
   
+  // Check if a path is active (including sub-paths)
+  const isPathActive = (href: string, subItems?: Array<{ href: string }>) => {
+    if (pathname === href) return true
+    if (subItems) {
+      return subItems.some(sub => pathname === sub.href || pathname.startsWith(sub.href))
+    }
+    return false
+  }
+  
   return (
-    <aside className="w-64 bg-white border-r border-slate-200 min-h-screen">
+    <aside className="w-64 bg-white border-r border-slate-200 min-h-screen sticky top-0 overflow-y-auto">
       <nav className="p-4 space-y-1">
         {navItems.map((item) => {
           const Icon = item.icon
-          const isActive = pathname === item.href || 
-            (item.subItems?.some(sub => pathname === sub.href))
+          const isActive = isPathActive(item.href, item.subItems)
           
           return (
             <div key={item.href}>
@@ -187,7 +201,8 @@ export default function AdminNav() {
                 {item.title}
               </Link>
               
-              {item.subItems && isActive && (
+              {/* Show sub-items if parent is active OR any sub-item is active */}
+              {item.subItems && (isActive || item.subItems.some(sub => pathname === sub.href || pathname.startsWith(sub.href))) && (
                 <div className="ml-7 mt-1 space-y-1">
                   {item.subItems.map((sub) => (
                     <Link
@@ -195,9 +210,9 @@ export default function AdminNav() {
                       href={sub.href}
                       className={cn(
                         "block px-3 py-1.5 text-xs rounded-lg transition-colors",
-                        pathname === sub.href
-                          ? "text-gold-600 font-medium"
-                          : "text-navy-500 hover:text-navy-700"
+                        (pathname === sub.href || pathname.startsWith(sub.href))
+                          ? "text-gold-600 font-medium bg-gold-50/50"
+                          : "text-navy-500 hover:text-navy-700 hover:bg-slate-50"
                       )}
                     >
                       {sub.title}

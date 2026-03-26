@@ -302,6 +302,11 @@
     font-weight: 600;
   }
 
+  .recharts-wrapper {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
   @media (max-width: 640px) {
     .truncate-mobile {
       white-space: normal;

@@ -9,7 +9,6 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start"
-    
   },
   "dependencies": {
     "@calcom/embed-react": "^1.5.3",
@@ -62,7 +61,7 @@
     "react-quill": "^2.0.0",
     "react-select": "^5.10.2",
     "react-simplemde-editor": "^5.2.0",
-    "recharts": "^3.7.0",
+    "recharts": "^3.8.1",
     "resend": "^6.9.1",
     "slate": "^0.123.0",
     "slate-dom": "^0.123.0",
