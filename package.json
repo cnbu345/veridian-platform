@@ -80,6 +80,7 @@
     "@types/react": "^19",
     "@types/react-big-calendar": "^1.16.3",
     "@types/react-dom": "^19",
+    "@types/recharts": "^2.0.1",
     "@types/stripe": "^8.0.417",
     "autoprefixer": "^10.4.24",
     "babel-plugin-react-compiler": "1.0.0",

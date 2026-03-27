@@ -111,12 +111,11 @@ const navItems = [
   },
   {
     title: 'Marketing',
-    href: '/admin/marketing/content',
+    href: '/admin/marketing',
     icon: TrendingUp,
     subItems: [
       { title: 'Analytics', href: '/admin/marketing' },
-      { title: 'Email Campaigns', href: '/admin/marketing/email' },
-      { title: 'Landing Pages', href: '/admin/marketing/pages' },
+      { title: 'Campaigns', href: '/admin/marketing/campaigns' },
       { title: 'SEO', href: '/admin/marketing/seo' },
       { title: 'Competitors', href: '/admin/marketing/competitors' }
     ]
