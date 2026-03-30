@@ -644,7 +644,7 @@ export interface Database {
         }
         Insert: {} // Read-only view
         Update: {} // Read-only view
-      }.
+      }
       user_subscriptions: {
         Row: {
           id: string
@@ -1172,6 +1172,176 @@ export interface Database {
           created_by?: string | null
           comment?: string | null
           created_at?: string
+        }
+      }
+      regulatory_facts: {
+        Row: {
+          id: string
+          state_code: string
+          claim: string
+          category: 'license_requirement' | 'bonding_amount' | 'fee_amount' | 'timeline' | 'regulator_contact' | 'enforcement_action' | 'pending_legislation' | 'tax_treatment' | 'reporting_requirement' | 'capital_requirement'
+          source_name: string
+          source_url: string
+          source_date: string
+          verified_by: string
+          verified_at: string
+          verification_status: 'verified' | 'pending_review' | 'needs_update' | 'deprecated'
+          expires_at: string | null
+          numeric_value: number | null
+          numeric_unit: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          state_code: string
+          claim: string
+          category: 'license_requirement' | 'bonding_amount' | 'fee_amount' | 'timeline' | 'regulator_contact' | 'enforcement_action' | 'pending_legislation' | 'tax_treatment' | 'reporting_requirement' | 'capital_requirement'
+          source_name: string
+          source_url: string
+          source_date: string
+          verified_by?: string
+          verified_at?: string
+          verification_status?: 'verified' | 'pending_review' | 'needs_update' | 'deprecated'
+          expires_at?: string | null
+          numeric_value?: number | null
+          numeric_unit?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          state_code?: string
+          claim?: string
+          category?: 'license_requirement' | 'bonding_amount' | 'fee_amount' | 'timeline' | 'regulator_contact' | 'enforcement_action' | 'pending_legislation' | 'tax_treatment' | 'reporting_requirement' | 'capital_requirement'
+          source_name?: string
+          source_url?: string
+          source_date?: string
+          verified_by?: string
+          verified_at?: string
+          verification_status?: 'verified' | 'pending_review' | 'needs_update' | 'deprecated'
+          expires_at?: string | null
+          numeric_value?: number | null
+          numeric_unit?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      regulatory_changes: {
+        Row: {
+          id: string
+          fact_id: string | null
+          change_type: 'new_fact' | 'updated_fact' | 'deprecated_fact' | 'restored_fact'
+          old_value: string | null
+          new_value: string | null
+          change_reason: string | null
+          change_source: string | null
+          changed_by: string
+          changed_at: string
+        }
+        Insert: {
+          id?: string
+          fact_id?: string | null
+          change_type: 'new_fact' | 'updated_fact' | 'deprecated_fact' | 'restored_fact'
+          old_value?: string | null
+          new_value?: string | null
+          change_reason?: string | null
+          change_source?: string | null
+          changed_by?: string
+          changed_at?: string
+        }
+        Update: {
+          id?: string
+          fact_id?: string | null
+          change_type?: 'new_fact' | 'updated_fact' | 'deprecated_fact' | 'restored_fact'
+          old_value?: string | null
+          new_value?: string | null
+          change_reason?: string | null
+          change_source?: string | null
+          changed_by?: string
+          changed_at?: string
+        }
+      }
+      report_claims: {
+        Row: {
+          id: string
+          report_id: string
+          claim: string
+          supporting_fact_ids: string[]
+          verification_status: 'verified' | 'unverified' | 'hallucination' | 'needs_review' | null
+          verification_score: number | null
+          verification_notes: string | null
+          verified_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          report_id: string
+          claim: string
+          supporting_fact_ids?: string[]
+          verification_status?: 'verified' | 'unverified' | 'hallucination' | 'needs_review' | null
+          verification_score?: number | null
+          verification_notes?: string | null
+          verified_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          report_id?: string
+          claim?: string
+          supporting_fact_ids?: string[]
+          verification_status?: 'verified' | 'unverified' | 'hallucination' | 'needs_review' | null
+          verification_score?: number | null
+          verification_notes?: string | null
+          verified_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      regulatory_audit_log: {
+        Row: {
+          id: string
+          table_name: string
+          record_id: string
+          action: 'INSERT' | 'UPDATE' | 'DELETE'
+          old_data: any | null
+          new_data: any | null
+          changed_by: string | null
+          changed_by_email: string | null
+          changed_at: string
+          reason: string | null
+          ip_address: string | null
+        }
+        Insert: {
+          id?: string
+          table_name: string
+          record_id: string
+          action: 'INSERT' | 'UPDATE' | 'DELETE'
+          old_data?: any | null
+          new_data?: any | null
+          changed_by?: string | null
+          changed_by_email?: string | null
+          changed_at?: string
+          reason?: string | null
+          ip_address?: string | null
+        }
+        Update: {
+          id?: string
+          table_name?: string
+          record_id?: string
+          action?: 'INSERT' | 'UPDATE' | 'DELETE'
+          old_data?: any | null
+          new_data?: any | null
+          changed_by?: string | null
+          changed_by_email?: string | null
+          changed_at?: string
+          reason?: string | null
+          ip_address?: string | null
         }
       }
     }

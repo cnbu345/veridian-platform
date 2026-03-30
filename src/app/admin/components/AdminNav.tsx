@@ -103,10 +103,12 @@ const navItems = [
     href: '/admin/regulatory',
     icon: Scale,
     subItems: [
-      { title: 'State Updates', href: '/admin/regulatory' },
+      { title: 'Dashboard', href: '/admin/regulatory' },
+      { title: 'State Updates', href: '/admin/regulatory/updates' },
       { title: 'Legislation Tracker', href: '/admin/regulatory/legislation' },
       { title: 'Enforcement Actions', href: '/admin/regulatory/enforcement' },
-      { title: 'Content Updates', href: '/admin/regulatory/content' }
+      { title: 'Content Library', href: '/admin/regulatory/content' },
+      { title: 'Audit Log', href: '/admin/regulatory/audit' }
     ]
   },
   {

@@ -8,7 +8,13 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "seed:regulatory": "npx tsx src/scripts/seed-regulatory-facts.ts",
+    "test:phase1": "npx tsx src/scripts/test-phase1.ts",
+    "verify:claims": "npx tsx src/scripts/verify-claims.ts",
+    "check:data": "npx tsx src/scripts/check-data-coverage.ts",
+    "check:coverage": "npx tsx src/scripts/check-coverage.ts",
+    "test:rag": "npx tsx src/scripts/test-simple-rag.ts"
   },
   "dependencies": {
     "@calcom/embed-react": "^1.5.3",
@@ -39,6 +45,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
+    "dotenv": "^17.3.1",
     "easymde": "^2.20.0",
     "file-saver": "^2.0.5",
     "framer-motion": "^11.3.0",
@@ -48,6 +55,7 @@
     "jszip": "^3.10.1",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
+    "openai": "^6.33.0",
     "pdf-lib": "^1.17.1",
     "react": "19.2.3",
     "react-big-calendar": "^1.19.4",
