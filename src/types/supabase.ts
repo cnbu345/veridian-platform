@@ -1344,6 +1344,44 @@ export interface Database {
           ip_address?: string | null
         }
       }
+      state_audit_tracker: {
+        Row: {
+          id: string
+          state_code: string
+          last_reviewed: string | null
+          licensing_verified: boolean
+          fees_verified: boolean
+          bonding_verified: boolean
+          enforcement_verified: boolean
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          state_code: string
+          last_reviewed?: string | null
+          licensing_verified?: boolean
+          fees_verified?: boolean
+          bonding_verified?: boolean
+          enforcement_verified?: boolean
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          state_code?: string
+          last_reviewed?: string | null
+          licensing_verified?: boolean
+          fees_verified?: boolean
+          bonding_verified?: boolean
+          enforcement_verified?: boolean
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

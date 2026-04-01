@@ -14,7 +14,11 @@
     "verify:claims": "npx tsx src/scripts/verify-claims.ts",
     "check:data": "npx tsx src/scripts/check-data-coverage.ts",
     "check:coverage": "npx tsx src/scripts/check-coverage.ts",
-    "test:rag": "npx tsx src/scripts/test-simple-rag.ts"
+    "test:rag": "npx tsx src/scripts/test-simple-rag.ts",
+    "test:phase3": "npx tsx src/scripts/test-hallucination-detector.ts",
+    "auto-update": "npx tsx src/scripts/run-auto-update.ts",
+    "mark:for-review": "npx tsx src/scripts/mark-facts-for-review.ts",
+    "sync:regulatory": "npx tsx src/scripts/sync-regulatory-data.ts"
   },
   "dependencies": {
     "@calcom/embed-react": "^1.5.3",

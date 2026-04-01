@@ -108,6 +108,10 @@ const navItems = [
       { title: 'Legislation Tracker', href: '/admin/regulatory/legislation' },
       { title: 'Enforcement Actions', href: '/admin/regulatory/enforcement' },
       { title: 'Content Library', href: '/admin/regulatory/content' },
+      { title: 'Hallucination Monitor', href: '/admin/regulatory/hallucination-dashboard' },
+      { title: 'Regulator Links', href: '/admin/regulatory/state-links' },
+      { title: 'State Audit', href: '/admin/regulatory/state-audit' },
+      { title: 'Resources', href: '/admin/regulatory/resources' },
       { title: 'Audit Log', href: '/admin/regulatory/audit' }
     ]
   },
