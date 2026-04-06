@@ -115,6 +115,11 @@ export default function Navbar({ initialUser }: NavbarProps) {
         { name: 'Regulatory Guide', href: '/guide', icon: BookOpen, description: 'State of digital asset regulation' },
       ]
     },
+    {
+      name: 'State Requirements',
+      href: '/state-requirements',
+      isPublic: true
+    }
   ]
 
   // DON'T RENDER ANYTHING on admin routes

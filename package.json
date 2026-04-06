@@ -72,6 +72,7 @@
     "react-markdown": "^10.1.0",
     "react-quill": "^2.0.0",
     "react-select": "^5.10.2",
+    "react-simple-maps": "^3.0.0",
     "react-simplemde-editor": "^5.2.0",
     "recharts": "^3.8.1",
     "resend": "^6.9.1",
@@ -81,6 +82,7 @@
     "slate-react": "^0.123.0",
     "stripe": "^20.3.1",
     "tailwind-merge": "^3.4.0",
+    "us-atlas": "^3.0.1",
     "xlsx": "^0.18.5",
     "zod": "^4.3.6"
   },

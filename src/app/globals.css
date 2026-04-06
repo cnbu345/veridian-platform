@@ -439,6 +439,15 @@
   }
 }
 
+/* Interactive map styles */
+.rsm-geography {
+  transition: all 0.2s ease;
+}
+
+.rsm-geography:focus {
+  outline: none;
+}
+
 /* Animation keyframes */
 @keyframes fadeIn {
   from {
