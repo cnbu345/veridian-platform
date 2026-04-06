@@ -526,11 +526,17 @@ export default function RegulatoryDashboard() {
 
           {/* Recent Notes */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100">
+            <div className="flex justify-between px-5 py-4 border-b border-gray-100">
               <h3 className="font-semibold text-gray-800 flex items-center gap-2">
                 <FileText className="w-4 h-4 text-gray-400" />
                 Recent Internal Notes
               </h3>
+              <Link
+                href="/admin/regulatory/notes-manager"
+                className='text-xs text-gold-600 hover:text-gold-700 flex items-center gap-1'
+              >
+              View all <ChevronRight className='w-3 h-3'/>
+              </Link>
             </div>
             <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
               {stats?.recentNotes?.length === 0 ? (

@@ -1,16 +1,15 @@
 // src/app/api/admin/regulatory/legiscan/sync/route.ts
-// POST - Sync bills from LegiScan API with usage tracking and debugging
+// POST - Sync bills from LegiScan API for any state or all states
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getUsageStats, recordSyncUsage } from '@/lib/regulatory/legiscan-usage'
 
-// LegiScan API Configuration
 const LEGISCAN_API_KEY = process.env.LEGISCAN_API_KEY
 const LEGISCAN_API_URL = 'https://api.legiscan.com'
 const MONTHLY_LIMIT = 30000
 
-// States with their LegiScan IDs
+// Complete list of all 50 states with their LegiScan IDs
 const LEGISCAN_STATES = [
   { id: 1, code: 'AK', name: 'Alaska' }, { id: 2, code: 'AL', name: 'Alabama' },
   { id: 3, code: 'AR', name: 'Arkansas' }, { id: 4, code: 'AZ', name: 'Arizona' },
@@ -39,105 +38,103 @@ const LEGISCAN_STATES = [
   { id: 49, code: 'WV', name: 'West Virginia' }, { id: 50, code: 'WY', name: 'Wyoming' }
 ]
 
-// Expanded keywords including "kiosk"
+// Crypto-related keywords
 const CRYPTO_KEYWORDS = [
-  'cryptocurrency',
-  'digital asset',
-  'virtual currency',
-  'blockchain',
-  'bitcoin',
-  'crypto',
-  'money transmitter',
-  'bitlicense',
-  'DAO',
-  'kiosk',
-  'stablecoin',
-  'token',
-  'web3'
+  'cryptocurrency', 'digital asset', 'virtual currency', 'bitcoin', 'crypto', 'kiosk'
 ]
 
-// Map LegiScan status to our status
-function mapLegiScanStatus(legiscanStatus: string): string {
-  const status = legiscanStatus?.toLowerCase() || ''
-  if (status.includes('enact')) return 'enacted'
-  if (status.includes('pass')) return 'passed_house'
-  if (status.includes('fail')) return 'failed'
-  if (status.includes('veto')) return 'vetoed'
-  if (status.includes('introduc')) return 'introduced'
-  if (status.includes('committee')) return 'in_committee'
+// Skip ceremonial keywords
+const SKIP_KEYWORDS = [
+  'recognize', 'honor', 'commend', 'memorial', 'commemorate', 'celebrate',
+  'congratulate', 'in memory of', 'declaring', 'designating', 'week of', 'month of',
+  'resolution', 'commending', 'birthday', 'anniversary', 'tax on stocks', 'wealth tax',
+  'unclaimed property', 'energy use'
+]
+
+// Helper function to normalize date (preserve the exact date from API, no timezone conversion)
+function normalizeDate(dateString: string | null): string | null {
+  if (!dateString) return null
+  const match = dateString.match(/^(\d{4}-\d{2}-\d{2})/)
+  return match ? match[1] : dateString.split('T')[0]
+}
+
+// Check if bill is relevant
+function isRelevantBill(title: string, billNumber: string): boolean {
+  const lowerTitle = title.toLowerCase()
+  
+  for (const skip of SKIP_KEYWORDS) {
+    if (lowerTitle.includes(skip)) return false
+  }
+  
+  const cryptoTerms = ['cryptocurrency', 'digital asset', 'virtual currency', 'bitcoin', 'crypto', 'kiosk', 'blockchain']
+  return cryptoTerms.some(term => lowerTitle.includes(term))
+}
+
+// Normalize bill number for display
+function normalizeBillNumber(billNumber: string): string {
+  return billNumber
+}
+
+// Determine status from last action text and progress
+function determineStatusFromLastAction(progress: number, lastAction: string): string {
+  const lowerAction = lastAction.toLowerCase()
+  
+  // ========== ENACTED / APPROVED ==========
+  if (lowerAction.includes('chapter') || 
+      lowerAction.includes('enacted') || 
+      lowerAction.includes('approved by governor') ||
+      lowerAction.includes('signed by governor') ||
+      lowerAction.includes('became law')) {
+    return 'enacted'
+  }
+  
+  // ========== PASSED / ENGROSSED / ENROLLED ==========
+  if (lowerAction.includes('engrossed') || 
+      lowerAction.includes('enrolled') ||
+      lowerAction.includes('passed house') ||
+      lowerAction.includes('passed senate') ||
+      lowerAction.includes('passed legislature') ||
+      lowerAction.includes('third reading passed') ||
+      lowerAction.includes('ordered transmitted') ||
+      lowerAction.includes('sent to governor')) {
+    return 'passed_house'
+  }
+  
+  // ========== FAILED / DIED ==========
+  if (lowerAction.includes('died') || 
+      lowerAction.includes('failed') || 
+      lowerAction.includes('rejected') ||
+      lowerAction.includes('defeated') ||
+      lowerAction.includes('not passed') ||
+      (lowerAction.includes('laid on table') && !lowerAction.includes('refer'))) {
+    return 'failed'
+  }
+  
+  // ========== VETOED ==========
+  if (lowerAction.includes('veto')) {
+    return 'vetoed'
+  }
+  
+  // ========== IN COMMITTEE ==========
+  if (lowerAction.includes('committee') ||
+      lowerAction.includes('subcommittee') ||
+      lowerAction.includes('referred to') ||
+      lowerAction.includes('favorable')) {
+    return 'in_committee'
+  }
+  
+  // ========== Use progress codes ==========
+  if (progress === 5) return 'enacted'
+  if (progress === 6) return 'failed'
+  if (progress === 7) return 'vetoed'
+  if (progress === 3 || progress === 4) return 'passed_house'
+  if (progress === 2) return 'in_committee'
+  
   return 'introduced'
 }
 
-// Convert LegiScan bill object (which may be an object with numeric keys) to array
-function billsToArray(billsObj: any): any[] {
-  if (!billsObj) return []
-  if (Array.isArray(billsObj)) return billsObj
-  
-  // If it's an object with numeric keys (0, 1, 2...), convert to array
-  const bills = []
-  for (let i = 0; i < 1000; i++) {
-    if (billsObj[i]) {
-      bills.push(billsObj[i])
-    } else {
-      break
-    }
-  }
-  return bills
-}
-
-// Fetch bills from LegiScan using getSearch with improved parsing
-async function searchBills(stateId: number, keyword: string, year: number) {
-  try {
-    const url = `${LEGISCAN_API_URL}/?key=${LEGISCAN_API_KEY}&op=getSearch&state=${stateId}&query=${encodeURIComponent(keyword)}&year=${year}`
-    console.log(`   📡 API: ${keyword} in ${stateId} (${url.substring(0, 120)}...)`)
-    
-    const response = await fetch(url)
-    const data = await response.json()
-    
-    console.log(`   📊 Response status: ${data.status}`)
-    
-    if (data.status !== 'OK') {
-      console.log(`   ⚠️ API returned status: ${data.status}`)
-      return []
-    }
-    
-    const searchResult = data.searchresult
-    if (!searchResult) {
-      console.log(`   ⚠️ No searchresult in response`)
-      return []
-    }
-    
-    // Get bills - they might be in searchresult.bills or searchresult directly
-    let bills = searchResult.bills || searchResult
-    
-    if (!bills) {
-      console.log(`   ⚠️ No bills found in searchresult`)
-      console.log(`   Keys: ${Object.keys(searchResult).join(', ')}`)
-      return []
-    }
-    
-    // Convert to array if needed
-    bills = billsToArray(bills)
-    
-    console.log(`   ✅ Found ${bills.length} bills for "${keyword}"`)
-    
-    // Log first few bills
-    if (bills.length > 0) {
-      const sampleBills = bills.slice(0, 3)
-      sampleBills.forEach((bill: any, idx: number) => {
-        console.log(`      ${idx + 1}. ${bill.bill_number} - ${bill.title?.substring(0, 60)}...`)
-      })
-    }
-    
-    return bills
-  } catch (error) {
-    console.error(`   ❌ Error searching bills for state ${stateId}:`, error)
-    return []
-  }
-}
-
-// Fetch full bill details
-async function getBillDetails(billId: number) {
+// Fetch full bill details from LegiScan
+async function fetchFullBillDetails(billId: number) {
   try {
     const url = `${LEGISCAN_API_URL}/?key=${LEGISCAN_API_KEY}&op=getBill&id=${billId}`
     const response = await fetch(url)
@@ -147,11 +144,265 @@ async function getBillDetails(billId: number) {
       return null
     }
     
-    return data.bill
+    const bill = data.bill
+    
+    // Extract introduced date from history
+    let introducedDate: string | null = null
+    let progress = bill.progress || 1
+    let lastAction = ''
+    let lastActionDate: string | null = null
+    
+    // Parse history to find introduction date and last action
+    if (bill.history && Array.isArray(bill.history) && bill.history.length > 0) {
+      // Look for the earliest date that indicates introduction
+      // Introduction can be: "Introduced", "Filed", "First reading", "Prefiled", "Referred to committee"
+      for (const event of bill.history) {
+        const action = event.action?.toLowerCase() || ''
+        const date = event.date
+        
+        // Look for introduction-related actions
+        if (action.includes('introduc') || 
+            action.includes('filed') || 
+            action.includes('first reading') ||
+            action.includes('prefiled')) {
+          if (date && !introducedDate) {
+            introducedDate = normalizeDate(date)
+          }
+        }
+        
+        // Also track progress based on history
+        if (action.includes('pass')) progress = Math.max(progress, 3)
+        if (action.includes('enact')) progress = 5
+        if (action.includes('fail')) progress = 6
+        if (action.includes('veto')) progress = 7
+      }
+      
+      // Get the most recent action for last_action
+      const latestEvent = bill.history[bill.history.length - 1]
+      if (latestEvent && latestEvent.action) {
+        lastAction = latestEvent.action
+        if (latestEvent.date) {
+          lastActionDate = normalizeDate(latestEvent.date)
+        }
+      }
+    }
+    
+    // If no introduction date found from history, use the status_date
+    if (!introducedDate && bill.status_date) {
+      introducedDate = normalizeDate(bill.status_date)
+    }
+    
+    // If still no introduction date, use the bill's created date
+    if (!introducedDate && bill.created) {
+      introducedDate = normalizeDate(bill.created)
+    }
+    
+    // Final fallback - DO NOT use last_action_date as introduced date
+    if (!introducedDate) {
+      introducedDate = new Date().toISOString().split('T')[0]
+    }
+    
+    // If we have a last action from bill directly, use that (as fallback)
+    if (bill.last_action && !lastAction) {
+      lastAction = bill.last_action
+      if (bill.last_action_date) {
+        lastActionDate = normalizeDate(bill.last_action_date)
+      }
+    }
+    
+    // Build formatted last action string
+    let formattedLastAction = lastAction
+    if (lastActionDate && lastAction) {
+      formattedLastAction = `${lastActionDate}: ${lastAction}`
+    } else if (lastActionDate) {
+      formattedLastAction = `${lastActionDate}: Status update`
+    }
+    
+    console.log(`      📅 Found introduced date: ${introducedDate} from history for ${bill.bill_number}`)
+    
+    return {
+      bill_id: bill.bill_id,
+      bill_number: bill.bill_number,
+      title: bill.title || '',
+      progress: progress,
+      introduced_date: introducedDate,
+      last_action: formattedLastAction,
+      raw_last_action: lastAction
+    }
   } catch (error) {
-    console.error(`   ❌ Error fetching bill ${billId}:`, error)
+    console.error(`Error fetching bill ${billId}:`, error)
     return null
   }
+}
+
+// Search bills using state code
+async function searchBills(stateCode: string, keyword: string, year: number) {
+  try {
+    const url = `${LEGISCAN_API_URL}/?key=${LEGISCAN_API_KEY}&op=getSearch&state=${stateCode}&query=${encodeURIComponent(keyword)}&year=${year}`
+    const response = await fetch(url)
+    const data = await response.json()
+    
+    if (data.status !== 'OK') {
+      console.log(`   ⚠️ Search failed: ${data.status}`)
+      return []
+    }
+    
+    const searchResult = data.searchresult
+    if (!searchResult) {
+      return []
+    }
+    
+    // Extract bills from the response (they are stored as numeric keys)
+    const bills = []
+    for (let i = 0; i < 100; i++) {
+      if (searchResult[i]) {
+        bills.push(searchResult[i])
+      } else {
+        break
+      }
+    }
+    
+    return bills
+  } catch (error) {
+    console.error(`Error searching bills for ${stateCode}:`, error)
+    return []
+  }
+}
+
+// Sync a single state
+async function syncSingleState(stateCode: string, year: number, userId: string) {
+  const supabase = await createClient()
+  let totalAdded = 0
+  let totalUpdated = 0
+  let totalQueries = 0
+  const allBills = new Map()
+
+  const stateInfo = LEGISCAN_STATES.find(s => s.code === stateCode)
+  console.log(`\n📍 Processing ${stateInfo?.name || stateCode} (${stateCode})...`)
+
+  for (const keyword of CRYPTO_KEYWORDS) {
+    console.log(`   🔍 Searching for "${keyword}"...`)
+    
+    const bills = await searchBills(stateCode, keyword, year)
+    totalQueries++
+    
+    console.log(`   📊 Found ${bills.length} total results for "${keyword}"`)
+    
+    let relevantCount = 0
+    for (const bill of bills) {
+      // Skip if not the right state
+      if (bill.state !== stateCode) {
+        continue
+      }
+      
+      // Check if relevant
+      if (!isRelevantBill(bill.title, bill.bill_number)) {
+        continue
+      }
+      
+      relevantCount++
+      
+      if (!allBills.has(bill.bill_id)) {
+        console.log(`   📄 Fetching details for ${bill.bill_number}...`)
+        const billDetails = await fetchFullBillDetails(bill.bill_id)
+        totalQueries++
+        
+        if (billDetails) {
+          allBills.set(bill.bill_id, {
+            bill_id: bill.bill_id,
+            bill_number: bill.bill_number,
+            title: billDetails.title,
+            progress: billDetails.progress,
+            introduced_date: billDetails.introduced_date,
+            last_action: billDetails.last_action,
+            raw_last_action: billDetails.raw_last_action
+          })
+        } else {
+          // Fallback to search result data
+          const lastActionDate = normalizeDate(bill.last_action_date)
+          const lastAction = lastActionDate ? `${lastActionDate}: ${bill.last_action || 'Status update'}` : bill.last_action
+          allBills.set(bill.bill_id, {
+            bill_id: bill.bill_id,
+            bill_number: bill.bill_number,
+            title: bill.title,
+            progress: 1,
+            introduced_date: normalizeDate(bill.last_action_date),
+            last_action: lastAction,
+            raw_last_action: bill.last_action || ''
+          })
+        }
+      }
+    }
+    
+    console.log(`   📊 Found ${relevantCount} relevant ${stateCode} bills for "${keyword}"`)
+    
+    // Rate limiting between keyword searches
+    await new Promise(resolve => setTimeout(resolve, 500))
+  }
+
+  console.log(`\n   📋 Total relevant ${stateCode} bills found: ${allBills.size}`)
+
+  for (const bill of allBills.values()) {
+    const normalizedBillNumber = normalizeBillNumber(bill.bill_number)
+    const status = determineStatusFromLastAction(bill.progress, bill.raw_last_action || '')
+    const introducedDate = bill.introduced_date || new Date().toISOString().split('T')[0]
+    const billUrl = `https://legiscan.com/${stateCode}/bill/${bill.bill_number}/${year}`
+    
+    // Use last_action as description
+    const description = bill.last_action || ''
+    
+    console.log(`   📝 Bill: ${normalizedBillNumber} - Status: ${status} (progress: ${bill.progress}) - Introduced: ${introducedDate}`)
+    if (description) {
+      console.log(`      📋 Last Action: ${description.substring(0, 80)}...`)
+    }
+    
+    // Check if bill already exists
+    const { data: existing } = await supabase
+      .from('legislation_tracker')
+      .select('id, status')
+      .eq('state_code', stateCode)
+      .eq('bill_number', normalizedBillNumber)
+      .maybeSingle()
+
+    if (existing) {
+      if (existing.status !== status || existing.introduced_date !== introducedDate) {
+        await supabase
+          .from('legislation_tracker')
+          .update({
+            status: status,
+            introduced_date: introducedDate,
+            description: description,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id)
+        totalUpdated++
+        console.log(`      🔄 Updated: ${normalizedBillNumber} (${existing.status} → ${status}, date: ${introducedDate})`)
+      }
+    } else {
+      const { error } = await supabase
+        .from('legislation_tracker')
+        .insert({
+          state_code: stateCode,
+          bill_number: normalizedBillNumber,
+          title: bill.title,
+          description: description,
+          status: status,
+          introduced_date: introducedDate,
+          bill_url: billUrl,
+          legiscan_bill_id: bill.bill_id,
+          created_by: userId
+        })
+
+      if (!error) {
+        totalAdded++
+        console.log(`✅ Added: ${normalizedBillNumber} - ${status} (Introduced: ${introducedDate})`)
+      } else {
+        console.log(`❌ Error adding ${normalizedBillNumber}: ${error.message}`)
+      }
+    }
+  }
+
+  return { added: totalAdded, updated: totalUpdated, queries: totalQueries }
 }
 
 export async function POST(request: NextRequest) {
@@ -164,200 +415,73 @@ export async function POST(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
-      console.log('❌ Unauthorized')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     if (!LEGISCAN_API_KEY) {
-      console.log('❌ LegiScan API key not configured')
       return NextResponse.json({ error: 'LegiScan API key not configured' }, { status: 500 })
-    }
-
-    // Test database connection
-    const { data: testData, error: testError } = await supabase
-      .from('legislation_tracker')
-      .select('id', { count: 'exact', head: true })
-    
-    console.log(`📊 Database connection: ${testError ? '❌ FAILED: ' + testError.message : '✅ OK'}`)
-    console.log(`   Current bills in database: ${testData?.count || 0}\n`)
-
-    // Check usage limit
-    const usageStats = await getUsageStats()
-    if (usageStats.isOverLimit) {
-      console.log(`❌ Monthly API limit reached (${MONTHLY_LIMIT.toLocaleString()} queries)`)
-      return NextResponse.json({ 
-        error: `Monthly API limit reached`,
-        limitReached: true,
-        remainingQueries: 0
-      }, { status: 429 })
     }
 
     const body = await request.json()
     const { year = new Date().getFullYear(), stateCode } = body
 
-    let statesToSync = LEGISCAN_STATES
-    if (stateCode) {
-      statesToSync = LEGISCAN_STATES.filter(s => s.code === stateCode)
-      console.log(`🎯 Target state: ${stateCode}`)
-    } else {
-      console.log(`🎯 Target: All 50 states`)
+    // Check usage limit before starting
+    const usageStats = await getUsageStats()
+    if (usageStats.isOverLimit) {
+      return NextResponse.json({ 
+        error: `Monthly API limit reached (${MONTHLY_LIMIT.toLocaleString()} queries). Please try again next month.`,
+        limitReached: true,
+        remainingQueries: 0
+      }, { status: 429 })
     }
-    console.log(`📅 Year: ${year}\n`)
 
     let totalAdded = 0
     let totalUpdated = 0
-    let totalSkipped = 0
     let totalQueries = 0
-    let totalBillsFound = 0
 
-    for (const state of statesToSync) {
-      console.log(`\n📍 Processing ${state.name} (${state.code})...`)
+    // If stateCode is provided, sync only that state
+    if (stateCode) {
+      console.log(`🎯 Target: Single state (${stateCode})`)
+      console.log(`📅 Year: ${year}\n`)
       
-      const allBills = new Map()
+      const result = await syncSingleState(stateCode, year, user.id)
+      totalAdded = result.added
+      totalUpdated = result.updated
+      totalQueries = result.queries
+    } 
+    // Otherwise, sync all 50 states
+    else {
+      console.log(`🎯 Target: All 50 states`)
+      console.log(`📅 Year: ${year}\n`)
       
-      // Search for each keyword
-      for (const keyword of CRYPTO_KEYWORDS) {
-        console.log(`\n   🔍 Searching for "${keyword}"...`)
-        const bills = await searchBills(state.id, keyword, year)
-        totalQueries++
+      for (const state of LEGISCAN_STATES) {
+        const result = await syncSingleState(state.code, year, user.id)
+        totalAdded += result.added
+        totalUpdated += result.updated
+        totalQueries += result.queries
         
-        for (const bill of bills) {
-          if (!allBills.has(bill.bill_id)) {
-            totalBillsFound++
-            // Get full bill details
-            const billDetails = await getBillDetails(bill.bill_id)
-            totalQueries++
-            
-            if (billDetails) {
-              allBills.set(bill.bill_id, {
-                ...bill,
-                title: billDetails.title || bill.title,
-                description: billDetails.description || '',
-                status_date: billDetails.status_date
-              })
-            } else {
-              allBills.set(bill.bill_id, bill)
-            }
-          }
-        }
-        
-        // Rate limiting - 500ms between searches
-        await new Promise(resolve => setTimeout(resolve, 500))
+        // Rate limiting between states
+        await new Promise(resolve => setTimeout(resolve, 1000))
       }
-
-      console.log(`\n   📋 Total unique bills found in ${state.name}: ${allBills.size}`)
-
-      let stateAdded = 0
-      let stateUpdated = 0
-      let stateSkipped = 0
-
-      for (const bill of allBills.values()) {
-        const status = mapLegiScanStatus(bill.status)
-        const billUrl = `https://legiscan.com/${state.code}/bill/${bill.bill_number}/${year}`
-        
-        // Check if bill already exists
-        const { data: existing } = await supabase
-          .from('legislation_tracker')
-          .select('id, status')
-          .eq('state_code', state.code)
-          .eq('bill_number', bill.bill_number)
-          .maybeSingle()
-
-        if (existing) {
-          // Update if status changed
-          if (existing.status !== status) {
-            await supabase
-              .from('legislation_tracker')
-              .update({
-                status: status,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', existing.id)
-            stateUpdated++
-            console.log(`      🔄 Updated: ${bill.bill_number} (${existing.status} → ${status})`)
-          } else {
-            stateSkipped++
-          }
-        } else {
-          // Insert new bill
-          const { error } = await supabase
-            .from('legislation_tracker')
-            .insert({
-              state_code: state.code,
-              bill_number: bill.bill_number,
-              title: bill.title || bill.bill_number,
-              description: bill.description || '',
-              status: status,
-              introduced_date: bill.status_date || new Date().toISOString(),
-              bill_url: billUrl,
-              legiscan_bill_id: bill.bill_id,
-              created_by: user.id
-            })
-
-          if (!error) {
-            stateAdded++
-            console.log(`      ✅ Added: ${bill.bill_number} - ${bill.title?.substring(0, 50)}...`)
-          } else {
-            console.log(`      ❌ Error adding ${bill.bill_number}: ${error.message}`)
-          }
-        }
-      }
-
-      totalAdded += stateAdded
-      totalUpdated += stateUpdated
-      totalSkipped += stateSkipped
-      
-      console.log(`\n   📊 ${state.name} summary: +${stateAdded} added, 🔄${stateUpdated} updated, ⏭️${stateSkipped} skipped`)
-      
-      // Rate limiting between states
-      await new Promise(resolve => setTimeout(resolve, 1000))
     }
 
     // Record the usage
     await recordSyncUsage(totalQueries)
 
-    // Get updated remaining count
-    const updatedStats = await getUsageStats()
-
-    // Log the sync
-    await supabase.from('regulatory_audit_log').insert({
-      table_name: 'legiscan_sync',
-      record_id: 'sync',
-      action: 'SYNC',
-      new_data: { 
-        added: totalAdded, 
-        updated: totalUpdated, 
-        skipped: totalSkipped,
-        billsFound: totalBillsFound,
-        queries: totalQueries,
-        year,
-        timestamp: new Date().toISOString() 
-      },
-      changed_by: user.id,
-      changed_by_name: user.email,
-      changed_at: new Date().toISOString()
-    })
-
     console.log('\n' + '='.repeat(60))
     console.log('📊 SYNC SUMMARY')
     console.log('='.repeat(60))
-    console.log(`   Bills found total: ${totalBillsFound}`)
     console.log(`   Added: ${totalAdded}`)
     console.log(`   Updated: ${totalUpdated}`)
-    console.log(`   Skipped: ${totalSkipped}`)
     console.log(`   API Queries: ${totalQueries}`)
-    console.log(`   Remaining: ${updatedStats.remaining.toLocaleString()}`)
     console.log('='.repeat(60) + '\n')
 
     return NextResponse.json({
       success: true,
-      message: `Added ${totalAdded} new bills, updated ${totalUpdated} existing bills, skipped ${totalSkipped} unchanged. Found ${totalBillsFound} total bills. Used ${totalQueries} API queries.`,
+      message: `Added ${totalAdded} bills, updated ${totalUpdated}. Used ${totalQueries} API queries.`,
       added: totalAdded,
       updated: totalUpdated,
-      skipped: totalSkipped,
-      billsFound: totalBillsFound,
-      queries: totalQueries,
-      remainingQueries: updatedStats.remaining
+      queries: totalQueries
     })
   } catch (error) {
     console.error('❌ API error:', error)

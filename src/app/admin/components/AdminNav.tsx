@@ -111,6 +111,7 @@ const navItems = [
       { title: 'Hallucination Monitor', href: '/admin/regulatory/hallucination-dashboard' },
       { title: 'Regulator Links', href: '/admin/regulatory/state-links' },
       { title: 'State Audit', href: '/admin/regulatory/state-audit' },
+      { title: 'Notes Manager', href: '/admin/regulatory/notes-manager' },
       { title: 'Resources', href: '/admin/regulatory/resources' },
       { title: 'Audit Log', href: '/admin/regulatory/audit' }
     ]
