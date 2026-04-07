@@ -98,26 +98,20 @@ export default function Navbar({ initialUser }: NavbarProps) {
     },
     {
       name: 'Pricing',
-      href: '/pricing',
-      dropdown: [
-        { name: 'Single Report', href: '/pricing#single', icon: FileText, description: '$2,497 one-time purchase' },
-        { name: 'Quarterly Subscription', href: '/pricing#quarterly', icon: Sparkles, description: '$3,997/year - 4 reports' },
-        { name: 'Monthly Subscription', href: '/pricing#monthly', icon: Building2, description: '$7,997/year - 12 reports' },
-        { name: 'Enterprise', href: '/enterprise', icon: Building2, description: 'Starting at $15,000/year' },
-      ]
+      href: '/pricing'
     },
     {
       name: 'Resources',
-      href: '#resources',
-      dropdown: [
-        { name: 'Sample Report', href: '/sample', icon: FileText, description: 'See the compliance intelligence' },
-        { name: 'Case Studies', href: '/case-studies', icon: BookOpen, description: 'How banks use our intelligence' },
-        { name: 'Regulatory Guide', href: '/guide', icon: BookOpen, description: 'State of digital asset regulation' },
-      ]
+      href: '#resources'
     },
     {
       name: 'State Requirements',
       href: '/state-requirements',
+      isPublic: true
+    },
+    {
+      name: 'Compare States',
+      href: '/compare',
       isPublic: true
     }
   ]
