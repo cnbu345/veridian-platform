@@ -5,6 +5,7 @@ import SocialProof from '@/components/marketing/SocialProof'
 import PainPoints from '@/components/marketing/PainPoints'
 import Process from '@/components/marketing/Process'
 import ReportFeatures from '@/components/marketing/ReportFeatures'
+import FreeToolsSection from '@/components/marketing/FreeToolsSection'
 import FinalCTA from '@/components/marketing/FinalCTA'
 import Footer from '@/components/layout/Footer'
 
@@ -17,6 +18,7 @@ export default function HomePage() {
       <PainPoints />
       <Process />
       <ReportFeatures />
+      <FreeToolsSection />
       <FinalCTA />
     </>
   )

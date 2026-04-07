@@ -2,7 +2,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Check, Shield, Clock, Users, Building2, Scale, FileText, Sparkles, X } from 'lucide-react'
+import { Check, Shield, Clock, Users, Building2, Scale, FileText, Sparkles, X, ArrowRight, MapPin, GitCompare } from 'lucide-react'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 
@@ -11,28 +11,90 @@ export default function PricingPage() {
     <div className="min-h-screen bg-slate-50 pt-32 pb-20">
       <div className="container-custom">
         {/* Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
+        <div className="text-center max-w-3xl mx-auto mb-12">
+          <div className="inline-flex items-center gap-2 bg-gold-100 rounded-full px-3 py-1 text-sm text-gold-700 mb-4">
+            <Sparkles className="w-4 h-4" />
+            <span>Trusted by banks, law firms, and compliance officers</span>
+          </div>
           <h1 className="heading-1 text-navy-900 mb-6">
             Enterprise-Grade Regulatory Intelligence
           </h1>
           <p className="text-xl text-navy-600">
-            Choose the plan that fits your institution's compliance needs.
-            All reports include state-by-state analysis and 24-hour delivery.
+            Start with our free tools. Upgrade to comprehensive reports when you're ready.
           </p>
         </div>
 
-        {/* Founder's Banner */}
-        <div className="max-w-3xl mx-auto mb-12">
-          <div className="bg-gradient-to-r from-gold-600 to-gold-500 rounded-2xl p-6 text-white">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-white" />
+        {/* FREE TOOLS SECTION - Lead Generation */}
+        <div className="max-w-5xl mx-auto mb-16">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-navy-900 mb-2">Free Regulatory Intelligence Tools</h2>
+            <p className="text-gray-600">No credit card required. Instant access.</p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* State Dashboard Card */}
+            <Link 
+              href="/state-requirements"
+              className="group bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all hover:border-gold-200"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
+                  <MapPin className="w-6 h-6 text-blue-600" />
+                </div>
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Free</span>
               </div>
-              <div>
-                <h3 className="text-xl font-bold mb-1">Founder's Circle Pricing</h3>
-                <p className="text-gold-100">
-                  First 50 customers receive 60% off. <span className="font-bold">38 spots remaining.</span>
-                </p>
+              <h3 className="text-lg font-semibold text-navy-900 mb-2">State Licensing Dashboard</h3>
+              <p className="text-gray-600 text-sm mb-4">
+                Interactive map showing regulatory climate for all 50 states. Click any state for detailed requirements.
+              </p>
+              <div className="flex items-center gap-2 text-gold-600 font-medium text-sm group-hover:gap-3 transition-all">
+                Explore Dashboard <ArrowRight className="w-4 h-4" />
+              </div>
+            </Link>
+
+            {/* Comparison Tool Card */}
+            <Link 
+              href="/compare"
+              className="group bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all hover:border-gold-200"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center">
+                  <GitCompare className="w-6 h-6 text-purple-600" />
+                </div>
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Free</span>
+              </div>
+              <h3 className="text-lg font-semibold text-navy-900 mb-2">State Comparison Tool</h3>
+              <p className="text-gray-600 text-sm mb-4">
+                Compare up to 3 states side-by-side. See licensing, tax treatment, and regulatory climate.
+              </p>
+              <div className="flex items-center gap-2 text-gold-600 font-medium text-sm group-hover:gap-3 transition-all">
+                Compare States <ArrowRight className="w-4 h-4" />
+              </div>
+            </Link>
+          </div>
+        </div>
+
+        {/* Founder's Circle Banner - URGENT */}
+        <div className="max-w-4xl mx-auto mb-12">
+          <div className="bg-gradient-to-r from-gold-600 to-gold-500 rounded-2xl p-6 text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
+            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                  <Sparkles className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold mb-1">Founder's Circle Pricing</h3>
+                  <p className="text-gold-100">
+                    First 50 customers receive 60% off. <span className="font-bold text-white">38 spots remaining.</span>
+                  </p>
+                </div>
+              </div>
+              <div className="text-center md:text-right">
+                <div className="text-2xl font-bold">$997</div>
+                <div className="text-sm text-gold-200 line-through">$2,497</div>
+                <div className="text-xs text-gold-200">Save 60%</div>
               </div>
             </div>
           </div>
@@ -40,13 +102,20 @@ export default function PricingPage() {
 
         {/* Pricing Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-          {/* Tier 1: Single Report */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-soft hover:shadow-premium transition-all duration-300 overflow-hidden">
+          {/* Tier 1: Single Report - FOUNDER'S PRICE */}
+          <div className="bg-white rounded-2xl border-2 border-gold-300 shadow-soft hover:shadow-premium transition-all duration-300 overflow-hidden relative">
+            <div className="absolute top-0 right-0 bg-gold-600 text-white px-3 py-1 text-xs font-semibold rounded-bl-lg">
+              Founder's Special
+            </div>
             <div className="p-8">
               <h3 className="text-lg font-semibold text-navy-900 mb-2">Single Report</h3>
-              <div className="mb-4">
-                <span className="text-3xl font-bold text-navy-900">$2,497</span>
+              <div className="mb-2">
+                <span className="text-3xl font-bold text-gold-600">$997</span>
                 <span className="text-sm text-navy-500 ml-2">one-time</span>
+              </div>
+              <div className="mb-4">
+                <span className="text-sm text-navy-400 line-through">Regular: $2,497</span>
+                <span className="ml-2 text-xs text-green-600 font-medium">Save 60%</span>
               </div>
               <p className="text-sm text-navy-600 mb-6">
                 Complete 5-page location-intelligent compliance report
@@ -67,21 +136,18 @@ export default function PricingPage() {
                 </li>
                 <li className="flex items-start gap-2 text-sm">
                   <Check className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                  <span>30-minute consultation call</span>
+                  <span>30-minute consultation call ($500 value)</span>
                 </li>
               </ul>
 
               <Link
                 href="/generate?tier=single"
-                className="block w-full py-3 px-4 text-center bg-navy-900 text-white font-semibold rounded-xl hover:bg-navy-800 transition-colors"
+                className="block w-full py-3 px-4 text-center bg-gold-600 text-white font-semibold rounded-xl hover:bg-gold-700 transition-colors"
               >
-                Purchase Report
+                Claim Founder's Price
               </Link>
               <p className="text-xs text-center text-navy-500 mt-2">
-                Includes 1 free 30-minute consultation ($500 value)
-              </p>
-              <p className="text-xs text-center text-navy-400 mt-4">
-                Founder's: <span className="line-through">$2,497</span> <span className="text-gold-600 font-bold">$997</span>
+                Only 38 spots remaining at this price
               </p>
             </div>
           </div>
@@ -89,7 +155,7 @@ export default function PricingPage() {
           {/* Tier 2: Quarterly Subscription */}
           <div className="bg-white rounded-2xl border-2 border-navy-200 shadow-soft hover:shadow-premium transition-all duration-300 overflow-hidden relative">
             <div className="absolute top-0 right-0 bg-navy-900 text-white px-3 py-1 text-xs font-semibold rounded-bl-lg">
-              Popular
+              Most Popular
             </div>
             <div className="p-8">
               <h3 className="text-lg font-semibold text-navy-900 mb-2">Quarterly Intelligence</h3>
@@ -116,7 +182,7 @@ export default function PricingPage() {
                 </li>
                 <li className="flex items-start gap-2 text-sm">
                   <Check className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                  <span>2 complimentary strategy sessions per year ($1,000 value)</span>
+                  <span>2 complimentary strategy sessions ($1,000 value)</span>
                 </li>
               </ul>
 
@@ -129,7 +195,7 @@ export default function PricingPage() {
             </div>
           </div>
 
-          {/* Tier 3: Monthly Subscription */}
+          {/* Tier 3: Enterprise Suite */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-soft hover:shadow-premium transition-all duration-300 overflow-hidden">
             <div className="p-8">
               <h3 className="text-lg font-semibold text-navy-900 mb-2">Enterprise Suite</h3>
@@ -177,7 +243,7 @@ export default function PricingPage() {
             </div>
           </div>
 
-          {/* Tier 4: Enterprise */}
+          {/* Tier 4: Custom Enterprise */}
           <div className="bg-gradient-to-br from-navy-900 to-navy-800 rounded-2xl shadow-soft hover:shadow-premium transition-all duration-300 overflow-hidden">
             <div className="p-8">
               <h3 className="text-lg font-semibold text-white mb-2">Custom Enterprise</h3>
@@ -206,7 +272,6 @@ export default function PricingPage() {
 
               <button
                 onClick={() => {
-                  // Open enterprise lead modal
                   const modal = document.getElementById('enterprise-lead-modal')
                   if (modal) modal.style.display = 'flex'
                 }}
@@ -214,166 +279,6 @@ export default function PricingPage() {
               >
                 Contact Sales
               </button>
-            </div>
-          </div>
-
-          {/* Add Enterprise Lead Modal */}
-          <div 
-            id="enterprise-lead-modal" 
-            className="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                const modal = document.getElementById('enterprise-lead-modal')
-                if (modal) modal.style.display = 'none'
-              }
-            }}
-          >
-            <div className="bg-white rounded-2xl max-w-lg w-full">
-              <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-navy-900">Contact Enterprise Sales</h2>
-                <button
-                  onClick={() => {
-                    const modal = document.getElementById('enterprise-lead-modal')
-                    if (modal) modal.style.display = 'none'
-                  }}
-                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              <form 
-                className="p-6 space-y-4"
-                onSubmit={async (e) => {
-                  e.preventDefault()
-                  const formData = new FormData(e.currentTarget)
-                  const form = e.currentTarget // Store reference to form
-                  
-                  try {
-                    console.log('Submitting enterprise lead:', {
-                      company_name: formData.get('company_name'),
-                      contact_name: formData.get('contact_name'),
-                      contact_email: formData.get('contact_email'),
-                      contact_phone: formData.get('contact_phone'),
-                      company_size: formData.get('company_size'),
-                      message: formData.get('message')
-                    })
-
-                    const response = await fetch('/api/public/enterprise/leads', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        company_name: formData.get('company_name'),
-                        contact_name: formData.get('contact_name'),
-                        contact_email: formData.get('contact_email'),
-                        contact_phone: formData.get('contact_phone'),
-                        company_size: formData.get('company_size'),
-                        message: formData.get('message'),
-                        source: 'pricing_page'
-                      })
-                    })
-
-                    const data = await response.json()
-                    
-                    if (!response.ok) {
-                      console.error('Server error:', data)
-                      throw new Error(data.error || 'Failed to submit')
-                    }
-
-                    // Show success message first
-                    toast.success('Thank you! Our enterprise team will contact you within 24 hours.')
-                    
-                    // Reset form before closing modal
-                    form.reset()
-                    
-                    // Close modal after a brief delay to ensure everything is processed
-                    setTimeout(() => {
-                      const modal = document.getElementById('enterprise-lead-modal')
-                      if (modal) modal.style.display = 'none'
-                    }, 100)
-
-                  } catch (error) {
-                    console.error('Submission error:', error)
-                    toast.error('Failed to submit. Please try again.')
-                  }
-                }}
-              >
-                <div>
-                  <label className="block text-sm font-medium text-navy-700 mb-2">Company Name *</label>
-                  <input
-                    type="text"
-                    name="company_name"
-                    required
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-navy-700 mb-2">Contact Name *</label>
-                  <input
-                    type="text"
-                    name="contact_name"
-                    required
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-navy-700 mb-2">Work Email *</label>
-                  <input
-                    type="email"
-                    name="contact_email"
-                    required
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-navy-700 mb-2">Phone Number</label>
-                  <input
-                    type="tel"
-                    name="contact_phone"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-navy-700 mb-2">Company Size</label>
-                  <select
-                    name="company_size"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500"
-                  >
-                    <option value="">Select...</option>
-                    <option value="1-10">1-10 employees</option>
-                    <option value="11-50">11-50 employees</option>
-                    <option value="51-200">51-200 employees</option>
-                    <option value="201-500">201-500 employees</option>
-                    <option value="501+">501+ employees</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-navy-700 mb-2">Tell us about your needs</label>
-                  <textarea
-                    name="message"
-                    rows={4}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500"
-                    placeholder="What compliance challenges are you facing? What features are you most interested in?"
-                  />
-                </div>
-                
-                <div className="pt-4">
-                  <button
-                    type="submit"
-                    className="w-full px-4 py-3 bg-gold-600 text-white rounded-lg font-medium hover:bg-gold-700"
-                  >
-                    Submit Request
-                  </button>
-                  <p className="text-xs text-center text-navy-500 mt-3">
-                    Our enterprise team typically responds within 24 hours
-                  </p>
-                </div>
-              </form>
             </div>
           </div>
         </div>
@@ -393,9 +298,9 @@ export default function PricingPage() {
             <div className="w-12 h-12 bg-navy-100 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Scale className="w-6 h-6 text-navy-700" />
             </div>
-            <h4 className="font-semibold text-navy-900 mb-2">Human-Validated</h4>
+            <h4 className="font-semibold text-navy-900 mb-2">Attorney-Verified</h4>
             <p className="text-sm text-navy-600">
-              Every report reviewed by a compliance analyst
+              Every report reviewed by a compliance attorney
             </p>
           </div>
           <div className="text-center">
@@ -419,6 +324,152 @@ export default function PricingPage() {
             Contact our compliance team
             <span className="text-lg">→</span>
           </Link>
+        </div>
+      </div>
+
+      {/* Enterprise Lead Modal */}
+      <div 
+        id="enterprise-lead-modal" 
+        className="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            const modal = document.getElementById('enterprise-lead-modal')
+            if (modal) modal.style.display = 'none'
+          }
+        }}
+      >
+        <div className="bg-white rounded-2xl max-w-lg w-full">
+          <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-navy-900">Contact Enterprise Sales</h2>
+            <button
+              onClick={() => {
+                const modal = document.getElementById('enterprise-lead-modal')
+                if (modal) modal.style.display = 'none'
+              }}
+              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <form 
+            className="p-6 space-y-4"
+            onSubmit={async (e) => {
+              e.preventDefault()
+              const formData = new FormData(e.currentTarget)
+              const form = e.currentTarget
+              
+              try {
+                const response = await fetch('/api/public/enterprise/leads', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    company_name: formData.get('company_name'),
+                    contact_name: formData.get('contact_name'),
+                    contact_email: formData.get('contact_email'),
+                    contact_phone: formData.get('contact_phone'),
+                    company_size: formData.get('company_size'),
+                    message: formData.get('message'),
+                    source: 'pricing_page'
+                  })
+                })
+
+                const data = await response.json()
+                
+                if (!response.ok) {
+                  throw new Error(data.error || 'Failed to submit')
+                }
+
+                toast.success('Thank you! Our enterprise team will contact you within 24 hours.')
+                form.reset()
+                
+                setTimeout(() => {
+                  const modal = document.getElementById('enterprise-lead-modal')
+                  if (modal) modal.style.display = 'none'
+                }, 100)
+
+              } catch (error) {
+                console.error('Submission error:', error)
+                toast.error('Failed to submit. Please try again.')
+              }
+            }}
+          >
+            <div>
+              <label className="block text-sm font-medium text-navy-700 mb-2">Company Name *</label>
+              <input
+                type="text"
+                name="company_name"
+                required
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-navy-700 mb-2">Contact Name *</label>
+              <input
+                type="text"
+                name="contact_name"
+                required
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-navy-700 mb-2">Work Email *</label>
+              <input
+                type="email"
+                name="contact_email"
+                required
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-navy-700 mb-2">Phone Number</label>
+              <input
+                type="tel"
+                name="contact_phone"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-navy-700 mb-2">Company Size</label>
+              <select
+                name="company_size"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500"
+              >
+                <option value="">Select...</option>
+                <option value="1-10">1-10 employees</option>
+                <option value="11-50">11-50 employees</option>
+                <option value="51-200">51-200 employees</option>
+                <option value="201-500">201-500 employees</option>
+                <option value="501+">501+ employees</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-navy-700 mb-2">Tell us about your needs</label>
+              <textarea
+                name="message"
+                rows={4}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500"
+                placeholder="What compliance challenges are you facing? What features are you most interested in?"
+              />
+            </div>
+            
+            <div className="pt-4">
+              <button
+                type="submit"
+                className="w-full px-4 py-3 bg-gold-600 text-white rounded-lg font-medium hover:bg-gold-700"
+              >
+                Submit Request
+              </button>
+              <p className="text-xs text-center text-navy-500 mt-3">
+                Our enterprise team typically responds within 24 hours
+              </p>
+            </div>
+          </form>
         </div>
       </div>
     </div>

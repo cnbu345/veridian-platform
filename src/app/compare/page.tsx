@@ -324,8 +324,8 @@ export default function ComparePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Hero Section */}
-      <div className="bg-navy-900 text-white py-12">
-        <div className="container-custom max-w-7xl mx-auto px-4">
+      <div className=" mt-12 bg-navy-900 text-white py-12">
+        <div className="pt-10 container-custom max-w-7xl mx-auto px-4">
           <h1 className="text-3xl md:text-4xl font-bold mb-3">
             State Comparison Tool
           </h1>

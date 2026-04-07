@@ -1,3 +1,4 @@
+// src/components/layout/Navbar.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -8,21 +9,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Menu, 
   X, 
-  ChevronDown,
-  FileText,
-  DollarSign,
-  Building2,
-  Users,
-  LogIn,
-  UserPlus,
-  BarChart3,
-  Shield,
-  BookOpen,
-  Sparkles,
+  LogIn, 
+  UserPlus, 
   Scale,
-  Landmark,
-  Briefcase,
-  Import
+  GitCompare,
+  Sparkles,
+  FileText
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { User } from '@supabase/supabase-js'
@@ -35,7 +27,6 @@ export default function Navbar({ initialUser }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [user, setUser] = useState<User | null>(initialUser)
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const [isAdminRoute, setIsAdminRoute] = useState(false)
   
   const pathname = usePathname()
@@ -85,35 +76,12 @@ export default function Navbar({ initialUser }: NavbarProps) {
     router.push('/')
   }
 
+  // Simplified nav links - only what's built and useful
   const navLinks = [
-    {
-      name: 'Solutions',
-      href: '#solutions',
-      dropdown: [
-        { name: 'Regulatory Intelligence Reports', href: '/generate', icon: Scale, description: 'State-by-state compliance analysis for digital assets' },
-        { name: 'Compliance Monitoring', href: '/compliance', icon: Shield, description: 'Track regulatory changes across all 50 states' },
-        { name: 'Risk Assessment', href: '/risk', icon: Landmark, description: 'Location-based exposure analysis for institutions' },
-        { name: 'Enterprise Solutions', href: '/enterprise', icon: Briefcase, description: 'Custom compliance frameworks for scale' },
-      ]
-    },
-    {
-      name: 'Pricing',
-      href: '/pricing'
-    },
-    {
-      name: 'Resources',
-      href: '#resources'
-    },
-    {
-      name: 'State Requirements',
-      href: '/state-requirements',
-      isPublic: true
-    },
-    {
-      name: 'Compare States',
-      href: '/compare',
-      isPublic: true
-    }
+    { name: 'State Dashboard', href: '/state-requirements', icon: Scale, isPublic: true },
+    { name: 'Compare States', href: '/compare', icon: GitCompare, isPublic: true },
+    { name: 'Pricing', href: '/pricing', isPublic: true },
+    { name: 'About', href: '/about', isPublic: true },
   ]
 
   // DON'T RENDER ANYTHING on admin routes
@@ -121,144 +89,72 @@ export default function Navbar({ initialUser }: NavbarProps) {
     return null
   }
 
-  // ALWAYS solid with dark text - no transparency
   return (
     <>
-      <nav className="fixed top-0 w-full z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200/50 shadow-soft">
-        <div className="container-custom">
-          <div className="flex items-center justify-between h-16 md:h-20">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 md:gap-3 group">
-              <div className="relative w-8 h-8 md:w-10 md:h-10">
+      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+        scrolled 
+          ? 'bg-white/95 backdrop-blur-xl shadow-lg border-b border-slate-200' 
+          : 'bg-white border-b border-slate-200'
+      }`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            
+            {/* Logo - Simplified for mobile */}
+            <Link href="/" className="flex items-center gap-2 shrink-0">
+              <div className="w-8 h-8">
                 <img 
                   src="/veridian-logo-gold-192X192.png" 
                   alt="Veridian Group" 
                   className="w-full h-full object-contain"
                 />
               </div>
-              <div className="flex flex-col sm:flex-row sm:items-center">
-                <span className="text-lg md:text-xl font-display font-bold text-navy-900">
+              <div className="flex items-baseline">
+                <span className="text-lg font-bold text-navy-900">
                   Veridian
                 </span>
-                <span className="text-lg md:text-xl font-display font-bold text-gold-600 ml-0 sm:ml-1">
+                <span className="text-lg font-bold text-gold-600">
                   Group
-                </span>
-                <span className="hidden xs:inline ml-0 sm:ml-2 text-[10px] md:text-xs font-medium text-navy-500 bg-navy-50 px-1.5 md:px-2 py-0.5 rounded-full whitespace-nowrap">
-                  Regulatory Intelligence
                 </span>
               </div>
             </Link>
 
-            {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center gap-8">
+            {/* Desktop Navigation - Simplified */}
+            <div className="hidden md:flex items-center gap-6">
               {navLinks.map((item) => (
-                <div
+                <Link
                   key={item.name}
-                  className="relative"
-                  onMouseEnter={() => setActiveDropdown(item.name)}
-                  onMouseLeave={() => setActiveDropdown(null)}
-                >
-                  {item.dropdown ? (
-                    <button
-                      className={cn(
-                        "flex items-center gap-1.5 text-sm font-semibold transition-colors",
-                        pathname === item.href 
-                          ? "text-gold-600"
-                          : "text-navy-700 hover:text-gold-600"
-                      )}
-                    >
-                      {item.name}
-                      <ChevronDown className={cn(
-                        "w-4 h-4 transition-transform duration-300",
-                        activeDropdown === item.name && "rotate-180"
-                      )} />
-                    </button>
-                  ) : (
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        "text-sm font-semibold transition-colors",
-                        pathname === item.href 
-                          ? "text-gold-600"
-                          : "text-navy-700 hover:text-gold-600"
-                      )}
-                    >
-                      {item.name}
-                    </Link>
+                  href={item.href}
+                  className={cn(
+                    "text-sm font-medium transition-colors",
+                    pathname === item.href 
+                      ? "text-gold-600"
+                      : "text-navy-700 hover:text-gold-600"
                   )}
-
-                  {/* Dropdown Menu */}
-                  <AnimatePresence>
-                    {activeDropdown === item.name && item.dropdown && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        transition={{ duration: 0.2 }}
-                        className={cn(
-                          "absolute top-full left-0 mt-2 w-72",
-                          "bg-white rounded-card border border-slate-200",
-                          "shadow-premium py-2"
-                        )}
-                      >
-                        {item.dropdown.map((dropdownItem) => (
-                          <Link
-                            key={dropdownItem.name}
-                            href={dropdownItem.href}
-                            className={cn(
-                              "flex items-start gap-3 px-4 py-3",
-                              "hover:bg-gold-50/50 transition-colors group"
-                            )}
-                          >
-                            <div className={cn(
-                              "w-8 h-8 bg-navy-50 rounded-lg",
-                              "flex items-center justify-center",
-                              "group-hover:bg-gold-100 transition-colors"
-                            )}>
-                              <dropdownItem.icon className={cn(
-                                "w-4 h-4 text-navy-600",
-                                "group-hover:text-gold-600 transition-colors"
-                              )} />
-                            </div>
-                            <div>
-                              <div className={cn(
-                                "text-sm font-semibold text-navy-900",
-                                "group-hover:text-gold-600 transition-colors"
-                              )}>
-                                {dropdownItem.name}
-                              </div>
-                              <div className="text-xs text-navy-500">
-                                {dropdownItem.description}
-                              </div>
-                            </div>
-                          </Link>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                >
+                  {item.name}
+                </Link>
               ))}
             </div>
 
-            {/* Auth Buttons */}
-            <div className="hidden lg:flex items-center gap-4">
+            {/* Auth Buttons - Desktop */}
+            <div className="hidden md:flex items-center gap-3">
               {user ? (
                 <>
                   <Link
                     href="/dashboard"
-                    className="px-5 py-2.5 text-sm font-semibold text-navy-700 hover:text-gold-600 transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-navy-700 hover:text-gold-600 transition-colors"
                   >
                     Dashboard
                   </Link>
                   <button
                     onClick={handleSignOut}
-                    className="px-5 py-2.5 text-sm font-semibold text-navy-700 hover:text-gold-600 transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-navy-700 hover:text-gold-600 transition-colors"
                   >
                     Sign Out
                   </button>
                   <Link
                     href="/generate"
-                    className="btn-primary px-6 py-2.5 text-sm"
+                    className="px-5 py-2 bg-gold-600 text-white text-sm font-semibold rounded-lg hover:bg-gold-700 transition-colors"
                   >
                     Get Report
                   </Link>
@@ -267,16 +163,14 @@ export default function Navbar({ initialUser }: NavbarProps) {
                 <>
                   <Link
                     href="/auth"
-                    className="px-5 py-2.5 text-sm font-semibold text-navy-700 hover:text-gold-600 transition-colors flex items-center gap-2"
+                    className="px-4 py-2 text-sm font-medium text-navy-700 hover:text-gold-600 transition-colors"
                   >
-                    <LogIn className="w-4 h-4" />
                     Sign In
                   </Link>
                   <Link
                     href="/auth?signup=true"
-                    className="bg-gold-600 text-white px-6 py-2.5 text-sm font-semibold rounded-lg hover:bg-gold-700 transition-colors flex items-center gap-2"
+                    className="px-5 py-2 bg-gold-600 text-white text-sm font-semibold rounded-lg hover:bg-gold-700 transition-colors"
                   >
-                    <UserPlus className="w-4 h-4" />
                     Get Started
                   </Link>
                 </>
@@ -286,20 +180,20 @@ export default function Navbar({ initialUser }: NavbarProps) {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="lg:hidden relative w-9 h-9 md:w-10 md:h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center"
+              className="md:hidden relative w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center"
               aria-label="Toggle menu"
             >
               {isOpen ? (
-                <X className="w-4 h-4 md:w-5 md:h-5 text-navy-800" />
+                <X className="w-4 h-4 text-navy-800" />
               ) : (
-                <Menu className="w-4 h-4 md:w-5 md:h-5 text-navy-800" />
+                <Menu className="w-4 h-4 text-navy-800" />
               )}
             </button>
           </div>
         </div>
       </nav>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu - Simplified */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -307,7 +201,7 @@ export default function Navbar({ initialUser }: NavbarProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 lg:hidden"
+            className="fixed inset-0 z-40 md:hidden"
             style={{ top: '64px' }}
           >
             {/* Backdrop */}
@@ -328,85 +222,72 @@ export default function Navbar({ initialUser }: NavbarProps) {
                 overflowY: 'auto'
               }}
             >
-              <div className="container-custom py-4 md:py-6">
-                <div className="space-y-4 md:space-y-6 pb-8">
-                  {/* Mobile Nav Links */}
+              <div className="px-4 py-6 space-y-6">
+                {/* Mobile Nav Links */}
+                <div className="space-y-1">
                   {navLinks.map((item) => (
-                    <div key={item.name} className="space-y-2 md:space-y-3">
-                      <div className="text-xs md:text-sm font-semibold text-navy-400 uppercase tracking-wider px-2">
-                        {item.name}
-                      </div>
-                      {item.dropdown ? (
-                        <div className="space-y-1 md:space-y-2 pl-2">
-                          {item.dropdown.map((dropdownItem) => (
-                            <Link
-                              key={dropdownItem.name}
-                              href={dropdownItem.href}
-                              onClick={() => setIsOpen(false)}
-                              className="flex items-center gap-2 md:gap-3 py-2 md:py-3 px-3 rounded-lg hover:bg-gold-50 transition-colors"
-                            >
-                              <dropdownItem.icon className="w-3.5 h-3.5 md:w-4 md:h-4 text-navy-500" />
-                              <span className="text-xs md:text-sm font-medium text-navy-700">
-                                {dropdownItem.name}
-                              </span>
-                            </Link>
-                          ))}
-                        </div>
-                      ) : (
-                        <Link
-                          href={item.href}
-                          onClick={() => setIsOpen(false)}
-                          className="block py-2 px-3 text-xs md:text-sm font-medium text-navy-700 hover:text-gold-600"
-                        >
-                          {item.name}
-                        </Link>
-                      )}
-                    </div>
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 text-base font-medium text-navy-700 hover:bg-gold-50 hover:text-gold-600 rounded-lg transition-colors"
+                    >
+                      {item.icon && <item.icon className="w-5 h-5" />}
+                      {item.name}
+                    </Link>
                   ))}
+                </div>
 
-                  {/* Mobile Auth */}
-                  <div className="pt-4 md:pt-6 border-t border-slate-200 px-2">
-                    {user ? (
-                      <div className="space-y-2 md:space-y-3">
-                        <Link
-                          href="/dashboard"
-                          onClick={() => setIsOpen(false)}
-                          className="block w-full px-4 py-2.5 md:py-3 text-center text-xs md:text-sm font-semibold text-navy-700 bg-navy-50 rounded-lg hover:bg-navy-100"
-                        >
-                          Dashboard
-                        </Link>
-                        <button
-                          onClick={() => {
-                            handleSignOut()
-                            setIsOpen(false)
-                          }}
-                          className="block w-full px-4 py-2.5 md:py-3 text-center text-xs md:text-sm font-semibold text-navy-700 border border-slate-200 rounded-lg hover:bg-slate-50"
-                        >
-                          Sign Out
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-2 md:space-y-3">
-                        <Link
-                          href="/auth"
-                          onClick={() => setIsOpen(false)}
-                          className="block w-full px-4 py-2.5 md:py-3 text-center text-xs md:text-sm font-semibold text-white bg-navy-800 rounded-lg hover:bg-navy-700"
-                        >
-                          Sign In
-                        </Link>
-                        <Link
-                          href="/auth?signup=true"
-                          onClick={() => setIsOpen(false)}
-                          className="block w-full px-4 py-2.5 md:py-3 text-center text-xs md:text-sm font-semibold text-navy-800 bg-gold-500 rounded-lg hover:bg-gold-400"
-                        >
-                          Get Started
-                        </Link>
-                      </div>
-                    )}
+                {/* Divider */}
+                <div className="border-t border-slate-100" />
+
+                {/* Mobile Auth */}
+                {user ? (
+                  <div className="space-y-2 px-4">
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setIsOpen(false)}
+                      className="block w-full py-3 text-center text-base font-semibold text-white bg-navy-800 rounded-lg"
+                    >
+                      Dashboard
+                    </Link>
+                    <button
+                      onClick={() => {
+                        handleSignOut()
+                        setIsOpen(false)
+                      }}
+                      className="block w-full py-3 text-center text-base font-semibold text-navy-700 border border-slate-200 rounded-lg"
+                    >
+                      Sign Out
+                    </button>
                   </div>
+                ) : (
+                  <div className="space-y-2 px-4">
+                    <Link
+                      href="/auth"
+                      onClick={() => setIsOpen(false)}
+                      className="block w-full py-3 text-center text-base font-semibold text-white bg-navy-800 rounded-lg"
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      href="/auth?signup=true"
+                      onClick={() => setIsOpen(false)}
+                      className="block w-full py-3 text-center text-base font-semibold text-navy-800 bg-gold-500 rounded-lg"
+                    >
+                      Get Started
+                    </Link>
+                  </div>
+                )}
 
-                  {/* Extra bottom padding */}
-                  <div className="h-4 md:h-8" />
+                {/* Trust Badge */}
+                <div className="px-4 pt-4">
+                  <div className="text-center text-xs text-gray-400">
+                    <span className="inline-flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      Founder's Circle: $997
+                    </span>
+                  </div>
                 </div>
               </div>
             </motion.div>
