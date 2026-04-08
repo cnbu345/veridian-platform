@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { sendLeadCaptureEmail } from '@/lib/email/leadCaptureService'
 
 // Allowed source values from leads table constraint
 const ALLOWED_SOURCES = ['organic', 'linkedin', 'referral', 'direct', 'conference', 'outbound', 'partner', 'other']
@@ -15,7 +16,7 @@ function mapSourceToAllowed(source: string): string {
   
   // Map our custom sources to allowed values
   if (source === 'comparison_tool' || source === 'state_dashboard' || source === 'state_requirements') {
-    return 'direct'  // Using 'direct' as it's a good fit for direct tool usage
+    return 'direct'  // Using 'direct' as a good fit for direct tool usage
   }
   
   // Map website traffic
@@ -84,6 +85,15 @@ export async function POST(request: NextRequest) {
         created_at: new Date().toISOString()
       })
       
+      // Send email for the interaction (optional - you might only want to send on first capture)
+      await sendLeadCaptureEmail({
+        name: name || 'Valued Customer',
+        email: email,
+        companyName: company_name,
+        source: source || 'state_dashboard',
+        interestedStates: interested_state
+      }).catch(emailError => console.error('❌ Email error:', emailError))
+      
     } else {
       // Create new lead
       const { data: newLead, error: insertError } = await supabase
@@ -119,6 +129,15 @@ export async function POST(request: NextRequest) {
         metadata: { original_source: source, interested_state, timestamp: new Date().toISOString() },
         created_at: new Date().toISOString()
       })
+      
+      // Send email to the new lead
+      await sendLeadCaptureEmail({
+        name: name || 'Valued Customer',
+        email: email,
+        companyName: company_name,
+        source: source || 'state_dashboard',
+        interestedStates: interested_state
+      }).catch(emailError => console.error('❌ Email error:', emailError))
     }
     
     // Also track in audit log

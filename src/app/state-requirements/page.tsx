@@ -170,28 +170,42 @@ export default function StateRequirementsPage() {
   // Handle lead capture
   const handleLeadCapture = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!leadEmail) {
+      alert('Please enter your email address')
+      return
+    }
+    
+    setLeadSubmitted(true)
+    
     try {
-      const res = await fetch('/api/public/lead-capture', {
+      const response = await fetch('/api/public/lead-capture', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: leadEmail,
+          name: '',  // Optional - can add name field if desired
           source: 'state_dashboard',
-          interested_state: selectedState?.state_code,
-          timestamp: new Date().toISOString()
+          interested_state: selectedState?.state_code
         })
       })
       
-      if (res.ok) {
-        setLeadSubmitted(true)
-        setTimeout(() => {
-          setShowLeadModal(false)
-          setLeadSubmitted(false)
-          setLeadEmail('')
-        }, 2000)
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to submit')
       }
+      
+      // Wait 2 seconds then close modal
+      setTimeout(() => {
+        setShowLeadModal(false)
+        setLeadSubmitted(false)
+        setLeadEmail('')
+      }, 2000)
+      
     } catch (error) {
       console.error('Error capturing lead:', error)
+      setLeadSubmitted(false)
+      alert('Something went wrong. Please try again.')
     }
   }
 

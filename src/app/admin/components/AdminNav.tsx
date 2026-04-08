@@ -104,6 +104,7 @@ const navItems = [
     icon: Scale,
     subItems: [
       { title: 'Dashboard', href: '/admin/regulatory' },
+      { title: 'Licensing Manager', href: '/admin/regulatory/licensing'},
       { title: 'State Updates', href: '/admin/regulatory/updates' },
       { title: 'Legislation Tracker', href: '/admin/regulatory/legislation' },
       { title: 'Enforcement Actions', href: '/admin/regulatory/enforcement' },

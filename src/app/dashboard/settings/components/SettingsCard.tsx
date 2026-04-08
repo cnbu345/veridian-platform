@@ -11,11 +11,9 @@ import {
   Globe,
   CircleCheck, 
   AlertCircle, 
-  Info 
+  Info, LucideIcon, ChevronRight
 } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { LucideIcon } from 'lucide-react'
-import { ChevronRight } from 'lucide-react'
 
 interface SettingsCardProps {
   title: string
