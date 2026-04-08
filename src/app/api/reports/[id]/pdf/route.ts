@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const supabase = await createClient()
-    const { id } = await params  // ← AWAIT the params Promise!
+    const { id } = await params
     
     // Verify user is authenticated
     const { data: { user }, error: userError } = await supabase.auth.getUser()
