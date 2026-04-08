@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { generateSafeReport, verifyReportClaims } from '@/lib/regulatory/safeReportGenerator'
+import { generateSafeReport, verifyAndSaveReportClaims } from '@/lib/regulatory/safeReportGenerator'
 import { prepareRAGContext } from '@/lib/regulatory/rag'
 import OpenAI from 'openai'
 
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     const reportContent = completion.choices[0].message.content
 
     // STEP 4: Verify the generated report
-    const verification = await verifyReportClaims(reportId, reportContent || '', params.state)
+    const verification = await verifyAndSaveReportClaims(reportId, reportContent || '', params.state)
 
     // STEP 5: Save the report to database
     const { error: updateError } = await supabase
