@@ -7,11 +7,12 @@ import { createClient } from '@/lib/supabase/server'
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+    if (sessionError || !session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    
     const searchParams = request.nextUrl.searchParams
     const stateCode = searchParams.get('state')
     const status = searchParams.get('status')
@@ -49,12 +50,15 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession()
-    if (!session?.user) {
+    const supabase = await createClient()
+    
+    // Get session using Supabase (same as GET method)
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+    if (sessionError || !session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    const supabase = await createClient()
+    
     const body = await request.json()
     const { state_code, ...updates } = body
     
@@ -62,12 +66,9 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'State code is required' }, { status: 400 })
     }
     
-    // Get current user
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', session.user.email)
-      .single()
+    // Get current user from Supabase auth (not from users table)
+    const userId = session.user.id
+    const userEmail = session.user.email
     
     // Get existing record for audit
     const { data: existing } = await supabase
@@ -81,7 +82,7 @@ export async function PUT(request: NextRequest) {
       .upsert({
         ...updates,
         state_code,
-        updated_by: user?.id,
+        updated_by: userId,
         updated_at: new Date().toISOString()
       })
       .select()
@@ -99,8 +100,8 @@ export async function PUT(request: NextRequest) {
       action: existing ? 'UPDATE' : 'CREATE',
       old_data: existing,
       new_data: data,
-      changed_by: user?.id,
-      changed_by_name: session.user.email,
+      changed_by: userId,
+      changed_by_name: userEmail,
       changed_at: new Date().toISOString()
     })
     

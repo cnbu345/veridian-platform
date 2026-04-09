@@ -1,5 +1,6 @@
 // src/app/state-requirements/page.tsx
 // Free Public State Licensing Requirements Dashboard
+// Updated to use new API response with financial data
 
 'use client'
 
@@ -21,7 +22,9 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
-  X
+  X,
+  Clock,
+  Shield
 } from 'lucide-react'
 import { cn } from '@/lib/utils/utils'
 
@@ -36,7 +39,7 @@ const USMap = dynamic(() => import('@/components/ui/USMap'), {
   )
 })
 
-// Types
+// Updated types to match new API response
 interface StateRegulation {
   state_code: string
   state_name: string
@@ -44,6 +47,7 @@ interface StateRegulation {
   tax_treatment: string
   regulatory_climate: 'friendly' | 'moderate' | 'strict' | 'unknown'
   license_required: 'none' | 'mtl' | 'bitlicense' | 'dfpi' | 'varies'
+  license_label: string
   license_description: string
   enforcement_history: string
   pending_legislation: string
@@ -51,7 +55,16 @@ interface StateRegulation {
   regulator_phone: string | null
   regulator_email: string | null
   regulator_website: string | null
+  application_fee: number | null
+  application_fee_formatted: string
+  bond_requirement: string
+  processing_time: string
   notes: string
+  regulator_link?: {
+    website_url: string
+    license_page_url: string | null
+    enforcement_page_url: string | null
+  }
 }
 
 export default function StateRequirementsPage() {
@@ -183,7 +196,7 @@ export default function StateRequirementsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: leadEmail,
-          name: '',  // Optional - can add name field if desired
+          name: '',
           source: 'state_dashboard',
           interested_state: selectedState?.state_code
         })
@@ -195,7 +208,6 @@ export default function StateRequirementsPage() {
         throw new Error(data.error || 'Failed to submit')
       }
       
-      // Wait 2 seconds then close modal
       setTimeout(() => {
         setShowLeadModal(false)
         setLeadSubmitted(false)
@@ -209,7 +221,7 @@ export default function StateRequirementsPage() {
     }
   }
 
-  // State detail card component
+  // State detail card component - UPDATED with financial data
   const StateDetailCard = ({ state, isHover = false, compact = false }: { state: StateRegulation; isHover?: boolean; compact?: boolean }) => (
     <div className={cn(
       "bg-white rounded-xl border p-4 transition-all",
@@ -242,30 +254,48 @@ export default function StateRequirementsPage() {
         </div>
       </div>
 
-      {/* Expanded details - only for non-hover, non-compact */}
+      {/* Expanded details - includes new financial data */}
       {!isHover && !compact && (
         <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
           <p className="text-sm text-gray-600">
-            <span className="font-medium">Regulations:</span> {state.crypto_regulations}
+            <span className="font-medium">Application Fee:</span> {state.application_fee_formatted}
+          </p>
+          <p className="text-sm text-gray-600">
+            <span className="font-medium">Bond Requirement:</span> {state.bond_requirement}
+          </p>
+          <p className="text-sm text-gray-600">
+            <span className="font-medium">Processing Time:</span> {state.processing_time}
           </p>
           <p className="text-sm text-gray-600">
             <span className="font-medium">License Details:</span> {state.license_description}
           </p>
-          {state.pending_legislation && (
+          {state.pending_legislation && state.pending_legislation !== 'No pending legislation identified' && (
             <p className="text-xs text-yellow-600 bg-yellow-50 p-2 rounded">
               <span className="font-medium">⚠️ Pending:</span> {state.pending_legislation}
             </p>
           )}
-          {state.regulator_website && (
-            <a
-              href={state.regulator_website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-gold-600 hover:text-gold-700"
-            >
-              Visit Regulator Website <ExternalLink className="w-3 h-3" />
-            </a>
-          )}
+          <div className="flex flex-wrap gap-2 pt-1">
+            {state.regulator_website && (
+              <a
+                href={state.regulator_website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-gold-600 hover:text-gold-700"
+              >
+                Regulator Website <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+            {state.regulator_link?.license_page_url && (
+              <a
+                href={state.regulator_link.license_page_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-gold-600 hover:text-gold-700"
+              >
+                License Info <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+          </div>
           <button
             onClick={() => {
               setSelectedState(state)
@@ -291,41 +321,39 @@ export default function StateRequirementsPage() {
           </h1>
           <p className="text-sm sm:text-base text-navy-200 max-w-2xl">
             Interactive map showing regulatory climate across all 50 states. 
-            Click any state for detailed licensing requirements.
+            Click any state for detailed licensing requirements including fees, bonds, and processing times.
           </p>
         </div>
       </div>
 
       <div className="container-custom max-w-7xl mx-auto px-4 py-6 sm:py-8">
 
-        {/* Interactive Map Section - Responsive */}
+        {/* Interactive Map Section */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 mb-6">
-        <div className="flex items-center justify-between mb-2 sm:mb-3">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
             <h2 className="text-sm sm:text-base font-semibold text-navy-900 flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-gold-600" />
-            Regulatory Map
+              <MapPin className="w-4 h-4 text-gold-600" />
+              Regulatory Map
             </h2>
             <div className="text-[10px] sm:text-xs text-gray-400 hidden sm:block">
-            Hover or click any state
+              Hover or click any state
             </div>
-        </div>
-        
-        {/* Remove the max-w-2xl constraint to allow full width on mobile */}
-        <div className="w-full overflow-x-auto">
+          </div>
+          
+          <div className="w-full overflow-x-auto">
             <USMap
-            statesData={statesMap}
-            onStateHover={handleMapHover}
-            onStateClick={handleMapClick}
-            selectedState={selectedState?.state_code || null}
+              statesData={statesMap}
+              onStateHover={handleMapHover}
+              onStateClick={handleMapClick}
+              selectedState={selectedState?.state_code || null}
             />
-        </div>
-        
-        {/* Hover Preview Card - responsive */}
-        {hoveredState && !selectedState && (
+          </div>
+          
+          {hoveredState && !selectedState && (
             <div className="mt-3 w-full">
-            <StateDetailCard state={hoveredState} isHover compact />
+              <StateDetailCard state={hoveredState} isHover compact />
             </div>
-        )}
+          )}
         </div>
 
         {/* Selected State Details */}
@@ -346,9 +374,8 @@ export default function StateRequirementsPage() {
           </div>
         )}
 
-        {/* Search and Filters - Responsive */}
+        {/* Search and Filters */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-          {/* Mobile filter toggle */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="w-full flex items-center justify-between sm:hidden mb-3"
@@ -401,74 +428,69 @@ export default function StateRequirementsPage() {
           </div>
         </div>
 
-        {/* All States Quick Reference Table - Responsive */}
-        {/* All States Quick Reference Table - Fully Responsive with Horizontal Scroll */}
+        {/* All States Quick Reference Table */}
         <div className="mt-6">
-            <h2 className="text-base sm:text-lg font-semibold text-navy-900 mb-3">All States Reference</h2>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                {/* Horizontal scroll wrapper for mobile - allows scrolling to see all columns */}
-                <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[650px]">
-                    <thead className="bg-gray-50 border-b border-gray-100">
+          <h2 className="text-base sm:text-lg font-semibold text-navy-900 mb-3">All States Reference</h2>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[650px]">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">State</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Climate</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">License</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Tax</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Application Fee</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Regulator</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {loading ? (
                     <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">State</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Climate</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">License</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Tax</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">Regulator</th>
+                      <td colSpan={6} className="px-3 py-8 text-center text-gray-400">
+                        <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
+                        Loading...
+                      </td>
                     </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                    {loading ? (
-                        <tr>
-                        <td colSpan={5} className="px-3 py-8 text-center text-gray-400">
-                            <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
-                            Loading...
+                  ) : (
+                    filteredStates.map((state) => (
+                      <tr
+                        key={state.state_code}
+                        className="hover:bg-gray-50 cursor-pointer transition-colors"
+                        onClick={() => setSelectedState(state)}
+                      >
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <span className="font-mono font-medium text-sm">{state.state_code}</span>
+                          <span className="text-gray-400 ml-1 text-xs hidden sm:inline">{state.state_name}</span>
                         </td>
-                        </tr>
-                    ) : (
-                        filteredStates.map((state) => (
-                        <tr
-                            key={state.state_code}
-                            className="hover:bg-gray-50 cursor-pointer transition-colors"
-                            onClick={() => setSelectedState(state)}
-                        >
-                            <td className="px-3 py-2 whitespace-nowrap">
-                            <span className="font-mono font-medium text-sm">{state.state_code}</span>
-                            <span className="text-gray-400 ml-1 text-xs hidden sm:inline">{state.state_name}</span>
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap">
-                            <ClimateBadge climate={state.regulatory_climate} />
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap">
-                            <LicenseBadge license={state.license_required} />
-                            </td>
-                            <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">
-                            {state.tax_treatment}
-                            </td>
-                            <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">
-                            {state.regulator_name}
-                            </td>
-                        </tr>
-                        ))
-                    )}
-                    </tbody>
-                </table>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <ClimateBadge climate={state.regulatory_climate} />
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <LicenseBadge license={state.license_required} />
+                        </td>
+                        <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">
+                          {state.tax_treatment === 'No state income tax' ? 'No Income Tax' : 'Income Tax'}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">
+                          {state.application_fee_formatted}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">
+                          {state.regulator_name?.substring(0, 30) || 'Contact regulator'}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
-            
-            {/* Mobile hint - shows on small screens */}
             <div className="block md:hidden text-center text-xs text-gray-400 py-2 border-t border-gray-100 bg-gray-50">
-            ← Scroll sideways to see all columns →
+              ← Scroll sideways to see all columns →
             </div>
-        </div>
-        {filteredStates.length > 50 && (
-            <p className="text-center text-xs text-gray-400 mt-2">
-            Showing first 50 states. Use search to find specific states.
-            </p>
-        )}
+          </div>
         </div>
 
-        {/* Call to Action Banner - Responsive */}
+        {/* Call to Action Banner */}
         <div className="mt-8 bg-gradient-to-r from-navy-800 to-navy-900 rounded-xl p-5 text-center text-white">
           <h3 className="text-base sm:text-lg font-bold mb-1">Need a Complete Compliance Report?</h3>
           <p className="text-navy-200 text-sm mb-3 max-w-2xl mx-auto">
@@ -491,7 +513,7 @@ export default function StateRequirementsPage() {
         </div>
       </div>
 
-      {/* Lead Capture Modal - Responsive */}
+      {/* Lead Capture Modal */}
       {showLeadModal && selectedState && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-sm w-full p-5 mx-4">

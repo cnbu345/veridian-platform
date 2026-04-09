@@ -1,4 +1,9 @@
 // src/lib/locationService.ts
+// Location classification service using unified licensing database
+// Last updated: April 9, 2026
+
+import { getSimplifiedLicensing } from './location/licensing'
+
 // Major US cities (top 50) - for market classification
 const MAJOR_CITIES = [
   { city: 'New York', state: 'NY', population: 8419000 },
@@ -68,30 +73,6 @@ const REGULATORY_HUBS = [
   { city: 'Cheyenne', state: 'WY', type: 'secondary', specialty: 'DAO, Crypto' },
 ]
 
-// State regulatory climate data
-export const STATE_REGULATORY_CLIMATE = {
-  'NY': { climate: 'strict', license: 'BitLicense', tax: 'income' },
-  'CA': { climate: 'strict', license: 'DFPI', tax: 'income' },
-  'TX': { climate: 'friendly', license: 'none', tax: 'none' },
-  'FL': { climate: 'friendly', license: 'none', tax: 'none' },
-  'WY': { climate: 'friendly', license: 'none', tax: 'none', special: 'DAO LLC' },
-  'NV': { climate: 'friendly', license: 'none', tax: 'none' },
-  'DE': { climate: 'friendly', license: 'none', tax: 'corporate' },
-  'IL': { climate: 'moderate', license: 'required', tax: 'income' },
-  'MA': { climate: 'moderate', license: 'required', tax: 'income' },
-  'WA': { climate: 'strict', license: 'required', tax: 'income' },
-  'CO': { climate: 'friendly', license: 'none', tax: 'income' },
-  'AZ': { climate: 'friendly', license: 'none', tax: 'income' },
-  'NC': { climate: 'moderate', license: 'required', tax: 'income' },
-  'GA': { climate: 'moderate', license: 'none', tax: 'income' },
-  'PA': { climate: 'moderate', license: 'none', tax: 'income' },
-  'OH': { climate: 'friendly', license: 'none', tax: 'income' },
-  'MI': { climate: 'moderate', license: 'none', tax: 'income' },
-  'VA': { climate: 'friendly', license: 'none', tax: 'income' },
-  'TN': { climate: 'friendly', license: 'none', tax: 'none' },
-  'NH': { climate: 'friendly', license: 'none', tax: 'none' },
-}
-
 export interface LocationData {
   city: string
   state: string
@@ -103,19 +84,23 @@ export interface LocationData {
   distanceToMajor?: number
   regulatoryClimate?: 'friendly' | 'moderate' | 'strict'
   licenseRequired?: string
-  taxStatus?: 'income' | 'none' | 'corporate'
+  licenseDescription?: string
+  taxStatus?: string
+  applicationFee?: number | null
+  applicationFeeFormatted?: string
+  bondRequirement?: string
+  processingTime?: string
 }
 
+/**
+ * Classify a location based on city and state using database licensing data
+ */
 export async function classifyLocation(city: string, state: string): Promise<LocationData> {
   const normalizedCity = city.trim().toLowerCase()
   const normalizedState = state.trim().toUpperCase()
 
-  // Get regulatory data for the state
-  const regulatoryData = STATE_REGULATORY_CLIMATE[normalizedState as keyof typeof STATE_REGULATORY_CLIMATE] || {
-    climate: 'moderate',
-    license: 'unknown',
-    tax: 'income'
-  }
+  // Get licensing data from unified service (database first, fallback to static)
+  const licensing = await getSimplifiedLicensing(normalizedState)
 
   // Check if it's a major city
   const isMajor = MAJOR_CITIES.some(
@@ -123,7 +108,6 @@ export async function classifyLocation(city: string, state: string): Promise<Loc
   )
 
   if (isMajor) {
-    // Find if it's a regulatory hub
     const regulatoryHub = REGULATORY_HUBS.find(
       hub => hub.city.toLowerCase() === normalizedCity && hub.state === normalizedState
     )
@@ -133,11 +117,16 @@ export async function classifyLocation(city: string, state: string): Promise<Loc
       state,
       tier: 'major',
       nearestRegulatoryHub: regulatoryHub ? regulatoryHub.city : city,
-      regulatoryHubType: regulatoryHub?.type || undefined,
+      regulatoryHubType: regulatoryHub?.type,
       regulatoryHubSpecialty: regulatoryHub?.specialty,
-      regulatoryClimate: regulatoryData.climate,
-      licenseRequired: regulatoryData.license,
-      taxStatus: regulatoryData.tax
+      regulatoryClimate: licensing.cryptoFriendly,
+      licenseRequired: licensing.licenseRequired,
+      licenseDescription: licensing.moneyTransmitter,
+      taxStatus: licensing.taxTreatment,
+      applicationFee: licensing.applicationFee,
+      applicationFeeFormatted: licensing.applicationFeeFormatted,
+      bondRequirement: licensing.bondRequirementFormatted,
+      processingTime: licensing.processingTimeFormatted
     }
   }
 
@@ -160,21 +149,28 @@ export async function classifyLocation(city: string, state: string): Promise<Loc
       regulatoryHubType: regulatoryHubInState?.type,
       regulatoryHubSpecialty: regulatoryHubInState?.specialty,
       distanceToMajor: 25,
-      regulatoryClimate: regulatoryData.climate,
-      licenseRequired: regulatoryData.license,
-      taxStatus: regulatoryData.tax
+      regulatoryClimate: licensing.cryptoFriendly,
+      licenseRequired: licensing.licenseRequired,
+      licenseDescription: licensing.moneyTransmitter,
+      taxStatus: licensing.taxTreatment,
+      applicationFee: licensing.applicationFee,
+      applicationFeeFormatted: licensing.applicationFeeFormatted,
+      bondRequirement: licensing.bondRequirementFormatted,
+      processingTime: licensing.processingTimeFormatted
     }
   }
 
-  // Default to rural
-  // Find nearest regulatory hub
+  // Default to rural - find nearest hub by state proximity
   const nearestHub = REGULATORY_HUBS.reduce((nearest, current) => {
-    if (current.state[0] === normalizedState[0]) return current
+    // Prefer same region or nearby states
+    if (current.state === normalizedState) return current
+    if (current.state[0] === normalizedState[0] && nearest.state !== normalizedState) return current
     return nearest
   }, REGULATORY_HUBS[0])
 
   const nearestMajor = MAJOR_CITIES.reduce((nearest, current) => {
-    if (current.state[0] === normalizedState[0]) return current
+    if (current.state === normalizedState) return current
+    if (current.state[0] === normalizedState[0] && nearest.state !== normalizedState) return current
     return nearest
   }, MAJOR_CITIES[0])
 
@@ -187,8 +183,13 @@ export async function classifyLocation(city: string, state: string): Promise<Loc
     regulatoryHubType: nearestHub.type,
     regulatoryHubSpecialty: nearestHub.specialty,
     distanceToMajor: 75,
-    regulatoryClimate: regulatoryData.climate,
-    licenseRequired: regulatoryData.license,
-    taxStatus: regulatoryData.tax
+    regulatoryClimate: licensing.cryptoFriendly,
+    licenseRequired: licensing.licenseRequired,
+    licenseDescription: licensing.moneyTransmitter,
+    taxStatus: licensing.taxTreatment,
+    applicationFee: licensing.applicationFee,
+    applicationFeeFormatted: licensing.applicationFeeFormatted,
+    bondRequirement: licensing.bondRequirementFormatted,
+    processingTime: licensing.processingTimeFormatted
   }
 }

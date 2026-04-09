@@ -1,5 +1,7 @@
 // src/lib/reports/reportData.ts
-import { getStateRegulation } from '../location/regulations'
+// Updated to use new licensing service
+
+import { getSimplifiedLicensing } from '../location/licensing'
 import { getTalentScoreForLocation } from '../location/talent'
 import { LocationAnalysis } from '../location/analyzer'
 import { getProvidersForLocation } from '../location/serviceProviders'
@@ -148,7 +150,8 @@ export function formatCurrency(amount: number): string {
   }).format(amount)
 }
 
-export function buildReportData(
+// Async version of buildReportData
+export async function buildReportData(
   company: any,
   location: LocationAnalysis,
   strategy: {
@@ -158,15 +161,28 @@ export function buildReportData(
     concerns: string
     goals: string
   }
-): ReportData {
-  // Use your existing regulation data
-  const stateRegulation = getStateRegulation(location.state)
+): Promise<ReportData> {
+  // Use the new licensing service instead of getStateRegulation
+  const licensing = await getSimplifiedLicensing(location.state)
   
-  // Use the new licensing data
+  // Transform licensing data to match the expected stateRegulation format
+  const stateRegulation = {
+    cryptoFriendly: licensing.cryptoFriendly,
+    moneyTransmitter: licensing.moneyTransmitter,
+    taxTreatment: licensing.taxTreatment,
+    notes: licensing.notes,
+    lastUpdated: new Date().toISOString().split('T')[0],
+    licenseRequired: licensing.licenseRequired,
+    applicationFee: licensing.applicationFeeFormatted,
+    bondRequirement: licensing.bondRequirement,
+    processingTime: licensing.processingTime
+  }
+  
+  // Use the existing licensing data for licenses
   const licenses = getLicensesForState(location.state)
   const multiStateLicenses = getAllStateLicenses(15) // Expand to 15 states
   
-  // Use the new service providers data
+  // Use the service providers data
   const providers = getProvidersForLocation(location.city, location.state, location.tier)
   
   // Use your existing talent data
@@ -325,6 +341,11 @@ export function buildReportData(
       label: 'Market Tier',
       value: location.tier === 'major' ? 'Major Market' :
              location.tier === 'suburban' ? 'Suburban' : 'Rural',
+      color: 'text-gold-400'
+    },
+    {
+      label: 'Application Fee',
+      value: licensing.applicationFeeFormatted,
       color: 'text-gold-400'
     }
   ]

@@ -1,4 +1,4 @@
-// src/app/admin/regulatory/updates/page.tsx
+// src/app/admin/regulatory/page.tsx
 // State Updates - Track and manage pending regulatory changes
 
 'use client'

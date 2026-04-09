@@ -1,6 +1,6 @@
 // src/app/compare/page.tsx
 // State Comparison Tool - Compare up to 3 states side-by-side
-// With stylish grouped filters
+// Updated to show financial data (fees, bonds, processing times)
 
 'use client'
 
@@ -25,10 +25,11 @@ import {
   Zap,
   Shield,
   Leaf,
-  Flame
+  Flame,
+  Clock
 } from 'lucide-react'
 
-// Types
+// Updated types to match new API response
 interface StateOption {
   code: string
   name: string
@@ -42,9 +43,14 @@ interface ComparisonState {
   state_name: string
   climate: string
   license_required: string
+  license_label: string
   license_description: string
   tax_treatment: string
   regulator_name: string
+  application_fee: number | null
+  application_fee_formatted: string
+  bond_requirement: string
+  processing_time: string
   regulator_link: {
     website_url: string
     license_page_url: string | null
@@ -194,7 +200,7 @@ export default function ComparePage() {
   const [leadName, setLeadName] = useState('')
   const [leadCompany, setLeadCompany] = useState('')
   const [leadSubmitted, setLeadSubmitted] = useState(false)
-  const [recommendation, setRecommendation] = useState<string>('')
+  const [recommendation, setRecommendation] = useState('')
 
   // Apply filter preset
   const applyFilter = (presetId: string) => {
@@ -254,13 +260,17 @@ export default function ComparePage() {
     const friendlyStates = states.filter(s => s.climate === 'friendly')
     const noTaxStates = states.filter(s => s.tax_treatment.includes('No state income tax'))
     const noLicenseStates = states.filter(s => s.license_required === 'none')
+    const lowestFeeState = states.reduce((prev, curr) => 
+      (prev.application_fee || Infinity) < (curr.application_fee || Infinity) ? prev : curr, states[0])
     
     if (friendlyStates.length > 0) {
       const best = friendlyStates[0]
       setRecommendation(`${best.state_name} offers the most favorable regulatory environment with a ${best.climate} climate. ${best.tax_treatment} and ${best.license_required === 'none' ? 'no specific license requirement' : 'clear licensing framework'} make it an attractive option for digital asset businesses.`)
     } else if (noTaxStates.length > 0) {
       const best = noTaxStates[0]
-      setRecommendation(`${best.state_name} stands out with ${best.tax_treatment.toLowerCase()}, which can significantly reduce operational costs.`)
+      setRecommendation(`${best.state_name} stands out with ${best.tax_treatment.toLowerCase()}, which can significantly reduce operational costs. Application fee: ${best.application_fee_formatted}.`)
+    } else if (lowestFeeState && lowestFeeState.application_fee) {
+      setRecommendation(`${lowestFeeState.state_name} has the lowest application fee at ${lowestFeeState.application_fee_formatted}, making it a cost-effective entry point for licensing.`)
     } else {
       setRecommendation(`Based on your selection, consider starting with states that have moderate regulatory requirements before expanding to stricter jurisdictions.`)
     }
@@ -307,7 +317,6 @@ export default function ComparePage() {
         throw new Error(data.error || 'Failed to submit')
         }
         
-        // Wait 2 seconds then redirect to pricing
         setTimeout(() => {
         window.location.href = '/pricing?utm_source=comparison&utm_medium=lead'
         }, 2000)
@@ -317,21 +326,20 @@ export default function ComparePage() {
         setLeadSubmitted(false)
         alert('Something went wrong. Please try again or contact us directly.')
     }
-    }
+  }
 
   const availableStates = ALL_STATES.filter(s => !selectedStates.includes(s.code))
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Hero Section */}
-      <div className=" mt-12 bg-navy-900 text-white py-12">
+      <div className="mt-12 bg-navy-900 text-white py-12">
         <div className="pt-10 container-custom max-w-7xl mx-auto px-4">
           <h1 className="text-3xl md:text-4xl font-bold mb-3">
             State Comparison Tool
           </h1>
           <p className="text-lg text-navy-200 max-w-2xl">
-            Compare licensing requirements, tax treatment, and regulatory climate across up to 3 states.
-            Make informed decisions about where to operate.
+            Compare licensing requirements, fees, bonds, processing times, and regulatory climate across up to 3 states.
           </p>
         </div>
       </div>
@@ -432,6 +440,7 @@ export default function ComparePage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
+                    {/* Regulatory Climate */}
                     <tr className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium text-gray-700">Regulatory Climate</td>
                       {comparisonData.map(state => (
@@ -441,6 +450,7 @@ export default function ComparePage() {
                       ))}
                     </tr>
                     
+                    {/* License Required */}
                     <tr className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium text-gray-700">License Required</td>
                       {comparisonData.map(state => (
@@ -450,6 +460,52 @@ export default function ComparePage() {
                       ))}
                     </tr>
                     
+                    {/* License Description */}
+                    <tr className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm font-medium text-gray-700">License Details</td>
+                      {comparisonData.map(state => (
+                        <td key={state.state_code} className="px-4 py-3 text-sm text-gray-600">
+                          {state.license_description || state.license_label}
+                        </td>
+                      ))}
+                    </tr>
+                    
+                    {/* Application Fee - NEW */}
+                    <tr className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm font-medium text-gray-700">Application Fee</td>
+                      {comparisonData.map(state => (
+                        <td key={state.state_code} className="px-4 py-3">
+                          <span className="text-sm font-medium text-gray-900">
+                            {state.application_fee_formatted}
+                          </span>
+                        </td>
+                      ))}
+                    </tr>
+                    
+                    {/* Bond Requirement - NEW */}
+                    <tr className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm font-medium text-gray-700">Bond Requirement</td>
+                      {comparisonData.map(state => (
+                        <td key={state.state_code} className="px-4 py-3 text-sm text-gray-600">
+                          {state.bond_requirement}
+                        </td>
+                      ))}
+                    </tr>
+                    
+                    {/* Processing Time - NEW */}
+                    <tr className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm font-medium text-gray-700">Processing Time</td>
+                      {comparisonData.map(state => (
+                        <td key={state.state_code} className="px-4 py-3">
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-gray-400" />
+                            <span className="text-sm text-gray-600">{state.processing_time}</span>
+                          </div>
+                        </td>
+                      ))}
+                    </tr>
+                    
+                    {/* Tax Treatment */}
                     <tr className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium text-gray-700">Tax Treatment</td>
                       {comparisonData.map(state => (
@@ -461,6 +517,7 @@ export default function ComparePage() {
                       ))}
                     </tr>
                     
+                    {/* Regulator */}
                     <tr className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium text-gray-700">Regulator</td>
                       {comparisonData.map(state => (
@@ -483,7 +540,8 @@ export default function ComparePage() {
                       ))}
                     </tr>
                     
-                    {comparisonData.some(s => s.pending_legislation) && (
+                    {/* Pending Legislation */}
+                    {comparisonData.some(s => s.pending_legislation && s.pending_legislation !== 'No pending legislation identified') && (
                       <tr className="hover:bg-gray-50">
                         <td className="px-4 py-3 text-sm font-medium text-gray-700">Pending Legislation</td>
                         {comparisonData.map(state => (
@@ -494,6 +552,7 @@ export default function ComparePage() {
                       </tr>
                     )}
                     
+                    {/* Enforcement History */}
                     <tr className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium text-gray-700">Enforcement History</td>
                       {comparisonData.map(state => (

@@ -19,7 +19,8 @@ import {
   ChevronDown,
   Loader2,
   UserCheck,
-  Calendar
+  Calendar,
+  XCircle
 } from 'lucide-react'
 import ResearchAssistant from '@/components/admin/ResearchAssistant'
 
@@ -60,6 +61,23 @@ interface LicensingRequirement {
   confidence_score: number
   created_at: string
   updated_at: string
+}
+
+// Toast notification component
+function Toast({ message, type, onClose }: { message: string; type: 'success' | 'error'; onClose: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000)
+    return () => clearTimeout(timer)
+  }, [onClose])
+
+  return (
+    <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-in slide-in-from-right ${
+      type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+    }`}>
+      {type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+      {message}
+    </div>
+  )
 }
 
 const ALL_STATES = [
@@ -108,6 +126,22 @@ export default function LicensingManagerPage() {
   const [showHistory, setShowHistory] = useState(false)
   const [historyEntries, setHistoryEntries] = useState<any[]>([])
   const [showConfidenceModal, setShowConfidenceModal] = useState(false)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+  // Load saved state from localStorage on mount
+  useEffect(() => {
+    const savedState = localStorage.getItem('licensing_selected_state')
+    if (savedState && ALL_STATES.includes(savedState)) {
+      setSelectedState(savedState)
+    }
+  }, [])
+
+  // Save selected state to localStorage whenever it changes
+  useEffect(() => {
+    if (selectedState) {
+      localStorage.setItem('licensing_selected_state', selectedState)
+    }
+  }, [selectedState])
 
   // Fetch all licensing requirements
   const fetchRequirements = async () => {
@@ -126,7 +160,6 @@ export default function LicensingManagerPage() {
       if (requirementsMap[selectedState]) {
         setCurrentData(requirementsMap[selectedState])
       } else {
-        // Initialize empty form for new state
         setCurrentData({
           state_code: selectedState,
           license_required: 'none',
@@ -140,6 +173,7 @@ export default function LicensingManagerPage() {
       }
     } catch (error) {
       console.error('Error fetching requirements:', error)
+      setToast({ message: 'Failed to load requirements', type: 'error' })
     } finally {
       setLoading(false)
     }
@@ -157,14 +191,14 @@ export default function LicensingManagerPage() {
       
       if (res.ok) {
         await fetchRequirements()
-        alert(`${selectedState} requirements saved successfully!`)
+        setToast({ message: `${selectedState} requirements saved successfully!`, type: 'success' })
       } else {
         const error = await res.json()
-        alert(`Error: ${error.error}`)
+        setToast({ message: `Error: ${error.error}`, type: 'error' })
       }
     } catch (error) {
       console.error('Error saving:', error)
-      alert('Failed to save requirements')
+      setToast({ message: 'Failed to save requirements', type: 'error' })
     } finally {
       setSaving(false)
     }
@@ -189,10 +223,14 @@ export default function LicensingManagerPage() {
       
       if (res.ok) {
         await fetchRequirements()
-        alert(`${selectedState} marked as verified!`)
+        setToast({ message: `${selectedState} marked as verified!`, type: 'success' })
+      } else {
+        const error = await res.json()
+        setToast({ message: `Error: ${error.error}`, type: 'error' })
       }
     } catch (error) {
       console.error('Error marking verified:', error)
+      setToast({ message: 'Failed to mark as verified', type: 'error' })
     }
   }
 
@@ -205,6 +243,7 @@ export default function LicensingManagerPage() {
       setShowHistory(true)
     } catch (error) {
       console.error('Error fetching history:', error)
+      setToast({ message: 'Failed to load history', type: 'error' })
     }
   }
 
@@ -221,21 +260,7 @@ export default function LicensingManagerPage() {
 
   useEffect(() => {
     fetchRequirements()
-  }, [])
-
-  useEffect(() => {
-    if (requirements[selectedState]) {
-      setCurrentData(requirements[selectedState])
-    } else {
-      setCurrentData({
-        state_code: selectedState,
-        license_required: 'none',
-        regulatory_climate: 'moderate',
-        verification_status: 'needs_review',
-        review_priority: 'medium'
-      })
-    }
-  }, [selectedState, requirements])
+  }, [selectedState])
 
   // Filter states for sidebar
   const filteredStates = ALL_STATES.filter(state => {
@@ -266,6 +291,15 @@ export default function LicensingManagerPage() {
 
   return (
     <div className="flex h-full min-h-screen bg-gray-50">
+      {/* Toast Notifications */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       {/* Sidebar - State List */}
       <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
         <div className="p-4 border-b border-gray-200">
@@ -319,7 +353,6 @@ export default function LicensingManagerPage() {
 
       {/* Main Content - Licensing Form */}
       <div className="flex-1 overflow-y-auto p-6">
-        
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 text-gold-600 animate-spin" />
@@ -327,56 +360,54 @@ export default function LicensingManagerPage() {
         ) : (
           <>
             {/* Header */}
-            {/* Header */}
             <div className="flex items-center justify-between mb-6">
-            <div>
+              <div>
                 <h1 className="text-2xl font-bold text-navy-900">
-                Licensing Requirements: {selectedState}
+                  Licensing Requirements: {selectedState}
                 </h1>
                 <p className="text-gray-500 mt-1">
-                Maintain accurate licensing data for this state
+                  Maintain accurate licensing data for this state
                 </p>
-            </div>
-            <div className="flex gap-3 items-center">
-                
+              </div>
+              <div className="flex gap-3 items-center">
                 <button
-                onClick={viewHistory}
-                className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+                  onClick={viewHistory}
+                  className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
                 >
-                <History className="w-4 h-4" />
-                History
+                  <History className="w-4 h-4" />
+                  History
                 </button>
                 <button
-                onClick={markAsVerified}
-                disabled={currentData.verification_status === 'verified'}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  onClick={markAsVerified}
+                  disabled={currentData.verification_status === 'verified'}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
-                <CheckCircle className="w-4 h-4" />
-                Mark Verified
+                  <CheckCircle className="w-4 h-4" />
+                  Mark Verified
                 </button>
                 <button
-                onClick={saveCurrentState}
-                disabled={saving}
-                className="px-4 py-2 bg-gold-600 text-white rounded-lg hover:bg-gold-700 transition-colors flex items-center gap-2"
+                  onClick={saveCurrentState}
+                  disabled={saving}
+                  className="px-4 py-2 bg-gold-600 text-white rounded-lg hover:bg-gold-700 transition-colors flex items-center gap-2"
                 >
-                <Save className="w-4 h-4" />
-                {saving ? 'Saving...' : 'Save Changes'}
+                  <Save className="w-4 h-4" />
+                  {saving ? 'Saving...' : 'Save Changes'}
                 </button>
+              </div>
             </div>
-            </div>
-            <div className='flex justify-end pb-3'>
-                {/* Research Assistant - Now in the header */}
-                <ResearchAssistant 
-                    stateCode={selectedState}
-                    onSourceUrlFound={(url, sourceName) => {
-                        setCurrentData({
-                        ...currentData,
-                        source_url: url,
-                        source_name: sourceName
-                        })
-                        alert(`Source added: ${sourceName}\nURL: ${url}\n\nReview and save to confirm.`)
-                    }}
-                />
+            
+            <div className="flex justify-end pb-3">
+              <ResearchAssistant 
+                stateCode={selectedState}
+                onSourceUrlFound={(url, sourceName) => {
+                  setCurrentData({
+                    ...currentData,
+                    source_url: url,
+                    source_name: sourceName
+                  })
+                  setToast({ message: `Source added: ${sourceName}`, type: 'success' })
+                }}
+              />
             </div>
 
             {/* Status Banner */}
@@ -398,7 +429,7 @@ export default function LicensingManagerPage() {
               </div>
             )}
 
-            {/* Form Sections */}
+            {/* Form Sections - Keep existing form code */}
             <div className="space-y-6">
               {/* Section 1: Basic Requirements */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -864,16 +895,5 @@ export default function LicensingManagerPage() {
         </div>
       )}
     </div>
-  )
-}
-
-// Helper component for XCircle icon
-function XCircle(props: any) {
-  return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
   )
 }

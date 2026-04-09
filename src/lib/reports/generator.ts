@@ -1,8 +1,10 @@
-// src/lib/reports/generator.ts // Generate Report
+// src/lib/reports/generator.ts
+// Generate Report - Updated to use new licensing service
+
 import { CompanyFormData } from './validation'
 import { LocationAnalysis } from '../location/analyzer'
 import { StrategyFormData } from './validation'
-import { getStateRegulation, getComplianceChecklist } from '../location/regulations'
+import { getSimplifiedLicensing } from '../location/licensing'
 import { getTalentScoreForLocation, getTalentRecommendations } from '../location/talent'
 import { generateRegulatoryReport } from '../openai/openai'
 import { GeneratedReport } from './types'
@@ -17,6 +19,58 @@ export interface GenerationResult {
   regulatory_contacts: any
   risk_assessment: any
   full_report?: string
+}
+
+// Helper function to get compliance checklist (temporary - can be moved to licensing service)
+async function getComplianceChecklist(stateCode: string): Promise<string[]> {
+  const licensing = await getSimplifiedLicensing(stateCode)
+  
+  const checklist = [
+    'Register business entity with Secretary of State',
+    'Obtain EIN from IRS',
+    'Determine money transmitter license requirements',
+  ]
+  
+  if (licensing.licenseRequired !== 'none') {
+    checklist.push(`Apply for ${licensing.licenseLabel || licensing.licenseRequired} license (${licensing.processingTime})`)
+    checklist.push('Prepare audited financial statements')
+    checklist.push(`Meet surety bond requirement: ${licensing.bondRequirement}`)
+    checklist.push(`Application fee: ${licensing.applicationFeeFormatted}`)
+    checklist.push('Implement AML/KYC procedures with blockchain analytics tools')
+    checklist.push('Designate qualified Compliance Officer with CAMS certification preferred')
+    checklist.push('Establish physical commercial office (no virtual offices/P.O. boxes)')
+  }
+  
+  if (stateCode === 'NY') {
+    checklist.push('Apply for BitLicense (12-18 months processing)')
+    checklist.push('Budget $250k-$1M for legal, compliance, and cybersecurity')
+    checklist.push('Maintain enhanced capital reserves')
+    checklist.push('Implement real-time blockchain analytics')
+    checklist.push('Designate CISO for cybersecurity')
+  }
+  
+  if (stateCode === 'CA') {
+    checklist.push('Register with DFPI by July 1, 2026 deadline')
+    checklist.push('Comply with California Consumer Privacy Act')
+    checklist.push('Prepare for DFAL licensing requirements')
+  }
+  
+  if (stateCode === 'FL') {
+    checklist.push('Register with OFR as money services business')
+    checklist.push('For kiosk operators: comply with CS/CS/SB 198 (2026) registration requirements')
+    checklist.push('Implement daily transaction limits where applicable')
+  }
+  
+  if (['TX', 'WY', 'FL', 'NV', 'SD', 'NH', 'TN'].includes(stateCode)) {
+    checklist.push('Review state-specific tax exemptions (no state income tax)')
+  }
+  
+  if (licensing.cryptoFriendly === 'strict') {
+    checklist.push('Budget for higher compliance costs (20-30% of staff in compliance roles)')
+    checklist.push('Prepare for rigorous regulatory examinations')
+  }
+  
+  return checklist
 }
 
 export async function generateReport(
@@ -47,17 +101,17 @@ export async function generateReport(
 
     // Parse the AI report into structured sections
     const executive_summary = extractExecutiveSummary(fullReport)
-    const regulatory_analysis = extractRegulatoryAnalysis(fullReport, location, strategy)
-    const licensing_matrix = extractLicensingMatrix(fullReport, location)
+    const regulatory_analysis = await extractRegulatoryAnalysis(fullReport, location, strategy)
+    const licensing_matrix = await extractLicensingMatrix(fullReport, location)
     const compliance_roadmap = extractComplianceRoadmap(fullReport, strategy)
     const regulatory_contacts = extractRegulatoryContacts(fullReport, location)
     const risk_assessment = extractRiskAssessment(fullReport, location, strategy)
 
     // Get local data for sections not fully covered by AI
-    const regulation = getStateRegulation(location.state)
+    const licensing = await getSimplifiedLicensing(location.state)
     const talentScore = getTalentScoreForLocation(location.city, location.state)
     const talentRecs = getTalentRecommendations(location.city, location.state, location.tier)
-    const complianceChecklist = getComplianceChecklist(location.state)
+    const complianceChecklist = await getComplianceChecklist(location.state)
 
     return {
       executive_summary,
@@ -85,45 +139,48 @@ function extractExecutiveSummary(fullReport: string): string {
   return match ? match[1].trim() : generateLocalExecutiveSummary()
 }
 
-function extractRegulatoryAnalysis(
+async function extractRegulatoryAnalysis(
   fullReport: string, 
   location: LocationAnalysis, 
   strategy: StrategyFormData
-): any {
+): Promise<any> {
   const regex = /## 2\. STATE REGULATORY ANALYSIS[\s\S]*?\([A-Z]{2}\)([\s\S]*?)(?=## 3\.|$)/
   const match = fullReport.match(regex)
   
-  const regulation = getStateRegulation(location.state)
-  const checklist = getComplianceChecklist(location.state)
+  const licensing = await getSimplifiedLicensing(location.state)
+  const checklist = await getComplianceChecklist(location.state)
   
   return {
-    climate: regulation.cryptoFriendly,
-    moneyTransmitter: regulation.moneyTransmitter,
-    taxTreatment: regulation.taxTreatment,
-    notes: regulation.notes,
+    climate: licensing.cryptoFriendly,
+    moneyTransmitter: licensing.moneyTransmitter,
+    taxTreatment: licensing.taxTreatment,
+    notes: licensing.notes,
     checklist,
-    lastUpdated: regulation.lastUpdated,
+    lastUpdated: new Date().toISOString().split('T')[0],
     licenseRequired: location.licenseRequired,
-    summary: match ? match[1].trim() : generateLocalRegulatorySummary(location, regulation),
+    applicationFee: licensing.applicationFeeFormatted,
+    bondRequirement: licensing.bondRequirement,
+    processingTime: licensing.processingTime,
+    summary: match ? match[1].trim() : generateLocalRegulatorySummary(location, licensing),
     fullAnalysis: match ? match[0].trim() : null
   }
 }
 
-function extractLicensingMatrix(fullReport: string, location: LocationAnalysis): any {
+async function extractLicensingMatrix(fullReport: string, location: LocationAnalysis): Promise<any> {
   const regex = /## 3\. MULTI-STATE LICENSING MATRIX([\s\S]*?)(?=## 4\.|$)/
   const match = fullReport.match(regex)
   
-  const regulation = getStateRegulation(location.state)
+  const licensing = await getSimplifiedLicensing(location.state)
   const licenses = []
   
-  if (regulation.moneyTransmitter.includes('required') || regulation.moneyTransmitter.includes('BitLicense')) {
+  if (licensing.licenseRequired !== 'none') {
     licenses.push({
-      type: 'Money Transmitter License',
+      type: licensing.licenseLabel || licensing.licenseRequired,
       required: true,
-      timeline: '4-8 months',
-      bonding: '$25,000 - $500,000',
-      fee: '$1,000 - $5,000',
-      notes: regulation.moneyTransmitter
+      timeline: licensing.processingTime,
+      bonding: licensing.bondRequirement,
+      fee: licensing.applicationFeeFormatted,
+      notes: licensing.moneyTransmitter
     })
   }
   
@@ -131,8 +188,8 @@ function extractLicensingMatrix(fullReport: string, location: LocationAnalysis):
     licenses.push({
       type: 'BitLicense',
       required: true,
-      timeline: '6-12 months',
-      bonding: '$50,000 - $500,000',
+      timeline: '12-18 months',
+      bonding: '$250,000 - $500,000',
       fee: '$5,000',
       notes: 'Comprehensive compliance program required'
     })
@@ -142,21 +199,21 @@ function extractLicensingMatrix(fullReport: string, location: LocationAnalysis):
     licenses.push({
       type: 'DFPI License',
       required: true,
-      timeline: '4-8 months',
-      bonding: '$25,000 - $500,000',
+      timeline: '9-12 months',
+      bonding: '$250,000 - $500,000',
       fee: '$1,000 - $5,000',
-      notes: 'California-specific requirements'
+      notes: 'California-specific requirements effective July 1, 2026'
     })
   }
   
   if (licenses.length === 0) {
     licenses.push({
-      type: 'State License',
-      required: 'May be required',
-      timeline: '2-6 months',
-      bonding: 'Varies by state',
-      fee: '$500 - $2,500',
-      notes: 'Consult with counsel for specific requirements'
+      type: 'No Specific License Required',
+      required: false,
+      timeline: 'N/A',
+      bonding: 'None required',
+      fee: 'None',
+      notes: 'Business may still need general business license'
     })
   }
   
@@ -297,22 +354,22 @@ function extractRiskAssessment(fullReport: string, location: LocationAnalysis, s
 }
 
 // Local generation functions (fallback when AI fails)
-function generateLocalReport(
+async function generateLocalReport(
   company: CompanyFormData,
   location: LocationAnalysis,
   strategy: StrategyFormData
-): GenerationResult {
-  const regulation = getStateRegulation(location.state)
+): Promise<GenerationResult> {
+  const licensing = await getSimplifiedLicensing(location.state)
   const talentScore = getTalentScoreForLocation(location.city, location.state)
   const talentRecs = getTalentRecommendations(location.city, location.state, location.tier)
-  const complianceChecklist = getComplianceChecklist(location.state)
+  const complianceChecklist = await getComplianceChecklist(location.state)
   
   return {
-    executive_summary: generateExecutiveSummary(company, location, strategy, regulation),
+    executive_summary: generateExecutiveSummary(company, location, strategy, licensing),
     location_analysis: generateLocationAnalysis(location, talentScore),
-    regulatory_analysis: generateRegulatoryAnalysis(location, regulation, complianceChecklist),
+    regulatory_analysis: generateRegulatoryAnalysis(location, licensing, complianceChecklist),
     talent_analysis: generateTalentAnalysis(location, talentScore, talentRecs),
-    licensing_matrix: generateLicensingMatrix(location, regulation),
+    licensing_matrix: generateLicensingMatrix(location, licensing),
     compliance_roadmap: generateComplianceRoadmap(strategy),
     regulatory_contacts: generateRegulatoryContacts(location),
     risk_assessment: generateRiskAssessment(location, strategy)
@@ -324,7 +381,7 @@ function generateExecutiveSummary(
   company: CompanyFormData,
   location: LocationAnalysis,
   strategy: StrategyFormData,
-  regulation: any
+  licensing: any
 ): string {
   const marketDesc = location.tier === 'major' 
     ? 'major market with established regulatory infrastructure'
@@ -332,9 +389,9 @@ function generateExecutiveSummary(
       ? `suburban market with access to ${location.nearestRegulatoryHub || location.nearestMajorCity}`
       : 'rural market requiring remote compliance resources'
   
-  const regulatoryDesc = regulation.cryptoFriendly === 'friendly'
+  const regulatoryDesc = licensing.cryptoFriendly === 'friendly'
     ? 'favorable regulatory environment with lower compliance burden'
-    : regulation.cryptoFriendly === 'moderate'
+    : licensing.cryptoFriendly === 'moderate'
       ? 'moderate regulatory requirements requiring standard compliance'
       : 'strict regulatory framework requiring comprehensive compliance programs'
   
@@ -348,14 +405,19 @@ With a compliance budget of ${formatBudget(company.budget)}, the institution is 
 Based in ${location.city}, ${location.state}, your institution operates in a ${marketDesc}. 
 This jurisdiction offers ${location.regulatoryClimate} regulatory climate and ${location.talentDensity} compliance talent density.
 
+## Financial Requirements
+- Application Fee: ${licensing.applicationFeeFormatted}
+- Bond Requirement: ${licensing.bondRequirement}
+- Processing Time: ${licensing.processingTime}
+
 ## Regulatory Focus
 Based on your primary focus on ${formatPrimaryFocus(strategy.primary)}, 
 we've developed a ${strategy.timeline} compliance roadmap that addresses your key concerns:
 ${strategy.concerns.substring(0, 150)}...
 
 ## Key Compliance Recommendations
-1. ${location.licenseRequired !== 'none' ? `Prioritize license applications in ${location.state} - start within 30 days` : 'Leverage favorable regulatory environment for rapid market entry'}
-2. ${regulation.cryptoFriendly === 'strict' ? 'Implement enhanced compliance infrastructure immediately' : 'Establish standard compliance protocols aligned with industry best practices'}
+1. ${location.licenseRequired !== 'none' ? `Prioritize license applications in ${location.state} - start within 30 days (${licensing.processingTime})` : 'Leverage favorable regulatory environment for rapid market entry'}
+2. ${licensing.cryptoFriendly === 'strict' ? 'Implement enhanced compliance infrastructure immediately' : 'Establish standard compliance protocols aligned with industry best practices'}
 3. Focus on ${strategy.secondary.slice(0, 2).map(formatSecondaryFocus).join(' and ')} as secondary priorities
 
 ## Expected Outcomes
@@ -382,22 +444,25 @@ function generateLocationAnalysis(location: LocationAnalysis, talentScore: any):
   }
 }
 
-function generateRegulatoryAnalysis(location: LocationAnalysis, regulation: any, checklist: string[]): any {
+function generateRegulatoryAnalysis(location: LocationAnalysis, licensing: any, checklist: string[]): any {
   return {
-    climate: regulation.cryptoFriendly,
-    moneyTransmitter: regulation.moneyTransmitter,
-    taxTreatment: regulation.taxTreatment,
-    notes: regulation.notes,
+    climate: licensing.cryptoFriendly,
+    moneyTransmitter: licensing.moneyTransmitter,
+    taxTreatment: licensing.taxTreatment,
+    notes: licensing.notes,
     checklist,
-    lastUpdated: regulation.lastUpdated,
+    lastUpdated: new Date().toISOString().split('T')[0],
     licenseRequired: location.licenseRequired,
-    summary: `${location.state} has a ${regulation.cryptoFriendly} regulatory climate. ${
-      regulation.cryptoFriendly === 'friendly' 
+    applicationFee: licensing.applicationFeeFormatted,
+    bondRequirement: licensing.bondRequirement,
+    processingTime: licensing.processingTime,
+    summary: `${location.state} has a ${licensing.cryptoFriendly} regulatory climate. ${
+      licensing.cryptoFriendly === 'friendly' 
         ? 'This presents lower compliance barriers for digital asset initiatives.'
-        : regulation.cryptoFriendly === 'strict'
+        : licensing.cryptoFriendly === 'strict'
           ? 'Expect significant compliance requirements and regulatory oversight.'
           : 'Standard compliance requirements with room to operate.'
-    }`
+    } Application fee is ${licensing.applicationFeeFormatted} with a bond requirement of ${licensing.bondRequirement}.`
   }
 }
 
@@ -416,17 +481,17 @@ function generateTalentAnalysis(location: LocationAnalysis, talentScore: any, re
   }
 }
 
-function generateLicensingMatrix(location: LocationAnalysis, regulation: any): any {
+function generateLicensingMatrix(location: LocationAnalysis, licensing: any): any {
   const licenses = []
   
-  if (regulation.moneyTransmitter.includes('required') || regulation.moneyTransmitter.includes('BitLicense')) {
+  if (licensing.licenseRequired !== 'none') {
     licenses.push({
-      type: 'Money Transmitter License',
+      type: licensing.licenseLabel || licensing.licenseRequired,
       required: true,
-      timeline: '4-8 months',
-      bonding: '$25,000 - $500,000',
-      fee: '$1,000 - $5,000',
-      notes: regulation.moneyTransmitter
+      timeline: licensing.processingTime,
+      bonding: licensing.bondRequirement,
+      fee: licensing.applicationFeeFormatted,
+      notes: licensing.moneyTransmitter
     })
   }
   
@@ -434,8 +499,8 @@ function generateLicensingMatrix(location: LocationAnalysis, regulation: any): a
     licenses.push({
       type: 'BitLicense',
       required: true,
-      timeline: '6-12 months',
-      bonding: '$50,000 - $500,000',
+      timeline: '12-18 months',
+      bonding: '$250,000 - $500,000',
       fee: '$5,000',
       notes: 'Comprehensive compliance program required'
     })
@@ -445,21 +510,21 @@ function generateLicensingMatrix(location: LocationAnalysis, regulation: any): a
     licenses.push({
       type: 'DFPI License',
       required: true,
-      timeline: '4-8 months',
-      bonding: '$25,000 - $500,000',
+      timeline: '9-12 months',
+      bonding: '$250,000 - $500,000',
       fee: '$1,000 - $5,000',
-      notes: 'California-specific requirements'
+      notes: 'California-specific requirements effective July 1, 2026'
     })
   }
   
   if (licenses.length === 0) {
     licenses.push({
-      type: 'State License',
-      required: 'May be required',
-      timeline: '2-6 months',
-      bonding: 'Varies by state',
-      fee: '$500 - $2,500',
-      notes: 'Consult with counsel for specific requirements'
+      type: 'No Specific License Required',
+      required: false,
+      timeline: 'N/A',
+      bonding: 'None required',
+      fee: 'None',
+      notes: 'Business may still need general business license'
     })
   }
   
@@ -590,14 +655,14 @@ function generateLocalExecutiveSummary(): string {
   return `Executive summary could not be extracted from AI report. Please refer to the full report below for complete analysis.`
 }
 
-function generateLocalRegulatorySummary(location: LocationAnalysis, regulation: any): string {
-  return `${location.state} has a ${regulation.cryptoFriendly} regulatory climate. ${
-    regulation.cryptoFriendly === 'friendly' 
+function generateLocalRegulatorySummary(location: LocationAnalysis, licensing: any): string {
+  return `${location.state} has a ${licensing.cryptoFriendly} regulatory climate. ${
+    licensing.cryptoFriendly === 'friendly' 
       ? 'This presents lower compliance barriers for digital asset initiatives.'
-      : regulation.cryptoFriendly === 'strict'
+      : licensing.cryptoFriendly === 'strict'
         ? 'Expect significant compliance requirements and regulatory oversight.'
         : 'Standard compliance requirements with room to operate.'
-  }`
+  } Application fee is ${licensing.applicationFeeFormatted} with a bond requirement of ${licensing.bondRequirement}.`
 }
 
 // Helper functions

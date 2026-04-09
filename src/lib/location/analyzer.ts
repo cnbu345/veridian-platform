@@ -1,6 +1,9 @@
-// src/lib/location/analyzer.ts // Location analysis
+// src/lib/location/analyzer.ts
+// Location analysis with licensing data from unified service
+// Last updated: April 9, 2026
+
 import { MAJOR_CITIES, REGULATORY_HUBS, MSAS } from './cities'
-import { getStateRegulation } from './regulations'
+import { getSimplifiedLicensing, type SimplifiedLicensing } from './licensing'
 
 export interface LocationAnalysis {
   city: string
@@ -15,15 +18,151 @@ export interface LocationAnalysis {
   msaPopulation?: number
   regulatoryClimate: 'friendly' | 'moderate' | 'strict' | 'unknown'
   licenseRequired: 'none' | 'mtl' | 'bitlicense' | 'dfpi' | 'varies'
+  licenseDescription: string
+  applicationFee: number | null
+  applicationFeeFormatted: string
+  bondRequirement: string
+  processingTime: string
+  taxTreatment: string
   talentDensity: 'high' | 'medium' | 'low'
   marketOpportunity: 'excellent' | 'good' | 'fair' | 'challenging'
+  complianceScore: number
+  marketScore: number
 }
 
+/**
+ * Calculate compliance score based on state and tier
+ * Higher score = more compliance work needed (strict = higher score)
+ */
+function calculateComplianceScore(
+  regulatoryClimate: string,
+  licenseRequired: string,
+  tier: string
+): number {
+  let score = 50 // baseline
+  
+  // Regulatory factor - stricter = more compliance work
+  if (regulatoryClimate === 'strict') {
+    score += 25
+  } else if (regulatoryClimate === 'moderate') {
+    score += 10
+  } else if (regulatoryClimate === 'friendly') {
+    score -= 10
+  }
+  
+  // License factor - more requirements = more compliance work
+  if (licenseRequired === 'bitlicense') {
+    score += 20
+  } else if (licenseRequired === 'dfpi' || licenseRequired === 'mtl') {
+    score += 10
+  } else if (licenseRequired === 'none') {
+    score -= 15
+  }
+  
+  // Tier factor - major cities have more compliance resources
+  if (tier === 'major') {
+    score += 5
+  } else if (tier === 'rural') {
+    score -= 10
+  }
+  
+  return Math.min(100, Math.max(0, score))
+}
+
+/**
+ * Calculate market opportunity score
+ * Higher score = better opportunity for crypto business
+ */
+function calculateMarketScore(
+  regulatoryClimate: string,
+  licenseRequired: string,
+  taxTreatment: string,
+  tier: string
+): number {
+  let score = 50 // baseline
+  
+  // Regulatory factor - friendly = more opportunity
+  if (regulatoryClimate === 'friendly') {
+    score += 25
+  } else if (regulatoryClimate === 'moderate') {
+    score += 10
+  } else if (regulatoryClimate === 'strict') {
+    score -= 20
+  }
+  
+  // License factor - fewer requirements = more opportunity
+  if (licenseRequired === 'none') {
+    score += 15
+  } else if (licenseRequired === 'mtl') {
+    score += 5
+  } else if (licenseRequired === 'bitlicense' || licenseRequired === 'dfpi') {
+    score -= 10
+  }
+  
+  // Tax factor - no income tax = more opportunity
+  if (taxTreatment.includes('No state income tax')) {
+    score += 15
+  }
+  
+  // Tier factor - major cities = more opportunity
+  if (tier === 'major') {
+    score += 20
+  } else if (tier === 'suburban') {
+    score += 10
+  } else if (tier === 'rural') {
+    score -= 10
+  }
+  
+  return Math.min(100, Math.max(0, score))
+}
+
+/**
+ * Determine talent density based on location
+ */
+function determineTalentDensity(
+  tier: string,
+  isRegulatoryHub: boolean,
+  stateCode: string
+): 'high' | 'medium' | 'low' {
+  // Major regulatory hubs have high talent density
+  if (isRegulatoryHub) return 'high'
+  
+  // Major cities have medium-high talent
+  if (tier === 'major') return 'medium'
+  
+  // States with active crypto ecosystems
+  const highTalentStates = ['NY', 'CA', 'TX', 'FL', 'IL', 'WA', 'CO', 'MA', 'NJ']
+  if (highTalentStates.includes(stateCode)) {
+    return tier === 'rural' ? 'low' : 'medium'
+  }
+  
+  // Suburban areas have medium-low talent
+  if (tier === 'suburban') return 'low'
+  
+  return 'low'
+}
+
+/**
+ * Determine market opportunity based on scores
+ */
+function determineMarketOpportunity(marketScore: number): 'excellent' | 'good' | 'fair' | 'challenging' {
+  if (marketScore >= 75) return 'excellent'
+  if (marketScore >= 55) return 'good'
+  if (marketScore >= 35) return 'fair'
+  return 'challenging'
+}
+
+/**
+ * Main location analysis function
+ */
 export async function analyzeLocation(city: string, state: string): Promise<LocationAnalysis> {
   const normalizedCity = city.trim().toLowerCase()
   const normalizedState = state.trim().toUpperCase()
   
   console.log('🔍 Analyzing location:', { city, state, normalizedCity, normalizedState })
+
+  // Get licensing data from unified service
+  const licensing = await getSimplifiedLicensing(normalizedState)
 
   // Check if it's a major city
   const majorCity = MAJOR_CITIES.find(
@@ -37,26 +176,40 @@ export async function analyzeLocation(city: string, state: string): Promise<Loca
       hub => hub.city.toLowerCase() === normalizedCity && hub.state === normalizedState
     )
     
-    const regulation = getStateRegulation(normalizedState)
+    const isRegulatoryHub = !!regulatoryHub
+    const talentDensity = determineTalentDensity('major', isRegulatoryHub, normalizedState)
+    const complianceScore = calculateComplianceScore(
+      licensing.cryptoFriendly,
+      licensing.licenseRequired,
+      'major'
+    )
+    const marketScore = calculateMarketScore(
+      licensing.cryptoFriendly,
+      licensing.licenseRequired,
+      licensing.taxTreatment,
+      'major'
+    )
+    const marketOpportunity = determineMarketOpportunity(marketScore)
     
-    // Determine license type
-    let licenseRequired: 'none' | 'mtl' | 'bitlicense' | 'dfpi' | 'varies' = 'varies'
-    if (regulation.moneyTransmitter.includes('BitLicense')) licenseRequired = 'bitlicense'
-    else if (regulation.moneyTransmitter.includes('DFPI')) licenseRequired = 'dfpi'
-    else if (regulation.moneyTransmitter.includes('required')) licenseRequired = 'mtl'
-    else if (regulation.moneyTransmitter.includes('No specific')) licenseRequired = 'none'
-    
-    const result = {
+    const result: LocationAnalysis = {
       city,
       state,
-      tier: 'major' as const,
+      tier: 'major',
       nearestRegulatoryHub: regulatoryHub?.city || majorCity.city,
       regulatoryHubType: regulatoryHub?.type,
       regulatoryHubScore: regulatoryHub?.score,
-      regulatoryClimate: regulation.cryptoFriendly as any,
-      licenseRequired,
-      talentDensity: regulatoryHub ? ('high' as const) : ('medium' as const),
-      marketOpportunity: regulatoryHub ? ('excellent' as const) : ('good' as const)
+      regulatoryClimate: licensing.cryptoFriendly,
+      licenseRequired: licensing.licenseRequired,
+      licenseDescription: licensing.moneyTransmitter,
+      applicationFee: licensing.applicationFee,
+      applicationFeeFormatted: licensing.applicationFeeFormatted,
+      bondRequirement: licensing.bondRequirementFormatted,
+      processingTime: licensing.processingTimeFormatted,
+      taxTreatment: licensing.taxTreatment,
+      talentDensity,
+      marketOpportunity,
+      complianceScore,
+      marketScore
     }
     
     console.log('✅ Analysis result:', result)
@@ -72,14 +225,20 @@ export async function analyzeLocation(city: string, state: string): Promise<Loca
   if (msa) {
     const majorInState = MAJOR_CITIES.find(mc => mc.state === normalizedState)
     const regulatoryHubInState = REGULATORY_HUBS.find(hub => hub.state === normalizedState)
-    const regulation = getStateRegulation(normalizedState)
-    
-    // Determine license type
-    let licenseRequired: 'none' | 'mtl' | 'bitlicense' | 'dfpi' | 'varies' = 'varies'
-    if (regulation.moneyTransmitter.includes('BitLicense')) licenseRequired = 'bitlicense'
-    else if (regulation.moneyTransmitter.includes('DFPI')) licenseRequired = 'dfpi'
-    else if (regulation.moneyTransmitter.includes('required')) licenseRequired = 'mtl'
-    else if (regulation.moneyTransmitter.includes('No specific')) licenseRequired = 'none'
+    const isRegulatoryHub = !!regulatoryHubInState
+    const talentDensity = determineTalentDensity('suburban', isRegulatoryHub, normalizedState)
+    const complianceScore = calculateComplianceScore(
+      licensing.cryptoFriendly,
+      licensing.licenseRequired,
+      'suburban'
+    )
+    const marketScore = calculateMarketScore(
+      licensing.cryptoFriendly,
+      licensing.licenseRequired,
+      licensing.taxTreatment,
+      'suburban'
+    )
+    const marketOpportunity = determineMarketOpportunity(marketScore)
     
     return {
       city,
@@ -92,10 +251,18 @@ export async function analyzeLocation(city: string, state: string): Promise<Loca
       distanceToMajor: 25,
       msaName: msa.name,
       msaPopulation: msa.population,
-      regulatoryClimate: regulation.cryptoFriendly as any,
-      licenseRequired,
-      talentDensity: regulatoryHubInState ? 'medium' : 'low',
-      marketOpportunity: 'good'
+      regulatoryClimate: licensing.cryptoFriendly,
+      licenseRequired: licensing.licenseRequired,
+      licenseDescription: licensing.moneyTransmitter,
+      applicationFee: licensing.applicationFee,
+      applicationFeeFormatted: licensing.applicationFeeFormatted,
+      bondRequirement: licensing.bondRequirementFormatted,
+      processingTime: licensing.processingTimeFormatted,
+      taxTreatment: licensing.taxTreatment,
+      talentDensity,
+      marketOpportunity,
+      complianceScore,
+      marketScore
     }
   }
   
@@ -112,14 +279,19 @@ export async function analyzeLocation(city: string, state: string): Promise<Loca
     return nearest
   }, REGULATORY_HUBS[0])
   
-  const regulation = getStateRegulation(normalizedState)
-  
-  // Determine license type
-  let licenseRequired: 'none' | 'mtl' | 'bitlicense' | 'dfpi' | 'varies' = 'varies'
-  if (regulation.moneyTransmitter.includes('BitLicense')) licenseRequired = 'bitlicense'
-  else if (regulation.moneyTransmitter.includes('DFPI')) licenseRequired = 'dfpi'
-  else if (regulation.moneyTransmitter.includes('required')) licenseRequired = 'mtl'
-  else if (regulation.moneyTransmitter.includes('No specific')) licenseRequired = 'none'
+  const talentDensity = determineTalentDensity('rural', false, normalizedState)
+  const complianceScore = calculateComplianceScore(
+    licensing.cryptoFriendly,
+    licensing.licenseRequired,
+    'rural'
+  )
+  const marketScore = calculateMarketScore(
+    licensing.cryptoFriendly,
+    licensing.licenseRequired,
+    licensing.taxTreatment,
+    'rural'
+  )
+  const marketOpportunity = determineMarketOpportunity(marketScore)
   
   return {
     city,
@@ -130,45 +302,40 @@ export async function analyzeLocation(city: string, state: string): Promise<Loca
     regulatoryHubType: nearestRegulatory.type,
     regulatoryHubScore: nearestRegulatory.score,
     distanceToMajor: 75,
-    regulatoryClimate: regulation.cryptoFriendly as any,
-    licenseRequired,
-    talentDensity: 'low',
-    marketOpportunity: 'fair'
+    regulatoryClimate: licensing.cryptoFriendly,
+    licenseRequired: licensing.licenseRequired,
+    licenseDescription: licensing.moneyTransmitter,
+    applicationFee: licensing.applicationFee,
+    applicationFeeFormatted: licensing.applicationFeeFormatted,
+    bondRequirement: licensing.bondRequirementFormatted,
+    processingTime: licensing.processingTimeFormatted,
+    taxTreatment: licensing.taxTreatment,
+    talentDensity,
+    marketOpportunity,
+    complianceScore,
+    marketScore
   }
 }
 
-// Get regulatory compliance score
-export function getComplianceScore(state: string, tier: string): number {
-  const regulation = getStateRegulation(state)
-  let score = 50
-  
-  // Regulatory factor - stricter = more compliance work needed = lower score
-  if (regulation.cryptoFriendly === 'friendly') score += 20
-  if (regulation.cryptoFriendly === 'moderate') score += 10
-  if (regulation.cryptoFriendly === 'strict') score -= 20
-  
-  // Tier factor - major cities have more compliance resources
-  if (tier === 'major') score += 15
-  if (tier === 'suburban') score += 5
-  if (tier === 'rural') score -= 10
-  
-  return Math.min(100, Math.max(0, score))
+/**
+ * Get regulatory compliance score (0-100)
+ * Higher score = more compliance requirements
+ */
+export async function getComplianceScore(state: string, city: string, tier: string): Promise<number> {
+  const licensing = await getSimplifiedLicensing(state)
+  return calculateComplianceScore(licensing.cryptoFriendly, licensing.licenseRequired, tier)
 }
 
-// Get market opportunity score
-export function getMarketScore(state: string, tier: string): number {
-  const regulation = getStateRegulation(state)
-  let score = 50
-  
-  // Regulatory factor - friendly = more opportunity
-  if (regulation.cryptoFriendly === 'friendly') score += 30
-  if (regulation.cryptoFriendly === 'moderate') score += 15
-  if (regulation.cryptoFriendly === 'strict') score -= 20
-  
-  // Tier factor
-  if (tier === 'major') score += 20
-  if (tier === 'suburban') score += 10
-  if (tier === 'rural') score -= 10
-  
-  return Math.min(100, Math.max(0, score))
+/**
+ * Get market opportunity score (0-100)
+ * Higher score = better opportunity for crypto business
+ */
+export async function getMarketScore(state: string, city: string, tier: string): Promise<number> {
+  const licensing = await getSimplifiedLicensing(state)
+  return calculateMarketScore(
+    licensing.cryptoFriendly,
+    licensing.licenseRequired,
+    licensing.taxTreatment,
+    tier
+  )
 }

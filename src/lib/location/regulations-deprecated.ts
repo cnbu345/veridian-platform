@@ -1,4 +1,4 @@
-// src/lib/location/regulations.ts
+// src/lib/location/regulations.ts - DEPRECATED
 // State regulatory data for Web3/crypto businesses
 // LAST UPDATED: March 1, 2026
 // SOURCES: State banking departments, NMLS, recent legislation
