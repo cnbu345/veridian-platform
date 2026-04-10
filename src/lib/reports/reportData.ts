@@ -1,7 +1,7 @@
 // src/lib/reports/reportData.ts
-// Updated to use new licensing service
+// Updated to use client-safe licensing helper
 
-import { getSimplifiedLicensing } from '../location/licensing'
+import { getSimplifiedLicensingClient } from '../location/licensing-client'
 import { getTalentScoreForLocation } from '../location/talent'
 import { LocationAnalysis } from '../location/analyzer'
 import { getProvidersForLocation } from '../location/serviceProviders'
@@ -162,9 +162,9 @@ export async function buildReportData(
     goals: string
   }
 ): Promise<ReportData> {
-  // Use the new licensing service instead of getStateRegulation
-  const licensing = await getSimplifiedLicensing(location.state)
-  
+  // Use the client-safe licensing service
+  const licensing = await getSimplifiedLicensingClient(location.state)  // CHANGED
+
   // Transform licensing data to match the expected stateRegulation format
   const stateRegulation = {
     cryptoFriendly: licensing.cryptoFriendly,
@@ -177,25 +177,25 @@ export async function buildReportData(
     bondRequirement: licensing.bondRequirement,
     processingTime: licensing.processingTime
   }
-  
+
   // Use the existing licensing data for licenses
   const licenses = getLicensesForState(location.state)
   const multiStateLicenses = getAllStateLicenses(15) // Expand to 15 states
-  
+
   // Use the service providers data
   const providers = getProvidersForLocation(location.city, location.state, location.tier)
-  
+
   // Use your existing talent data
   const talentScore = getTalentScoreForLocation(location.city, location.state)
-  
+
   // Get current year for dynamic dates
   const currentYear = new Date().getFullYear()
   const currentMonth = new Date().getMonth()
   const currentQuarter = Math.floor(currentMonth / 3) + 1
-  
+
   // Determine timeline based on strategy
   const months = strategy.timeline === '3-months' ? 3 : strategy.timeline === '6-months' ? 6 : 12
-  
+
   // Compliance phases based on timeline
   const compliancePhases: CompliancePhase[] = [
     {
@@ -251,7 +251,7 @@ export async function buildReportData(
       ]
     }
   ]
-  
+
   // Risk items
   const risks: RiskItem[] = [
     {
@@ -297,7 +297,7 @@ export async function buildReportData(
       mitigation: 'Robust cybersecurity, insurance'
     }
   ]
-  
+
   // Overall risk
   let overallRisk = 'Moderate'
   if (location.regulatoryClimate === 'strict') {
@@ -310,7 +310,7 @@ export async function buildReportData(
   const metrics: ReportMetric[] = [
     {
       label: 'Regulatory Climate',
-      value: location.regulatoryClimate === 'friendly' ? 'Friendly' : 
+      value: location.regulatoryClimate === 'friendly' ? 'Friendly' :
              location.regulatoryClimate === 'strict' ? 'Strict' : 'Moderate',
       color: location.regulatoryClimate === 'friendly' ? 'text-green-600' :
              location.regulatoryClimate === 'strict' ? 'text-red-600' : 'text-yellow-600'
@@ -349,12 +349,12 @@ export async function buildReportData(
       color: 'text-gold-400'
     }
   ]
-  
+
   // Market Analysis
   const marketAnalysis: MarketAnalysis = {
-    tier: location.tier === 'major' ? 'Major Market' : 
+    tier: location.tier === 'major' ? 'Major Market' :
           location.tier === 'suburban' ? 'Suburban Market' : 'Rural Market',
-    description: location.tier === 'major' 
+    description: location.tier === 'major'
       ? `Major market with robust regulatory infrastructure and high compliance talent density.`
       : location.tier === 'suburban'
       ? `Suburban market with access to ${location.nearestRegulatoryHub || 'nearby regulatory hub'}.`
@@ -364,7 +364,7 @@ export async function buildReportData(
     opportunityScore: location.tier === 'major' ? 85 : location.tier === 'suburban' ? 70 : 55,
     keyIndustries: ['Financial Services', 'Technology', 'Real Estate']
   }
-  
+
   // Talent Analysis
   const talentAnalysis: TalentAnalysis = {
     talentScore: talentScore.score,
@@ -380,9 +380,9 @@ export async function buildReportData(
     topChannels: talentScore.rank === 'high'
       ? ['Local compliance associations', 'University law programs', 'Industry conferences']
       : ['LinkedIn Recruiter', 'Remote compliance job boards', 'Specialized search firms'],
-    timeToHire: talentScore.rank === 'high' ? '4-6 weeks' : talentScore.rank === 'medium' ? '6-8 weeks' : '8-10 weeks'
+    timeToHire: talentScore.rank === 'high' ? '4-6 weeks' : talentScore.rank === 'medium' ? '6-8 weeks' : '8-10 weeks'    
   }
-  
+
   // Technology Recommendations
   const techRecommendations: TechRecommendation[] = [
     {
@@ -443,7 +443,7 @@ export async function buildReportData(
       ]
     }
   ]
-  
+
   // Budget Guide
   const budgetGuide: BudgetGuide = {
     legalFees: {
@@ -477,7 +477,7 @@ export async function buildReportData(
       { category: 'Compliance Staff', amount: '$80,000 - $250,000', notes: 'Salary + benefits' }
     ]
   }
-  
+
   // Next Steps
   const nextSteps: NextSteps = {
     immediate: [
@@ -524,7 +524,7 @@ export async function buildReportData(
       }
     ]
   }
-  
+
   return {
     company,
     location,

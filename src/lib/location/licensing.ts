@@ -2,6 +2,11 @@
 // Unified licensing service - reads from Supabase first, falls back to static data
 // Last updated: April 9, 2026
 
+// Server-only guard
+if (typeof window !== 'undefined') {
+  throw new Error('❌ licensing.ts is SERVER-ONLY. Use licensing-client.ts for client components.')
+}
+
 import { createClient } from '@/lib/supabase/server'
 import { LICENSING_DATA, getLicensesForState as getStaticLicenses, type LicenseInfo } from './licensingData'
 

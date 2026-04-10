@@ -1,10 +1,10 @@
 // src/lib/reports/generator.ts
-// Generate Report - Updated to use new licensing service
+// Generate Report - Updated to use client-safe licensing service
 
 import { CompanyFormData } from './validation'
 import { LocationAnalysis } from '../location/analyzer'
 import { StrategyFormData } from './validation'
-import { getSimplifiedLicensing } from '../location/licensing'
+import { getSimplifiedLicensingClient } from '../location/licensing-client'  // CHANGED
 import { getTalentScoreForLocation, getTalentRecommendations } from '../location/talent'
 import { generateRegulatoryReport } from '../openai/openai'
 import { GeneratedReport } from './types'
@@ -23,7 +23,7 @@ export interface GenerationResult {
 
 // Helper function to get compliance checklist (temporary - can be moved to licensing service)
 async function getComplianceChecklist(stateCode: string): Promise<string[]> {
-  const licensing = await getSimplifiedLicensing(stateCode)
+  const licensing = await getSimplifiedLicensingClient(stateCode)  // CHANGED
   
   const checklist = [
     'Register business entity with Secretary of State',
@@ -32,7 +32,7 @@ async function getComplianceChecklist(stateCode: string): Promise<string[]> {
   ]
   
   if (licensing.licenseRequired !== 'none') {
-    checklist.push(`Apply for ${licensing.licenseLabel || licensing.licenseRequired} license (${licensing.processingTime})`)
+    checklist.push(`Apply for ${licensing.licenseRequired} license (${licensing.processingTime})`)
     checklist.push('Prepare audited financial statements')
     checklist.push(`Meet surety bond requirement: ${licensing.bondRequirement}`)
     checklist.push(`Application fee: ${licensing.applicationFeeFormatted}`)
@@ -108,7 +108,7 @@ export async function generateReport(
     const risk_assessment = extractRiskAssessment(fullReport, location, strategy)
 
     // Get local data for sections not fully covered by AI
-    const licensing = await getSimplifiedLicensing(location.state)
+    const licensing = await getSimplifiedLicensingClient(location.state)  // CHANGED
     const talentScore = getTalentScoreForLocation(location.city, location.state)
     const talentRecs = getTalentRecommendations(location.city, location.state, location.tier)
     const complianceChecklist = await getComplianceChecklist(location.state)
@@ -147,7 +147,7 @@ async function extractRegulatoryAnalysis(
   const regex = /## 2\. STATE REGULATORY ANALYSIS[\s\S]*?\([A-Z]{2}\)([\s\S]*?)(?=## 3\.|$)/
   const match = fullReport.match(regex)
   
-  const licensing = await getSimplifiedLicensing(location.state)
+  const licensing = await getSimplifiedLicensingClient(location.state)  // CHANGED
   const checklist = await getComplianceChecklist(location.state)
   
   return {
@@ -170,12 +170,15 @@ async function extractLicensingMatrix(fullReport: string, location: LocationAnal
   const regex = /## 3\. MULTI-STATE LICENSING MATRIX([\s\S]*?)(?=## 4\.|$)/
   const match = fullReport.match(regex)
   
-  const licensing = await getSimplifiedLicensing(location.state)
+  const licensing = await getSimplifiedLicensingClient(location.state)  // CHANGED
   const licenses = []
   
   if (licensing.licenseRequired !== 'none') {
     licenses.push({
-      type: licensing.licenseLabel || licensing.licenseRequired,
+      type: licensing.licenseRequired === 'mtl' ? 'Money Transmitter License' :
+            licensing.licenseRequired === 'bitlicense' ? 'BitLicense' :
+            licensing.licenseRequired === 'dfpi' ? 'DFPI License' :
+            licensing.licenseRequired,
       required: true,
       timeline: licensing.processingTime,
       bonding: licensing.bondRequirement,
@@ -359,7 +362,7 @@ async function generateLocalReport(
   location: LocationAnalysis,
   strategy: StrategyFormData
 ): Promise<GenerationResult> {
-  const licensing = await getSimplifiedLicensing(location.state)
+  const licensing = await getSimplifiedLicensingClient(location.state)  // CHANGED
   const talentScore = getTalentScoreForLocation(location.city, location.state)
   const talentRecs = getTalentRecommendations(location.city, location.state, location.tier)
   const complianceChecklist = await getComplianceChecklist(location.state)
@@ -486,7 +489,10 @@ function generateLicensingMatrix(location: LocationAnalysis, licensing: any): an
   
   if (licensing.licenseRequired !== 'none') {
     licenses.push({
-      type: licensing.licenseLabel || licensing.licenseRequired,
+      type: licensing.licenseRequired === 'mtl' ? 'Money Transmitter License' :
+            licensing.licenseRequired === 'bitlicense' ? 'BitLicense' :
+            licensing.licenseRequired === 'dfpi' ? 'DFPI License' :
+            licensing.licenseRequired,
       required: true,
       timeline: licensing.processingTime,
       bonding: licensing.bondRequirement,

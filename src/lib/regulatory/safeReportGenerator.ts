@@ -1,10 +1,12 @@
 // src/lib/regulatory/safeReportGenerator.ts
 // Phase 1 Part 4: Hallucination-free report generation with configurable AI provider
+// UPDATED: Uses licensing_requirements table instead of deprecated state_regulations
 
-import { prepareRAGContext, hasSufficientData, type RetrievedFact } from './rag'
+import { hasSufficientData, type RetrievedFact, searchRelevantFacts, buildPromptFromFacts } from './simpleRag'
 import { recordClaim, updateClaimVerification } from './sourceVerification'
-import { getStateRegulation } from '@/lib/location/regulations'
+import { getSimplifiedLicensing, type SimplifiedLicensing } from '@/lib/location/licensing'
 import { getActiveProvider, type AIProviderConfig } from '@/lib/ai/config'
+import { createClient } from '@/lib/supabase/server'
 
 // Import the appropriate AI client based on provider
 async function getAIClient() {
@@ -34,9 +36,9 @@ async function getAIClient() {
       }
     
     case 'local-llama':
-      // Local Llama uses a different API format (Ollama)
+      // Local Llama uses Ollama API format
       return {
-        client: null, // Will use fetch directly for Ollama
+        client: null,
         provider: provider.name,
         model: provider.model,
         apiUrl: provider.apiUrl
@@ -84,7 +86,7 @@ async function callOpenAICompatible(prompt: string, client: any, model: string, 
                    You have ZERO tolerance for hallucinations. 
                    You ONLY use the verified facts provided in the context.
                    If information is missing, you say "INSUFFICIENT DATA" or "No verified data available".
-                   You NEVER invent regulatory requirements, fees, timelines, or any compliance information.
+                   You NEVER invent regulatory requirements, fees, bonds, timelines, or any compliance information.
                    You ALWAYS cite sources using the provided URLs.`
       },
       {
@@ -128,6 +130,54 @@ export interface SafeReportResult {
     safe: boolean
   }
   aiProvider?: string
+  licensingData?: SimplifiedLicensing
+  enforcementHistory?: string
+  pendingLegislation?: string
+}
+
+/**
+ * Fetch additional state data for comprehensive reports
+ */
+async function fetchStateEnforcementAndLegislation(stateCode: string) {
+  const supabase = await createClient()
+  const twoYearsAgo = new Date()
+  twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2)
+  
+  // Fetch enforcement actions
+  const { data: enforcement } = await supabase
+    .from('enforcement_actions')
+    .select('action_type, defendant, penalty_amount, action_date, description')
+    .eq('state_code', stateCode)
+    .gte('action_date', twoYearsAgo.toISOString())
+    .order('action_date', { ascending: false })
+    .limit(5)
+  
+  // Fetch pending legislation
+  const { data: legislation } = await supabase
+    .from('legislation_tracker')
+    .select('bill_number, title, status, introduced_date, effective_date')
+    .eq('state_code', stateCode)
+    .not('status', 'in', '("enacted","failed","vetoed")')
+    .order('introduced_date', { ascending: false })
+    .limit(5)
+  
+  // Format enforcement history as readable text
+  let enforcementHistory = 'No recent enforcement actions identified'
+  if (enforcement && enforcement.length > 0) {
+    enforcementHistory = enforcement.map(e => 
+      `${e.action_type.replace('_', ' ')} against ${e.defendant}${e.penalty_amount ? ` ($${e.penalty_amount.toLocaleString()})` : ''} - ${new Date(e.action_date).toLocaleDateString()}`
+    ).join('; ')
+  }
+  
+  // Format pending legislation as readable text
+  let pendingLegislation = 'No pending legislation identified'
+  if (legislation && legislation.length > 0) {
+    pendingLegislation = legislation.map(l => 
+      `${l.bill_number}: ${l.title.substring(0, 80)}${l.title.length > 80 ? '...' : ''} (${l.status.replace('_', ' ')})`
+    ).join('; ')
+  }
+  
+  return { enforcementHistory, pendingLegislation, enforcementCount: enforcement?.length || 0, legislationCount: legislation?.length || 0 }
 }
 
 /**
@@ -140,43 +190,51 @@ export async function generateSafeReport(
   reportId?: string
 ): Promise<SafeReportResult> {
   const activeProvider = getActiveProvider()
-  console.log(`Generating hallucination-safe report using AI provider: ${activeProvider.name}`)
-  console.log(`For ${params.companyName} in ${params.state}`)
+  console.log(`[ReportGen] Generating report using AI provider: ${activeProvider.name}`)
+  console.log(`[ReportGen] For ${params.companyName} in ${params.state}`)
 
-  // STEP 1: Check if we have sufficient data
-  const hasData = await hasSufficientData(params.state)
-  
-  if (!hasData) {
+  // STEP 1: Get licensing data from source of truth
+  let licensingData: SimplifiedLicensing
+  try {
+    licensingData = await getSimplifiedLicensing(params.state)
+    console.log(`[ReportGen] Retrieved licensing data: license=${licensingData.licenseRequired}, climate=${licensingData.cryptoFriendly}`)
+  } catch (error) {
+    console.error('[ReportGen] Error fetching licensing data:', error)
     return {
       success: false,
-      insufficientData: true,
-      missingState: params.state,
-      error: `Insufficient verified data for ${params.state}. Minimum 3 facts required.`,
+      error: `Failed to fetch licensing data for ${params.state}`,
       factsUsed: []
     }
   }
 
-  // STEP 2: Retrieve verified facts
-  const ragContext = await prepareRAGContext(params.state, params.state)
+  // STEP 2: Check if we have sufficient data
+  const hasData = await hasSufficientData(params.state)
   
-  if (!ragContext.hasData) {
+  if (!hasData && licensingData.licenseRequired === 'varies') {
     return {
       success: false,
       insufficientData: true,
       missingState: params.state,
-      error: `Only ${ragContext.facts.length} verified facts found for ${params.state}. Need at least 3.`,
-      factsUsed: ragContext.facts
+      error: `Insufficient verified data for ${params.state}. Please ensure licensing requirements are entered in the admin panel.`,
+      factsUsed: [],
+      licensingData
     }
   }
 
-  // STEP 3: Get basic state info (non-regulatory - safe to use)
-  const stateInfo = getStateRegulation(params.state)
+  // STEP 3: Fetch enforcement and legislation data
+  const { enforcementHistory, pendingLegislation, enforcementCount, legislationCount } = await fetchStateEnforcementAndLegislation(params.state)
+  console.log(`[ReportGen] Found ${enforcementCount} enforcement actions, ${legislationCount} pending bills`)
 
-  // STEP 4: Build the safe prompt (NO empty promises, ONLY verified facts)
-  const safePrompt = buildSafePrompt(params, ragContext.promptContext, stateInfo)
+  // STEP 4: Retrieve verified facts via RAG
+  const query = `Generate regulatory compliance report for ${params.companyName} focusing on ${params.primaryFocus}`
+  const relevantFacts = await searchRelevantFacts(query, params.state, 15)
+  console.log(`[ReportGen] Found ${relevantFacts.length} relevant facts`)
 
-  // STEP 5: Generate report using the configured AI provider
-  console.log(`Calling ${activeProvider.name} with safe prompt...`)
+  // STEP 5: Build the comprehensive safe prompt
+  const safePrompt = buildComprehensivePrompt(params, licensingData, enforcementHistory, pendingLegislation, relevantFacts)
+
+  // STEP 6: Generate report using the configured AI provider
+  console.log(`[ReportGen] Calling ${activeProvider.name}...`)
   
   let reportContent = ''
   let aiError = null
@@ -185,54 +243,87 @@ export async function generateSafeReport(
     const { client, provider, model, apiUrl } = await getAIClient()
     
     if (provider === 'local-llama') {
-      // Local Llama (Ollama)
       reportContent = await callLocalLlama(safePrompt, activeProvider)
     } else {
-      // OpenAI-compatible (DeepSeek, Ollama Cloud)
       reportContent = await callOpenAICompatible(safePrompt, client, model, activeProvider.temperature)
     }
     
-    console.log(`AI response received from ${provider}: ${reportContent.length} characters`)
+    console.log(`[ReportGen] Response received: ${reportContent.length} characters`)
 
   } catch (error) {
-    console.error(`${activeProvider.name} API error:`, error)
+    console.error(`[ReportGen] ${activeProvider.name} error:`, error)
     aiError = error instanceof Error ? error.message : 'Unknown AI error'
     return {
       success: false,
       error: `${activeProvider.name} error: ${aiError}`,
-      factsUsed: ragContext.facts
+      factsUsed: relevantFacts,
+      licensingData
     }
   }
 
-  // STEP 6: If reportId provided, verify and save claims
+  // STEP 7: If reportId provided, verify and save claims
   let verificationResult
   if (reportId && reportContent) {
     verificationResult = await verifyAndSaveReportClaims(reportId, reportContent, params.state)
   }
 
-  // STEP 7: Return the result
+  // STEP 8: Return the result
   return {
     success: true,
     reportContent,
-    factsUsed: ragContext.facts,
+    factsUsed: relevantFacts,
     verification: verificationResult,
-    aiProvider: activeProvider.name
+    aiProvider: activeProvider.name,
+    licensingData,
+    enforcementHistory,
+    pendingLegislation
   }
 }
 
 /**
- * Build a prompt that forces the AI to ONLY use verified facts
+ * Build a comprehensive prompt that includes ALL verified data
  */
-function buildSafePrompt(
+function buildComprehensivePrompt(
   params: SafeReportParams,
-  verifiedContext: string,
-  stateInfo: any
+  licensing: SimplifiedLicensing,
+  enforcementHistory: string,
+  pendingLegislation: string,
+  facts: any[]
 ): string {
-  return `You are a regulatory compliance AI for financial institutions. You have ZERO tolerance for hallucinations.
+  // Format facts for the prompt
+  const factsSection = facts.length > 0 
+    ? facts.map(f => `- ${f.fact.claim}\n  Source: ${f.fact.source_name} (${f.fact.source_url})`).join('\n')
+    : 'No additional verified facts available.'
 
-${verifiedContext}
+  return `You are a regulatory compliance AI for financial institutions and law firms. You have ZERO tolerance for hallucinations.
 
-COMPANY INFORMATION:
+========================================
+VERIFIED REGULATORY DATA FOR ${params.state}
+========================================
+
+## LICENSING REQUIREMENTS (Source: Official State Regulator)
+- License Required: ${licensing.licenseRequired === 'none' ? 'No license required' : licensing.licenseRequired === 'mtl' ? 'Money Transmitter License' : licensing.licenseRequired === 'bitlicense' ? 'BitLicense' : licensing.licenseRequired === 'dfpi' ? 'DFPI License' : 'Varies by activity'}
+- Regulatory Climate: ${licensing.cryptoFriendly}
+- Tax Treatment: ${licensing.taxTreatment}
+- License Description: ${licensing.moneyTransmitter}
+
+## FINANCIAL REQUIREMENTS
+- Application Fee: ${licensing.applicationFeeFormatted}
+- Bond Requirement: ${licensing.bondRequirement}
+- Processing Time: ${licensing.processingTime}
+
+## ENFORCEMENT HISTORY (Last 2 years)
+${enforcementHistory}
+
+## PENDING LEGISLATION
+${pendingLegislation}
+
+## ADDITIONAL VERIFIED FACTS
+${factsSection}
+
+========================================
+COMPANY INFORMATION
+========================================
 - Company: ${params.companyName}
 - Industry: ${params.industry}
 - Company Size: ${params.companySize}
@@ -250,50 +341,58 @@ ${params.concerns}
 COMPLIANCE GOALS:
 ${params.goals}
 
-REPORT REQUIREMENTS:
+========================================
+REPORT REQUIREMENTS
+========================================
+
 Generate a professional regulatory intelligence report with the following structure:
 
 ## 1. EXECUTIVE SUMMARY
-- ONLY summarize verified facts from the context above
-- If information is missing for a section, state "No verified data available"
-- Include the company name and location
-- Highlight the most critical compliance requirements
+- Summarize the regulatory climate for ${params.state}
+- Highlight key licensing requirements
+- Note any pending legislation that may affect compliance
+- Include the company name and primary compliance focus
 
-## 2. STATE REGULATORY ANALYSIS (${params.state})
-- List ONLY the verified license requirements from the context above
-- For each requirement, cite the source name and URL
-- Include regulatory climate rating if available
-- If a requirement type is not listed, say "No verified data available for [requirement type]"
+## 2. LICENSING REQUIREMENTS
+- State the license type required (${licensing.licenseRequired === 'none' ? 'No license required' : licensing.licenseRequired === 'mtl' ? 'Money Transmitter License' : licensing.licenseRequired === 'bitlicense' ? 'BitLicense' : licensing.licenseRequired === 'dfpi' ? 'DFPI License' : 'Varies'})
+- Application fee: ${licensing.applicationFeeFormatted}
+- Bond requirement: ${licensing.bondRequirement}
+- Processing time: ${licensing.processingTime}
+- Cite the source for each requirement
 
-## 3. COMPLIANCE REQUIREMENTS CHECKLIST
-- Based ONLY on verified facts
-- Include: license requirements, bonding amounts, fee estimates, timeline estimates
-- If numeric values exist, include them with units
-- Mark items as "Verified" with source citations
+## 3. REGULATORY CLIMATE ASSESSMENT
+- Climate rating: ${licensing.cryptoFriendly}
+- Tax implications: ${licensing.taxTreatment}
+- Risk level based on climate
 
-## 4. IMPLEMENTATION TIMELINE
-- ONLY use verified timeline facts from the context
-- If no timeline data exists for a specific requirement, state "Timeline data not verified"
-- Do NOT guess or estimate missing timelines
+## 4. ENFORCEMENT & LEGISLATION UPDATE
+- Recent enforcement actions: ${enforcementHistory !== 'No recent enforcement actions identified' ? enforcementHistory : 'None identified in the past 2 years'}
+- Pending legislation: ${pendingLegislation !== 'No pending legislation identified' ? pendingLegislation : 'None currently tracked'}
 
-## 5. RISK ASSESSMENT
-- Based ONLY on the verified regulatory climate rating above
-- Identify compliance gaps based on missing verified data
-- Recommend legal counsel review for any unverified areas
+## 5. COMPLIANCE CHECKLIST
+- Immediate actions (30 days)
+- Short-term requirements (90 days)
+- Ongoing obligations
+- Based ONLY on verified data above
 
-## 6. REGULATORY CONTACTS
-- Include regulator contact information if provided in context
-- If no contact info is verified, state "Contact information not available in verified sources"
+## 6. IMPLEMENTATION TIMELINE
+- Expected processing time: ${licensing.processingTime}
+- Key milestones based on verified data
+
+## 7. RISK ASSESSMENT
+- Compliance risk score based on regulatory climate
+- Gap analysis for missing verified data
 
 CRITICAL RULES (MUST FOLLOW):
 1. DO NOT invent any regulatory requirements, fees, bonds, or timelines
 2. DO NOT guess or estimate missing information
-3. If a fact isn't in the context above, say "INSUFFICIENT DATA" or "No verified data available"
-4. ALWAYS cite sources using the provided URLs in format: [Source: Source Name]
-5. Include this exact disclaimer at the end of the report:
+3. If a fact isn't in the verified data above, say "INSUFFICIENT DATA"
+4. ALWAYS cite sources using the format [Source: Source Name]
+5. Use exact numbers from the data - do not round or approximate
+6. Include this exact disclaimer at the end:
 
 ---
-DISCLAIMER: This report uses only verified regulatory data from official sources as cited above. Veridian Group is not a law firm. All compliance strategies should be reviewed with qualified legal counsel in ${params.state} before implementation. Regulations are subject to change without notice. Last verified data date: ${new Date().toISOString().split('T')[0]}
+**DISCLAIMER**: This report uses only verified regulatory data from official sources as cited above. Veridian Group is not a law firm. All compliance strategies should be reviewed with qualified legal counsel in ${params.state} before implementation. Regulations are subject to change without notice.
 ---
 
 Generate the complete report now:`
@@ -301,24 +400,21 @@ Generate the complete report now:`
 
 /**
  * Verify each sentence of a generated report against the facts database
- * This is a post-generation safety check
  */
 export async function verifyAndSaveReportClaims(
   reportId: string,
   reportContent: string,
   stateCode: string
 ): Promise<{ verifiedCount: number; hallucinationCount: number; safe: boolean }> {
-  // Split into sentences (rough but effective)
   const sentences = reportContent.split(/[.!?]+/).filter(s => s.trim().length > 30)
   
   let verifiedCount = 0
   let hallucinationCount = 0
   let needsReviewCount = 0
 
-  console.log(`Verifying ${sentences.length} sentences from report...`)
+  console.log(`[Verify] Verifying ${sentences.length} sentences...`)
 
   for (const sentence of sentences) {
-    // Check if this sentence makes a regulatory claim
     const regulatoryKeywords = [
       'license', 'required', 'must', 'regulation', 'compliance', 
       'fee', 'bond', 'timeline', 'deadline', 'prohibited', 
@@ -330,14 +426,12 @@ export async function verifyAndSaveReportClaims(
     
     if (!hasRegulatoryClaim) continue
 
-    // Record the claim for verification
     const { success, claimId, error } = await recordClaim(reportId, sentence.trim(), [])
     
     if (success && claimId) {
-      // Call the verify_claim RPC function
-      const { data: verification, error: verifyRpcError } = await supabaseRpcVerify(sentence.trim(), stateCode)
+      const verification = await supabaseRpcVerify(sentence.trim(), stateCode)
       
-      if (verifyRpcError || !verification) {
+      if (!verification) {
         await updateClaimVerification(claimId, 'needs_review', 0.5, 'Verification RPC failed')
         needsReviewCount++
       } else if (verification.is_verified && verification.confidence_score > 0.7) {
@@ -357,16 +451,11 @@ export async function verifyAndSaveReportClaims(
 
   const total = verifiedCount + hallucinationCount + needsReviewCount
   const hallucinationRate = total > 0 ? (hallucinationCount / total) * 100 : 0
-  const safe = hallucinationRate < 10 // Less than 10% hallucination rate is acceptable
+  const safe = hallucinationRate < 10
 
-  console.log(`Verification complete: ${verifiedCount} verified, ${hallucinationCount} hallucinations, ${needsReviewCount} needs review`)
-  console.log(`Hallucination rate: ${hallucinationRate.toFixed(1)}%`)
+  console.log(`[Verify] Complete: ${verifiedCount} verified, ${hallucinationCount} hallucinations, ${needsReviewCount} needs review (${hallucinationRate.toFixed(1)}% rate)`)
 
-  return {
-    verifiedCount,
-    hallucinationCount,
-    safe
-  }
+  return { verifiedCount, hallucinationCount, safe }
 }
 
 // Helper function to call Supabase RPC
@@ -376,8 +465,15 @@ async function supabaseRpcVerify(claimText: string, stateCode: string) {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   const supabase = createClient(supabaseUrl, supabaseKey)
   
-  return await supabase.rpc('verify_claim', {
+  const { data, error } = await supabase.rpc('verify_claim', {
     claim_text: claimText,
     state_code: stateCode
   })
+  
+  if (error) {
+    console.error('[Verify] RPC error:', error)
+    return null
+  }
+  
+  return data
 }

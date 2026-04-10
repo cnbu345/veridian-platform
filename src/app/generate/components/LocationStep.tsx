@@ -1,12 +1,14 @@
-// src/app/generate/components/LocationStep.tsx // Location Form
+// src/app/generate/components/LocationStep.tsx
+// Location Form - UPDATED to use new licensing helper
+
 'use client'
 
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { locationSchema, LocationFormData } from '@/lib/reports/validation'
-import { analyzeLocation, LocationAnalysis } from '@/lib/location/analyzer'
-import { getStateRegulation } from '@/lib/location/regulations'
+import { analyzeLocationClient, LocationAnalysisClient } from '@/lib/location/analyzer-client'
+import { getSimplifiedLicensingClient } from '@/lib/location/licensing-client'
 import { MapPin, Building2, Users, Shield, TrendingUp, Loader2 } from 'lucide-react'
 import LocationPreview from './LocationPreview'
 
@@ -27,7 +29,7 @@ interface LocationStepProps {
 
 export default function LocationStep({ data, onUpdate, onNext, onBack }: LocationStepProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [analysis, setAnalysis] = useState<LocationAnalysis | null>(null)
+  const [analysis, setAnalysis] = useState<LocationAnalysisClient | null>(null)
   const [regulation, setRegulation] = useState<any>(null)
 
   const {
@@ -51,11 +53,22 @@ export default function LocationStep({ data, onUpdate, onNext, onBack }: Locatio
       const analyze = async () => {
         setIsAnalyzing(true)
         try {
-          const result = await analyzeLocation(city, state)
+          // Get location analysis
+          const result = await analyzeLocationClient(city, state)
           setAnalysis(result)
           
-          const reg = getStateRegulation(state)
-          setRegulation(reg)
+          // Get licensing data from new client-safe helper
+          const licensing = await getSimplifiedLicensingClient(state)
+          setRegulation({
+            cryptoFriendly: licensing.cryptoFriendly,
+            license_required: licensing.licenseRequired,
+            license_description: licensing.moneyTransmitter,
+            tax_treatment: licensing.taxTreatment,
+            regulator_name: 'State Regulator',
+            application_fee_formatted: licensing.applicationFeeFormatted,
+            bond_requirement: licensing.bondRequirement,
+            processing_time: licensing.processingTime
+          })
         } catch (error) {
           console.error('Location analysis failed:', error)
         } finally {
@@ -69,10 +82,8 @@ export default function LocationStep({ data, onUpdate, onNext, onBack }: Locatio
   }, [city, state])
 
   const onSubmit = (formData: LocationFormData) => {
-    // Make sure to include the analysis data when updating
     onUpdate({
       ...formData,
-      // Pass the tier from analysis - default to 'major' for known major cities
       locationTier: analysis?.tier || (
         formData.city?.toLowerCase() === 'austin' && formData.state === 'TX' ? 'major' :
         formData.city?.toLowerCase() === 'dallas' && formData.state === 'TX' ? 'major' :
