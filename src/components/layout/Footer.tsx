@@ -24,10 +24,10 @@ import {
 const navigation = {
   solutions: [
     { name: 'Regulatory Intelligence', href: '/generate', icon: Scale },
-    { name: 'Compliance Monitoring', href: '/compliance', icon: Shield },
+    { name: 'Compliance Monitoring', href: '/compliance-page', icon: Shield },
     { name: 'Risk Assessment', href: '/risk', icon: Landmark },
     { name: 'Enterprise Solutions', href: '/enterprise', icon: Building2 },
-    { name: 'API Access', href: '/api', icon: Sparkles },
+    { name: 'API Access', href: '/api-page', icon: Sparkles },
   ],
   resources: [
     { name: 'Sample Report', href: '/sample' },

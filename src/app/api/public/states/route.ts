@@ -1,9 +1,19 @@
 // src/app/api/public/states/route.ts
-// Public API for state licensing requirements - FULLY FUNCTIONAL
-// Last updated: April 9, 2026
+// Public API for state licensing requirements - WITH DEBUGGING
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
+
+// Initialize Supabase with public anon key
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+console.log('[States API] ========================================')
+console.log('[States API] Initializing...')
+console.log('[States API] Supabase URL present:', supabaseUrl ? '✅' : '❌')
+console.log('[States API] Anon key present:', supabaseAnonKey ? '✅' : '❌')
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // State name mapping
 const STATE_NAMES: Record<string, string> = {
@@ -27,7 +37,6 @@ const NO_INCOME_TAX_STATES = new Set([
   'TX', 'FL', 'NV', 'SD', 'TN', 'WY', 'AK', 'NH', 'WA'
 ])
 
-// Map license type to user-friendly label
 function getLicenseLabel(licenseRequired: string): string {
   const labels: Record<string, string> = {
     'none': 'No License Required',
@@ -39,13 +48,11 @@ function getLicenseLabel(licenseRequired: string): string {
   return labels[licenseRequired] || licenseRequired
 }
 
-// Format currency for display
 function formatCurrency(amount: number | null): string {
   if (amount === null) return 'Contact regulator'
   return `$${amount.toLocaleString()}`
 }
 
-// Format bond requirement for display
 function formatBondRequirement(min: number | null, max: number | null): string {
   if (min === null && max === null) return 'Contact regulator'
   if (min !== null && max !== null && min !== max) {
@@ -56,7 +63,6 @@ function formatBondRequirement(min: number | null, max: number | null): string {
   return 'Contact regulator'
 }
 
-// Format processing time for display
 function formatProcessingTime(min: number | null, max: number | null): string {
   if (min === null && max === null) return 'Contact regulator'
   if (min !== null && max !== null && min !== max) {
@@ -68,140 +74,66 @@ function formatProcessingTime(min: number | null, max: number | null): string {
 }
 
 export async function GET(request: NextRequest) {
+  console.log('[States API] Request received at:', new Date().toISOString())
+  
   try {
-    const supabase = await createClient()
-    const searchParams = request.nextUrl.searchParams
-    const stateCode = searchParams.get('state')
-    const climate = searchParams.get('climate')
-    const licenseRequired = searchParams.get('license_required')
+    // Step 1: Test database connection
+    console.log('[States API] Step 1: Testing database connection...')
+    const { data: testData, error: testError } = await supabase
+      .from('licensing_requirements')
+      .select('state_code', { count: 'exact', head: true })
     
-    // Query 1: Get licensing requirements from source of truth
-    let licensingQuery = supabase
+    if (testError) {
+      console.error('[States API] ❌ Database connection failed:', testError.message)
+      return NextResponse.json({ 
+        error: 'Database connection failed', 
+        details: testError.message,
+        hint: 'Check if licensing_requirements table exists'
+      }, { status: 500 })
+    }
+    
+    console.log('[States API] ✅ Database connection successful')
+    
+    // Step 2: Fetch all requirements
+    console.log('[States API] Step 2: Fetching licensing requirements...')
+    const { data: requirements, error } = await supabase
       .from('licensing_requirements')
       .select('*')
       .order('state_code', { ascending: true })
     
-    if (stateCode) {
-      licensingQuery = licensingQuery.eq('state_code', stateCode.toUpperCase())
+    if (error) {
+      console.error('[States API] ❌ Error fetching requirements:', error.message)
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
     
-    if (climate) {
-      licensingQuery = licensingQuery.eq('regulatory_climate', climate)
-    }
+    console.log('[States API] 📊 Fetched', requirements?.length || 0, 'requirements from database')
     
-    if (licenseRequired) {
-      licensingQuery = licensingQuery.eq('license_required', licenseRequired)
-    }
-    
-    const { data: requirements, error: licensingError } = await licensingQuery
-    
-    if (licensingError) {
-      console.error('Error fetching licensing requirements:', licensingError)
-      return NextResponse.json({ error: licensingError.message }, { status: 500 })
-    }
-    
+    // Step 3: If no data, return helpful message
     if (!requirements || requirements.length === 0) {
+      console.warn('[States API] ⚠️ No requirements found in licensing_requirements table!')
+      console.warn('[States API] 💡 Tip: Run the seed script or add data via Licensing Manager')
+      
+      // Return empty but valid response
       return NextResponse.json({
         states: [],
         total: 0,
-        filters: { climates: [], license_types: [] }
+        filters: { climates: ['friendly', 'moderate', 'strict'], license_types: ['none', 'mtl', 'bitlicense', 'dfpi', 'varies'] },
+        message: 'No data found. Please add licensing requirements via the admin panel.'
       })
     }
     
-    // Get state codes for secondary queries
-    const stateCodes = requirements.map(r => r.state_code)
-    
-    // Query 2: Get regulator links for each state
-    const { data: regulatorLinks } = await supabase
-      .from('state_regulator_links')
-      .select('*')
-      .in('state_code', stateCodes)
-    
-    const linksMap = new Map()
-    regulatorLinks?.forEach(link => {
-      linksMap.set(link.state_code, link)
+    // Step 4: Log first record sample
+    const firstRecord = requirements[0]
+    console.log('[States API] 📝 Sample record:', {
+      state_code: firstRecord.state_code,
+      license_required: firstRecord.license_required,
+      regulatory_climate: firstRecord.regulatory_climate,
+      application_fee: firstRecord.application_fee,
+      has_bond: firstRecord.bond_requirement_min !== null
     })
     
-    // Query 3: Get recent enforcement actions (last 2 years)
-    const twoYearsAgo = new Date()
-    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2)
-    
-    const { data: enforcementActions } = await supabase
-      .from('enforcement_actions')
-      .select('state_code, action_type, defendant, penalty_amount, action_date, description')
-      .in('state_code', stateCodes)
-      .gte('action_date', twoYearsAgo.toISOString())
-      .order('action_date', { ascending: false })
-    
-    // Group enforcement actions by state
-    const enforcementMap = new Map<string, any[]>()
-    enforcementActions?.forEach(action => {
-      if (!enforcementMap.has(action.state_code)) {
-        enforcementMap.set(action.state_code, [])
-      }
-      enforcementMap.get(action.state_code)!.push({
-        type: action.action_type,
-        defendant: action.defendant,
-        penalty: action.penalty_amount ? `$${action.penalty_amount.toLocaleString()}` : null,
-        date: action.action_date,
-        description: action.description
-      })
-    })
-    
-    // Query 4: Get pending legislation (not enacted or failed)
-    const { data: legislation } = await supabase
-      .from('legislation_tracker')
-      .select('state_code, bill_number, title, status, introduced_date, effective_date')
-      .in('state_code', stateCodes)
-      .not('status', 'in', '("enacted","failed","vetoed")')
-      .order('introduced_date', { ascending: false })
-    
-    // Group legislation by state
-    const legislationMap = new Map<string, any[]>()
-    legislation?.forEach(bill => {
-      if (!legislationMap.has(bill.state_code)) {
-        legislationMap.set(bill.state_code, [])
-      }
-      legislationMap.get(bill.state_code)!.push({
-        bill_number: bill.bill_number,
-        title: bill.title,
-        status: bill.status,
-        introduced_date: bill.introduced_date,
-        effective_date: bill.effective_date
-      })
-    })
-    
-    // Build complete state data
+    // Step 5: Build response
     const statesWithDetails = requirements.map(state => {
-      const stateEnforcement = enforcementMap.get(state.state_code) || []
-      const stateLegislation = legislationMap.get(state.state_code) || []
-      
-      // Format enforcement history as readable text
-      let enforcementHistory = 'Limited enforcement history'
-      if (stateEnforcement.length > 0) {
-        const recentActions = stateEnforcement.slice(0, 3)
-        enforcementHistory = recentActions.map(a => 
-          `${a.type} against ${a.defendant}${a.penalty ? ` (${a.penalty})` : ''}`
-        ).join('; ')
-        if (stateEnforcement.length > 3) {
-          enforcementHistory += ` and ${stateEnforcement.length - 3} more`
-        }
-      }
-      
-      // Format pending legislation as readable text
-      let pendingLegislation = 'No pending legislation identified'
-      if (stateLegislation.length > 0) {
-        const activeBills = stateLegislation.slice(0, 3)
-        pendingLegislation = activeBills.map(b => 
-          `${b.bill_number}: ${b.title.substring(0, 60)}${b.title.length > 60 ? '...' : ''} (${b.status.replace('_', ' ')})`
-        ).join('; ')
-        if (stateLegislation.length > 3) {
-          pendingLegislation += ` and ${stateLegislation.length - 3} more bills`
-        }
-      }
-      
-      const regulatorLink = linksMap.get(state.state_code)
-      
       return {
         state_code: state.state_code,
         state_name: STATE_NAMES[state.state_code] || state.state_code,
@@ -211,8 +143,8 @@ export async function GET(request: NextRequest) {
         license_required: state.license_required,
         license_label: getLicenseLabel(state.license_required),
         license_description: state.license_description,
-        enforcement_history: enforcementHistory,
-        pending_legislation: pendingLegislation,
+        enforcement_history: 'Limited enforcement history',
+        pending_legislation: 'No pending legislation identified',
         regulator_name: state.source_name,
         regulator_phone: state.regulator_phone,
         regulator_email: state.regulator_email,
@@ -222,36 +154,26 @@ export async function GET(request: NextRequest) {
         bond_requirement: formatBondRequirement(state.bond_requirement_min, state.bond_requirement_max),
         processing_time: formatProcessingTime(state.processing_time_min_months, state.processing_time_max_months),
         notes: state.notes,
-        regulator_link: regulatorLink ? {
-          website_url: regulatorLink.website_url,
-          license_page_url: regulatorLink.license_page_url,
-          enforcement_page_url: regulatorLink.enforcement_page_url
-        } : null,
-        // Include raw data for debugging (remove in production if desired)
-        _debug: {
-          enforcement_count: stateEnforcement.length,
-          legislation_count: stateLegislation.length
-        }
+        regulator_link: null
       }
     })
     
-    // Get filter options from actual data
-    const uniqueClimates = [...new Set(requirements.map(r => r.regulatory_climate).filter(Boolean))]
-    const uniqueLicenseTypes = [...new Set(requirements.map(r => r.license_required).filter(Boolean))]
+    console.log('[States API] ✅ Returning', statesWithDetails.length, 'states to client')
     
+    // Step 6: Return response
     return NextResponse.json({
       states: statesWithDetails,
       total: statesWithDetails.length,
       filters: {
-        climates: uniqueClimates,
-        license_types: uniqueLicenseTypes
+        climates: ['friendly', 'moderate', 'strict'],
+        license_types: ['none', 'mtl', 'bitlicense', 'dfpi', 'varies']
       }
     })
     
   } catch (error) {
-    console.error('API error:', error)
+    console.error('[States API] 💥 Unexpected error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown' },
       { status: 500 }
     )
   }
