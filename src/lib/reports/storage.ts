@@ -29,7 +29,7 @@ export async function saveReportRequest(
       },
       stripe_payment_id: paymentId,
       template_id: templateId,
-      status: 'pending',  // ← Explicitly set root status column
+      status: 'pending',
       created_at: new Date().toISOString()
     })
     .select()
@@ -66,7 +66,6 @@ export async function getUserReports(userId: string) {
     throw new Error(`Failed to fetch reports: ${error.message}`)
   }
   
-  // Transform the data to include template info in a consistent format
   return (data || []).map(report => ({
     ...report,
     template: report.user_templates || null
@@ -104,44 +103,54 @@ export async function getReport(reportId: string, userId: string) {
   } as GeneratedReport & { template: any }
 }
 
-// Update report status - FIXED: Updates the root status column
+// Update report status - NOW INCLUDES LICENSING DATA
 export async function updateReportStatus(
   reportId: string,
   status: 'generating' | 'ready' | 'failed',
   content?: any,
-  templateId?: string | null
+  templateId?: string | null,
+  licensingData?: any  // NEW: Accept licensing data
 ) {
   const supabase = await createClient()
   
+  // Fetch current report to preserve existing content
+  const { data: currentReport } = await supabase
+    .from('reports')
+    .select('report_content')
+    .eq('id', reportId)
+    .single()
+  
   const updateData: any = {
-    status: status,  // ← CRITICAL: Update the root status column!
+    status: status,
     updated_at: new Date().toISOString()
   }
   
-  // Also update report_content if provided
+  // Build updated report_content
+  let updatedContent: any = {}
+  
+  if (currentReport?.report_content) {
+    updatedContent = { ...currentReport.report_content }
+  }
+  
   if (content !== undefined) {
-    updateData.report_content = {
+    updatedContent = {
+      ...updatedContent,
       ...content,
       status,
       updated_at: new Date().toISOString()
     }
   } else {
-    // If no content provided, still update the status in report_content for consistency
-    // Fetch current report to preserve existing content
-    const { data: currentReport } = await supabase
-      .from('reports')
-      .select('report_content')
-      .eq('id', reportId)
-      .single()
-    
-    if (currentReport?.report_content) {
-      updateData.report_content = {
-        ...currentReport.report_content,
-        status,
-        updated_at: new Date().toISOString()
-      }
-    }
+    updatedContent.status = status
+    updatedContent.updated_at = new Date().toISOString()
   }
+  
+  // CRITICAL: Store full licensing data in report_content
+  if (licensingData) {
+    updatedContent.licensing_data = licensingData
+    console.log(`✅ Stored licensing data for ${licensingData.state_code} in report ${reportId}`)
+  }
+  
+  updateData.report_content = updatedContent
   
   if (templateId !== undefined) {
     updateData.template_id = templateId
@@ -158,6 +167,53 @@ export async function updateReportStatus(
   }
   
   console.log(`✅ Report ${reportId} status updated to: ${status}`)
+}
+
+// NEW: Fetch full licensing data for a state
+export async function fetchLicensingData(stateCode: string): Promise<any | null> {
+  const supabase = await createClient()
+  
+  try {
+    const { data, error } = await supabase
+      .from('licensing_requirements')
+      .select('*')
+      .eq('state_code', stateCode.toUpperCase())
+      .single()
+    
+    if (error) {
+      console.warn(`No licensing data found for ${stateCode}:`, error.message)
+      return null
+    }
+    
+    console.log(`✅ Retrieved full licensing data for ${stateCode}`)
+    return data
+  } catch (error) {
+    console.error(`Error fetching licensing data for ${stateCode}:`, error)
+    return null
+  }
+}
+
+// NEW: Fetch licensing data for multiple states
+export async function fetchMultiStateLicensingData(stateCodes: string[]): Promise<any[]> {
+  const supabase = await createClient()
+  
+  try {
+    const { data, error } = await supabase
+      .from('licensing_requirements')
+      .select('*')
+      .in('state_code', stateCodes.map(s => s.toUpperCase()))
+    
+    if (error) {
+      console.warn('Error fetching multi-state licensing data:', error.message)
+      return []
+    }
+    
+    console.log(`✅ Retrieved licensing data for ${data?.length || 0} states`)
+    return data || []
+  } catch (error) {
+    console.error('Error fetching multi-state licensing data:', error)
+    return []
+  }
 }
 
 // Delete report

@@ -1,6 +1,6 @@
 // src/lib/regulatory/safeReportGenerator.ts
-// Phase 1 Part 4: Hallucination-free report generation with configurable AI provider
-// UPDATED: Uses licensing_requirements table instead of deprecated state_regulations
+// Hallucination-free report generation with configurable AI provider
+// UPDATED: Now fetches FULL licensing data from licensing_requirements table
 
 import { hasSufficientData, type RetrievedFact, searchRelevantFacts, buildPromptFromFacts } from './simpleRag'
 import { recordClaim, updateClaimVerification } from './sourceVerification'
@@ -36,7 +36,6 @@ async function getAIClient() {
       }
     
     case 'local-llama':
-      // Local Llama uses Ollama API format
       return {
         client: null,
         provider: provider.name,
@@ -101,6 +100,62 @@ async function callOpenAICompatible(prompt: string, client: any, model: string, 
   return completion.choices[0].message.content || ''
 }
 
+// 🔥 NEW: Fetch FULL licensing data from licensing_requirements table
+async function fetchFullLicensingData(stateCode: string): Promise<any | null> {
+  try {
+    const supabase = await createClient()
+    
+    const { data, error } = await supabase
+      .from('licensing_requirements')
+      .select('*')
+      .eq('state_code', stateCode.toUpperCase())
+      .single()
+    
+    if (error) {
+      console.warn(`[SafeReportGen] No full licensing data found for ${stateCode}:`, error.message)
+      return null
+    }
+    
+    console.log(`[SafeReportGen] ✅ Retrieved full licensing data for ${stateCode}:`, {
+      application_fee: data?.application_fee,
+      annual_renewal_fee: data?.annual_renewal_fee,
+      bond_min: data?.bond_requirement_min,
+      bond_max: data?.bond_requirement_max,
+      net_worth: data?.net_worth_requirement,
+      regulator_website: data?.regulator_website
+    })
+    
+    return data
+  } catch (error) {
+    console.error(`[SafeReportGen] Error fetching full licensing data for ${stateCode}:`, error)
+    return null
+  }
+}
+
+// 🔥 NEW: Fetch FULL multi-state licensing data
+async function fetchFullMultiStateLicensingData(stateCodes: string[]): Promise<any[]> {
+  try {
+    const supabase = await createClient()
+    const upperStates = stateCodes.map(s => s.toUpperCase())
+    
+    const { data, error } = await supabase
+      .from('licensing_requirements')
+      .select('*')
+      .in('state_code', upperStates)
+    
+    if (error) {
+      console.warn(`[SafeReportGen] Error fetching multi-state licensing data:`, error.message)
+      return []
+    }
+    
+    console.log(`[SafeReportGen] ✅ Retrieved full licensing data for ${data?.length || 0} states`)
+    return data || []
+  } catch (error) {
+    console.error(`[SafeReportGen] Error fetching multi-state licensing data:`, error)
+    return []
+  }
+}
+
 export interface SafeReportParams {
   companyName: string
   industry: string
@@ -108,6 +163,7 @@ export interface SafeReportParams {
   budget: string
   city: string
   state: string
+  secondaryStates?: string[]
   locationTier: string
   nearestRegulatoryHub?: string
   primaryFocus: string
@@ -115,6 +171,7 @@ export interface SafeReportParams {
   timeline: string
   concerns: string
   goals: string
+  userTier?: string
 }
 
 export interface SafeReportResult {
@@ -131,6 +188,8 @@ export interface SafeReportResult {
   }
   aiProvider?: string
   licensingData?: SimplifiedLicensing
+  fullLicensingData?: any  // 🔥 NEW: Full licensing data
+  multiStateFullLicensingData?: any[]  // 🔥 NEW: Multi-state full licensing data
   enforcementHistory?: string
   pendingLegislation?: string
 }
@@ -143,7 +202,6 @@ async function fetchStateEnforcementAndLegislation(stateCode: string) {
   const twoYearsAgo = new Date()
   twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2)
   
-  // Fetch enforcement actions
   const { data: enforcement } = await supabase
     .from('enforcement_actions')
     .select('action_type, defendant, penalty_amount, action_date, description')
@@ -152,7 +210,6 @@ async function fetchStateEnforcementAndLegislation(stateCode: string) {
     .order('action_date', { ascending: false })
     .limit(5)
   
-  // Fetch pending legislation
   const { data: legislation } = await supabase
     .from('legislation_tracker')
     .select('bill_number, title, status, introduced_date, effective_date')
@@ -161,7 +218,6 @@ async function fetchStateEnforcementAndLegislation(stateCode: string) {
     .order('introduced_date', { ascending: false })
     .limit(5)
   
-  // Format enforcement history as readable text
   let enforcementHistory = 'No recent enforcement actions identified'
   if (enforcement && enforcement.length > 0) {
     enforcementHistory = enforcement.map(e => 
@@ -169,7 +225,6 @@ async function fetchStateEnforcementAndLegislation(stateCode: string) {
     ).join('; ')
   }
   
-  // Format pending legislation as readable text
   let pendingLegislation = 'No pending legislation identified'
   if (legislation && legislation.length > 0) {
     pendingLegislation = legislation.map(l => 
@@ -181,9 +236,20 @@ async function fetchStateEnforcementAndLegislation(stateCode: string) {
 }
 
 /**
- * Generate a report that CANNOT hallucinate
- * Uses RAG to ONLY include verified facts
- * Supports multiple AI providers (DeepSeek, Ollama Cloud, Local Llama)
+ * Fetch data for multiple states (for multi-state reports)
+ */
+async function fetchMultiStateData(stateCodes: string[]) {
+  const results: Record<string, any> = {}
+  for (const stateCode of stateCodes) {
+    const licensing = await getSimplifiedLicensing(stateCode)
+    const { enforcementHistory, pendingLegislation } = await fetchStateEnforcementAndLegislation(stateCode)
+    results[stateCode] = { licensing, enforcementHistory, pendingLegislation }
+  }
+  return results
+}
+
+/**
+ * Generate a single-state report (UPDATED with full licensing data)
  */
 export async function generateSafeReport(
   params: SafeReportParams,
@@ -197,7 +263,7 @@ export async function generateSafeReport(
   let licensingData: SimplifiedLicensing
   try {
     licensingData = await getSimplifiedLicensing(params.state)
-    console.log(`[ReportGen] Retrieved licensing data: license=${licensingData.licenseRequired}, climate=${licensingData.cryptoFriendly}`)
+    console.log(`[ReportGen] Retrieved simplified licensing data: license=${licensingData.licenseRequired}, climate=${licensingData.cryptoFriendly}`)
   } catch (error) {
     console.error('[ReportGen] Error fetching licensing data:', error)
     return {
@@ -206,6 +272,10 @@ export async function generateSafeReport(
       factsUsed: []
     }
   }
+
+  // 🔥 STEP 1.5: Fetch FULL licensing data from licensing_requirements table
+  const fullLicensingData = await fetchFullLicensingData(params.state)
+  console.log(`[ReportGen] Full licensing data retrieved: ${!!fullLicensingData}`)
 
   // STEP 2: Check if we have sufficient data
   const hasData = await hasSufficientData(params.state)
@@ -217,7 +287,8 @@ export async function generateSafeReport(
       missingState: params.state,
       error: `Insufficient verified data for ${params.state}. Please ensure licensing requirements are entered in the admin panel.`,
       factsUsed: [],
-      licensingData
+      licensingData,
+      fullLicensingData
     }
   }
 
@@ -230,8 +301,8 @@ export async function generateSafeReport(
   const relevantFacts = await searchRelevantFacts(query, params.state, 15)
   console.log(`[ReportGen] Found ${relevantFacts.length} relevant facts`)
 
-  // STEP 5: Build the comprehensive safe prompt
-  const safePrompt = buildComprehensivePrompt(params, licensingData, enforcementHistory, pendingLegislation, relevantFacts)
+  // STEP 5: Build the comprehensive safe prompt (using full licensing data when available)
+  const safePrompt = buildComprehensivePrompt(params, licensingData, fullLicensingData, enforcementHistory, pendingLegislation, relevantFacts)
 
   // STEP 6: Generate report using the configured AI provider
   console.log(`[ReportGen] Calling ${activeProvider.name}...`)
@@ -257,7 +328,8 @@ export async function generateSafeReport(
       success: false,
       error: `${activeProvider.name} error: ${aiError}`,
       factsUsed: relevantFacts,
-      licensingData
+      licensingData,
+      fullLicensingData
     }
   }
 
@@ -267,7 +339,7 @@ export async function generateSafeReport(
     verificationResult = await verifyAndSaveReportClaims(reportId, reportContent, params.state)
   }
 
-  // STEP 8: Return the result
+  // STEP 8: Return the result WITH full licensing data
   return {
     success: true,
     reportContent,
@@ -275,17 +347,85 @@ export async function generateSafeReport(
     verification: verificationResult,
     aiProvider: activeProvider.name,
     licensingData,
+    fullLicensingData,  // 🔥 RETURN FULL LICENSING DATA
     enforcementHistory,
     pendingLegislation
   }
 }
 
 /**
+ * Generate a multi-state comparison report (UPDATED with full licensing data)
+ */
+export async function generateMultiStateReport(
+  params: SafeReportParams,
+  reportId?: string
+): Promise<SafeReportResult> {
+  const activeProvider = getActiveProvider()
+  const primaryState = params.state
+  const secondaryStates = params.secondaryStates || []
+  const allStates = [primaryState, ...secondaryStates]
+  
+  console.log(`[ReportGen] Generating MULTI-STATE report for ${allStates.join(', ')}`)
+  console.log(`[ReportGen] Using AI provider: ${activeProvider.name}`)
+
+  // Fetch data for all states
+  const statesData = await fetchMultiStateData(allStates)
+  
+  // 🔥 Fetch FULL multi-state licensing data
+  const fullMultiStateLicensingData = await fetchFullMultiStateLicensingData(allStates)
+
+  // Build multi-state prompt
+  const multiStatePrompt = buildMultiStatePrompt(params, statesData, fullMultiStateLicensingData)
+
+  let reportContent = ''
+  try {
+    const { client, provider, model, apiUrl } = await getAIClient()
+    
+    if (provider === 'local-llama') {
+      reportContent = await callLocalLlama(multiStatePrompt, activeProvider)
+    } else {
+      reportContent = await callOpenAICompatible(multiStatePrompt, client, model, activeProvider.temperature)
+    }
+    
+    console.log(`[ReportGen] Multi-state response received: ${reportContent.length} characters`)
+
+  } catch (error) {
+    console.error(`[ReportGen] Multi-state AI error:`, error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown AI error',
+      factsUsed: []
+    }
+  }
+
+  let verificationResult
+  if (reportId && reportContent) {
+    verificationResult = await verifyAndSaveReportClaims(reportId, reportContent, primaryState)
+  }
+
+  // Get simplified licensing for primary state (for backward compatibility)
+  const primaryLicensingData = await getSimplifiedLicensing(primaryState)
+
+  return {
+    success: true,
+    reportContent,
+    factsUsed: [],
+    verification: verificationResult,
+    aiProvider: activeProvider.name,
+    licensingData: primaryLicensingData,
+    fullLicensingData: fullMultiStateLicensingData.find(d => d.state_code === primaryState) || null,
+    multiStateFullLicensingData: fullMultiStateLicensingData  // 🔥 RETURN MULTI-STATE FULL LICENSING DATA
+  }
+}
+
+/**
  * Build a comprehensive prompt that includes ALL verified data
+ * UPDATED: Uses full licensing data when available for financial values
  */
 function buildComprehensivePrompt(
   params: SafeReportParams,
   licensing: SimplifiedLicensing,
+  fullLicensingData: any,
   enforcementHistory: string,
   pendingLegislation: string,
   facts: any[]
@@ -295,6 +435,44 @@ function buildComprehensivePrompt(
     ? facts.map(f => `- ${f.fact.claim}\n  Source: ${f.fact.source_name} (${f.fact.source_url})`).join('\n')
     : 'No additional verified facts available.'
 
+  // 🔥 Use full licensing data for financial values if available
+  const applicationFee = fullLicensingData?.application_fee 
+    ? `$${Number(fullLicensingData.application_fee).toLocaleString()}`
+    : licensing.applicationFeeFormatted
+    
+  const annualRenewalFee = fullLicensingData?.annual_renewal_fee
+    ? `$${Number(fullLicensingData.annual_renewal_fee).toLocaleString()}`
+    : 'Varies'
+    
+  const bondRequirement = fullLicensingData?.bond_requirement_min && fullLicensingData?.bond_requirement_max
+    ? (fullLicensingData.bond_requirement_min === fullLicensingData.bond_requirement_max 
+        ? `$${Number(fullLicensingData.bond_requirement_min).toLocaleString()}`
+        : `$${Number(fullLicensingData.bond_requirement_min).toLocaleString()} - $${Number(fullLicensingData.bond_requirement_max).toLocaleString()}`)
+    : licensing.bondRequirement
+    
+  const netWorthRequirement = fullLicensingData?.net_worth_requirement
+    ? `$${Number(fullLicensingData.net_worth_requirement).toLocaleString()}`
+    : 'Varies'
+    
+  const processingTime = fullLicensingData?.processing_time_description
+    || (fullLicensingData?.processing_time_min_months && fullLicensingData?.processing_time_max_months
+        ? `${fullLicensingData.processing_time_min_months}-${fullLicensingData.processing_time_max_months} months`
+        : licensing.processingTime)
+        
+  const licenseName = fullLicensingData?.license_name 
+    || (licensing.licenseRequired === 'none' ? 'No license required' 
+        : licensing.licenseRequired === 'mtl' ? 'Money Transmitter License' 
+        : licensing.licenseRequired === 'bitlicense' ? 'BitLicense' 
+        : licensing.licenseRequired === 'dfpi' ? 'DFPI License' 
+        : 'Varies by activity')
+        
+  const regulatorName = fullLicensingData?.regulator_name || 'State Regulator'
+  const regulatorPhone = fullLicensingData?.regulator_phone || 'Check state website'
+  const regulatorEmail = fullLicensingData?.regulator_email || 'Check state website'
+  const regulatorWebsite = fullLicensingData?.regulator_website || ''
+  const licenseDescription = fullLicensingData?.license_description || licensing.moneyTransmitter
+  const notes = fullLicensingData?.notes || ''
+
   return `You are a regulatory compliance AI for financial institutions and law firms. You have ZERO tolerance for hallucinations.
 
 ========================================
@@ -302,15 +480,24 @@ VERIFIED REGULATORY DATA FOR ${params.state}
 ========================================
 
 ## LICENSING REQUIREMENTS (Source: Official State Regulator)
-- License Required: ${licensing.licenseRequired === 'none' ? 'No license required' : licensing.licenseRequired === 'mtl' ? 'Money Transmitter License' : licensing.licenseRequired === 'bitlicense' ? 'BitLicense' : licensing.licenseRequired === 'dfpi' ? 'DFPI License' : 'Varies by activity'}
-- Regulatory Climate: ${licensing.cryptoFriendly}
+- License Required: ${licenseName}
+- Regulatory Climate: ${fullLicensingData?.regulatory_climate || licensing.cryptoFriendly}
 - Tax Treatment: ${licensing.taxTreatment}
-- License Description: ${licensing.moneyTransmitter}
+- License Description: ${licenseDescription}
+${notes ? `- Important Notes: ${notes}` : ''}
 
-## FINANCIAL REQUIREMENTS
-- Application Fee: ${licensing.applicationFeeFormatted}
-- Bond Requirement: ${licensing.bondRequirement}
-- Processing Time: ${licensing.processingTime}
+## FINANCIAL REQUIREMENTS (Verified from Official Sources)
+- Application Fee: ${applicationFee}
+- Annual Renewal Fee: ${annualRenewalFee}
+- Bond Requirement: ${bondRequirement}
+- Net Worth Requirement: ${netWorthRequirement}
+- Processing Time: ${processingTime}
+
+## REGULATOR CONTACT
+- Regulator: ${regulatorName}
+- Phone: ${regulatorPhone}
+- Email: ${regulatorEmail}
+${regulatorWebsite ? `- Website: ${regulatorWebsite}` : ''}
 
 ## ENFORCEMENT HISTORY (Last 2 years)
 ${enforcementHistory}
@@ -349,19 +536,21 @@ Generate a professional regulatory intelligence report with the following struct
 
 ## 1. EXECUTIVE SUMMARY
 - Summarize the regulatory climate for ${params.state}
-- Highlight key licensing requirements
+- Highlight key licensing requirements including fees and bonds
 - Note any pending legislation that may affect compliance
 - Include the company name and primary compliance focus
 
 ## 2. LICENSING REQUIREMENTS
-- State the license type required (${licensing.licenseRequired === 'none' ? 'No license required' : licensing.licenseRequired === 'mtl' ? 'Money Transmitter License' : licensing.licenseRequired === 'bitlicense' ? 'BitLicense' : licensing.licenseRequired === 'dfpi' ? 'DFPI License' : 'Varies'})
-- Application fee: ${licensing.applicationFeeFormatted}
-- Bond requirement: ${licensing.bondRequirement}
-- Processing time: ${licensing.processingTime}
+- State the license type required: ${licenseName}
+- Application fee: ${applicationFee}
+- Annual renewal fee: ${annualRenewalFee}
+- Bond requirement: ${bondRequirement}
+- Net worth requirement: ${netWorthRequirement}
+- Processing time: ${processingTime}
 - Cite the source for each requirement
 
 ## 3. REGULATORY CLIMATE ASSESSMENT
-- Climate rating: ${licensing.cryptoFriendly}
+- Climate rating: ${fullLicensingData?.regulatory_climate || licensing.cryptoFriendly}
 - Tax implications: ${licensing.taxTreatment}
 - Risk level based on climate
 
@@ -369,17 +558,23 @@ Generate a professional regulatory intelligence report with the following struct
 - Recent enforcement actions: ${enforcementHistory !== 'No recent enforcement actions identified' ? enforcementHistory : 'None identified in the past 2 years'}
 - Pending legislation: ${pendingLegislation !== 'No pending legislation identified' ? pendingLegislation : 'None currently tracked'}
 
-## 5. COMPLIANCE CHECKLIST
+## 5. REGULATOR CONTACT INFORMATION
+- ${regulatorName}
+- Phone: ${regulatorPhone}
+- Email: ${regulatorEmail}
+${regulatorWebsite ? `- Website: ${regulatorWebsite}` : ''}
+
+## 6. COMPLIANCE CHECKLIST
 - Immediate actions (30 days)
 - Short-term requirements (90 days)
 - Ongoing obligations
 - Based ONLY on verified data above
 
-## 6. IMPLEMENTATION TIMELINE
-- Expected processing time: ${licensing.processingTime}
+## 7. IMPLEMENTATION TIMELINE
+- Expected processing time: ${processingTime}
 - Key milestones based on verified data
 
-## 7. RISK ASSESSMENT
+## 8. RISK ASSESSMENT
 - Compliance risk score based on regulatory climate
 - Gap analysis for missing verified data
 
@@ -396,6 +591,139 @@ CRITICAL RULES (MUST FOLLOW):
 ---
 
 Generate the complete report now:`
+}
+
+/**
+ * Build a multi-state comparison prompt (UPDATED with full licensing data)
+ */
+function buildMultiStatePrompt(
+  params: SafeReportParams,
+  statesData: Record<string, any>,
+  fullMultiStateLicensingData: any[]
+): string {
+  const allStates = Object.keys(statesData)
+  const primaryState = params.state
+  
+  let statesSection = ''
+  for (const [state, data] of Object.entries(statesData)) {
+    const isPrimary = state === primaryState
+    const licensing = data.licensing
+    const fullData = fullMultiStateLicensingData.find(d => d.state_code === state) || {}
+    
+    // Use full data for financial values
+    const applicationFee = fullData.application_fee 
+      ? `$${Number(fullData.application_fee).toLocaleString()}`
+      : licensing.applicationFeeFormatted
+      
+    const bondRequirement = fullData.bond_requirement_min && fullData.bond_requirement_max
+      ? (fullData.bond_requirement_min === fullData.bond_requirement_max 
+          ? `$${Number(fullData.bond_requirement_min).toLocaleString()}`
+          : `$${Number(fullData.bond_requirement_min).toLocaleString()} - $${Number(fullData.bond_requirement_max).toLocaleString()}`)
+      : licensing.bondRequirement
+    
+    statesSection += `
+${'='.repeat(60)}
+${isPrimary ? 'PRIMARY STATE' : 'COMPARISON STATE'}: ${state}
+${'='.repeat(60)}
+- License Required: ${fullData.license_name || (licensing.licenseRequired === 'none' ? 'No license required' : licensing.licenseRequired === 'mtl' ? 'Money Transmitter License' : licensing.licenseRequired === 'bitlicense' ? 'BitLicense' : licensing.licenseRequired === 'dfpi' ? 'DFPI License' : 'Varies')}
+- Regulatory Climate: ${fullData.regulatory_climate || licensing.cryptoFriendly}
+- Tax Treatment: ${licensing.taxTreatment}
+- License Description: ${fullData.license_description || licensing.moneyTransmitter}
+- Application Fee: ${applicationFee}
+- Annual Renewal Fee: ${fullData.annual_renewal_fee ? `$${Number(fullData.annual_renewal_fee).toLocaleString()}` : 'Varies'}
+- Bond Requirement: ${bondRequirement}
+- Net Worth Requirement: ${fullData.net_worth_requirement ? `$${Number(fullData.net_worth_requirement).toLocaleString()}` : 'Varies'}
+- Processing Time: ${fullData.processing_time_description || licensing.processingTime}
+- Recent Enforcement: ${data.enforcementHistory.substring(0, 150)}...
+- Pending Legislation: ${data.pendingLegislation.substring(0, 150)}...
+`
+  }
+
+  return `You are a regulatory compliance AI for financial institutions and law firms. You have ZERO tolerance for hallucinations.
+
+========================================
+MULTI-STATE REGULATORY COMPARISON REPORT
+========================================
+Primary State: ${primaryState}
+States Included in Comparison: ${allStates.join(', ')}
+
+${statesSection}
+
+========================================
+COMPANY INFORMATION
+========================================
+- Company: ${params.companyName}
+- Industry: ${params.industry}
+- Company Size: ${params.companySize}
+- Compliance Budget: ${params.budget}
+- Primary Location: ${params.city}, ${primaryState}
+- Market Classification: ${params.locationTier}
+- Primary Compliance Focus: ${params.primaryFocus}
+- Secondary Focus Areas: ${params.secondaryFocus.join(', ')}
+- Target Timeline: ${params.timeline}
+
+SPECIFIC CONCERNS TO ADDRESS:
+${params.concerns}
+
+COMPLIANCE GOALS:
+${params.goals}
+
+========================================
+REPORT REQUIREMENTS
+========================================
+
+Generate a professional COMPARATIVE regulatory intelligence report with the following structure:
+
+## 1. EXECUTIVE SUMMARY
+- Overview of the multi-state regulatory landscape
+- Highlight key differences between states (fees, bonds, timelines)
+- Preliminary recommendation on optimal state(s)
+
+## 2. STATE-BY-STATE COMPARISON TABLE
+Create a comparison table with rows for each state showing:
+- License Required
+- Regulatory Climate
+- Tax Treatment
+- Application Fee
+- Annual Renewal Fee
+- Bond Requirement
+- Net Worth Requirement
+- Processing Time
+
+## 3. PRIMARY STATE DETAILED ANALYSIS (${primaryState})
+- Full licensing requirements
+- Financial requirements (fees, bonds, net worth)
+- Regulator contact information
+- Enforcement history
+- Pending legislation
+- Compliance timeline
+
+## 4. SECONDARY STATES OVERVIEW
+For each secondary state, provide a concise summary of key requirements
+
+## 5. BEST STATE RECOMMENDATION
+- Compare all states and recommend the optimal jurisdiction
+- Justify based on fees, processing time, climate, and tax treatment
+- Consider the company's specific focus areas
+
+## 6. MULTI-STATE COMPLIANCE STRATEGY
+- If operating in multiple states, outline the compliance approach
+- Identify which state has the most stringent requirements
+- Recommend a phased rollout strategy
+
+CRITICAL RULES (MUST FOLLOW):
+1. DO NOT invent any regulatory requirements, fees, bonds, or timelines
+2. Use ONLY the verified data provided above
+3. If a fact isn't in the data, say "INSUFFICIENT DATA"
+4. ALWAYS cite sources
+5. Use exact numbers from the data - do not round or approximate
+6. Include this exact disclaimer at the end:
+
+---
+**DISCLAIMER**: This report uses only verified regulatory data from official sources as cited above. Veridian Group is not a law firm. All compliance strategies should be reviewed with qualified legal counsel before implementation. Regulations are subject to change without notice.
+---
+
+Generate the complete comparative report now:`
 }
 
 /**
@@ -466,8 +794,8 @@ async function supabaseRpcVerify(claimText: string, stateCode: string) {
   const supabase = createClient(supabaseUrl, supabaseKey)
   
   const { data, error } = await supabase.rpc('verify_claim', {
-    claim_text: claimText,
-    state_code: stateCode
+    input_claim: claimText,
+    input_state_code: stateCode
   })
   
   if (error) {

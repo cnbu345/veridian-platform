@@ -4,10 +4,11 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
 
-// Get Supabase client (uses your existing .env.local)
+// Use SERVICE ROLE key for admin operations (bypasses RLS)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
 
 export interface VerifiedClaim {
   isVerified: boolean
@@ -45,8 +46,8 @@ export async function verifyClaim(
   try {
     // Call the database function we created in SQL
     const { data, error } = await supabase.rpc('verify_claim', {
-      claim_text: claimText,
-      state_code: stateCode
+      input_claim: claimText,
+      input_state_code: stateCode
     })
 
     if (error) {
@@ -128,23 +129,29 @@ export async function recordClaim(
   claim: string,
   supportingFactIds: string[] = []
 ): Promise<{ success: boolean; claimId?: string; error?: string }> {
-  const { data, error } = await supabase
-    .from('report_claims')
-    .insert({
-      report_id: reportId,
-      claim: claim,
-      supporting_fact_ids: supportingFactIds,
-      verification_status: 'needs_review'
-    })
-    .select('id')
-    .single()
+  try {
+    const { data, error } = await supabase
+      .from('report_claims')
+      .insert({
+        report_id: reportId,
+        claim: claim,
+        supporting_fact_ids: supportingFactIds,
+        verification_status: 'needs_review',
+        created_at: new Date().toISOString()
+      })
+      .select('id')
+      .single()
 
-  if (error) {
-    console.error('❌ recordClaim error:', error)
-    return { success: false, error: error.message }
+    if (error) {
+      console.error('❌ recordClaim error:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, claimId: data.id }
+  } catch (error) {
+    console.error('❌ recordClaim exception:', error)
+    return { success: false, error: String(error) }
   }
-
-  return { success: true, claimId: data.id }
 }
 
 /**
@@ -156,22 +163,27 @@ export async function updateClaimVerification(
   score: number,
   notes?: string
 ): Promise<boolean> {
-  const { error } = await supabase
-    .from('report_claims')
-    .update({
-      verification_status: status,
-      verification_score: score,
-      verification_notes: notes,
-      verified_at: new Date().toISOString()
-    })
-    .eq('id', claimId)
+  try {
+    const { error } = await supabase
+      .from('report_claims')
+      .update({
+        verification_status: status,
+        verification_score: score,
+        verification_notes: notes,
+        verified_at: new Date().toISOString()
+      })
+      .eq('id', claimId)
 
-  if (error) {
-    console.error('❌ updateClaimVerification error:', error)
+    if (error) {
+      console.error('❌ updateClaimVerification error:', error)
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error('❌ updateClaimVerification exception:', error)
     return false
   }
-
-  return true
 }
 
 /**
@@ -217,7 +229,6 @@ export async function getHallucinationRate(reportId: string): Promise<{
 
 /**
  * Insert a new verified fact into the database
- * (This should only be used by admins or the auto-update pipeline)
  */
 export async function insertVerifiedFact(
   fact: Omit<RegulatoryFact, 'id'>

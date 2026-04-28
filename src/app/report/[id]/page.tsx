@@ -25,7 +25,27 @@ export default async function ReportPage({
       redirect('/dashboard')
     }
 
-    return <ReportViewClient report={report} />
+    // Check if user has an active subscription
+    const supabase = await createClient()
+    const { data: subscription } = await supabase
+      .from('subscriptions')
+      .select('plan_tier, status')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .maybeSingle()
+
+    // Determine if upsell should be shown
+    const showQuarterlyUpsell = !subscription || 
+      subscription.plan_tier === 'single' ||
+      report.subscription_tier === 'single'
+
+    return (
+      <ReportViewClient 
+        report={report} 
+        showQuarterlyUpsell={showQuarterlyUpsell}
+        userSubscription={subscription}
+      />
+    )
   } catch (error) {
     console.error('Error loading report:', error)
     redirect('/dashboard')

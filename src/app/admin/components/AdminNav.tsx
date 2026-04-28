@@ -34,7 +34,7 @@ import {
   Activity,
   HeartPulse,
   Monitor,
-  Zap
+  Zap, Database
 } from 'lucide-react'
 
 const navItems = [
@@ -99,9 +99,10 @@ const navItems = [
     ]
   },
   {
-    title: 'Regulatory',
+    title: 'Legal & Compliance',
     href: '/admin/regulatory',
     icon: Scale,
+    role: 'legal_admin', // for RBAC later
     subItems: [
       { title: 'Dashboard', href: '/admin/regulatory' },
       { title: 'Licensing Manager', href: '/admin/regulatory/licensing'},
@@ -115,6 +116,24 @@ const navItems = [
       { title: 'Notes Manager', href: '/admin/regulatory/notes-manager' },
       { title: 'Resources', href: '/admin/regulatory/resources' },
       { title: 'Audit Log', href: '/admin/regulatory/audit' }
+    ]
+  },
+  {
+    title: 'Report Data',
+    href: '/admin/data',
+    icon: Database,
+    role: 'data_admin',  // For RBAC later
+    subItems: [
+      { title: 'Dashboard', href: '/admin/data' },
+      { title: 'Technology Vendors', href: '/admin/data/technology-vendors' },
+      { title: 'Budget Templates', href: '/admin/data/budget-templates' },
+      { title: 'Market Metrics', href: '/admin/data/market-metrics' },
+      { title: 'Talent Metrics', href: '/admin/data/talent-metrics' },
+      { title: 'Risk Factors', href: '/admin/data/risk-factors' },
+      { title: 'Compliance Phases', href: '/admin/data/compliance-phases' },
+      { title: 'Next Steps & Calendar', href: '/admin/data/next-steps' },
+      { title: 'Data Verification', href: '/admin/data/verification' },
+      { title: 'Data Audit Log', href: '/admin/data/audit' }
     ]
   },
   {

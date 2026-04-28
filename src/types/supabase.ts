@@ -1,3 +1,5 @@
+import { boolean, string } from "zod"
+
 // src/types/supabase.ts
 export type Json =
   | string
@@ -47,6 +49,208 @@ export interface Database {
           avatar_url?: string | null
           subscription_tier?: 'free' | 'single' | 'quarterly' | 'monthly' | 'enterprise'
           stripe_customer_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      },
+      action_items: {
+        Row: {
+          id: string
+          phase_id: string
+          description: string
+          is_conditional: boolean
+          condition_field: string | null
+          condition_value: string | null
+          condition_operator: string
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          phase_id: string
+          description: string
+          is_conditional?: boolean
+          condition_field?: string | null
+          condition_value?: string | null
+          condition_operator?: string
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          phase_id?: string
+          description?: string
+          is_conditional?: boolean
+          condition_field?: string | null
+          condition_value?: string | null
+          condition_operator?: string
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+      },
+      budget_templates: {
+        Row: {
+          id: string
+          company_size: string
+          industry: string | null
+          state_code: string | null
+          legal_fees_min: number
+          legal_fees_max: number
+          legal_fees_description: string
+          licensing_fees_min: number
+          licensing_fees_max: number
+          licensing_fees_description: string
+          technology_min: number
+          technology_max: number
+          technology_description: string
+          staffing_min: number
+          staffing_max: number
+          staffing_description: string
+          total_min: number
+          total_max: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          company_size: string
+          industry?: string | null
+          state_code?: string | null
+          legal_fees_min: number
+          legal_fees_max: number
+          legal_fees_description: string
+          licensing_fees_min: number
+          licensing_fees_max: number
+          licensing_fees_description: string
+          technology_min: number
+          technology_max: number
+          technology_description: string
+          staffing_min: number
+          staffing_max: number
+          staffing_description: string
+          total_min: number
+          total_max: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          company_size?: string
+          industry?: string | null
+          state_code?: string | null
+          legal_fees_min?: number
+          legal_fees_max?: number
+          legal_fees_description?: string
+          licensing_fees_min?: number
+          licensing_fees_max?: number
+          licensing_fees_description?: string
+          technology_min?: number
+          technology_max?: number
+          technology_description?: string
+          staffing_min?: number
+          staffing_max?: number
+          staffing_description?: string
+          total_min?: number
+          total_max?: number
+          created_at?: string
+          updated_at?: string
+        }
+      },
+      compliance_calendar_tasks: {
+        Row: {
+          id: string
+          calendar_template_id: string
+          description: string
+          is_conditional: boolean
+          condition_field: string | null
+          condition_value: string | null
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          calendar_template_id: string
+          description: string
+          is_conditional?: boolean
+          condition_field?: string | null
+          condition_value?: string | null
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          calendar_template_id?: string
+          description?: string
+          is_conditional?: boolean
+          condition_field?: string | null
+          condition_value?: string | null
+          sort_order?: number
+          created_at?: string
+        }
+      },
+      compliance_calendar_templates: {
+        Row: {
+          id: string
+          timeframe: string
+          default_days_offset: number | null
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          timeframe: string
+          default_days_offset?: number | null
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          timeframe?: string
+          default_days_offset?: number | null
+          sort_order?: number
+          created_at?: string
+        }
+      },
+      compliance_phases: {
+        Row: {
+          id: string
+          phase_name: string
+          phase_key: string
+          default_timeline_start_days: number
+          default_timeline_end_days: number | null
+          default_timeline_display: string
+          color_class: string
+          text_color_class: string
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          phase_name: string
+          phase_key: string
+          default_timeline_start_days: number
+          default_timeline_end_days?: number | null
+          default_timeline_display: string
+          color_class: string
+          text_color_class: string
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          phase_name?: string
+          phase_key?: string
+          default_timeline_start_days?: number
+          default_timeline_end_days?: number | null
+          default_timeline_display?: string
+          color_class?: string
+          text_color_class?: string
+          sort_order?: number
           created_at?: string
           updated_at?: string
         }
@@ -183,6 +387,82 @@ export interface Database {
           updated_at?: string
         }
       },
+      market_metrics: {
+        Row: {
+          id: string
+          state_code: string
+          city_name: string | null
+          tier: string
+          growth_rate: number | null
+          competitor_density: string | null
+          opportunity_score: number | null
+          key_industries: string[] | null
+          nearest_regulatory_hub: string | null
+          distance_to_hub_miles: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          state_code: string
+          city_name?: string | null
+          tier: string
+          growth_rate?: number | null
+          competitor_density?: string | null
+          opportunity_score?: number | null
+          key_industries?: string[] | null
+          nearest_regulatory_hub?: string | null
+          distance_to_hub_miles?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          state_code?: string
+          city_name?: string | null
+          tier?: string
+          growth_rate?: number | null
+          competitor_density?: string | null
+          opportunity_score?: number | null
+          key_industries?: string[] | null
+          nearest_regulatory_hub?: string | null
+          distance_to_hub_miles?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+      },
+      next_steps_templates: {
+        Row: {
+          id: string
+          template_type: string
+          description: string
+          is_conditional: boolean
+          condition_field: string | null
+          condition_value: string | null
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          template_type: string
+          description: string
+          is_conditional?: boolean
+          condition_field?: string | null
+          condition_value?: string | null
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          template_type?: string
+          description?: string
+          is_conditional?: boolean
+          condition_field?: string | null
+          condition_value?: string | null
+          sort_order?: number
+          created_at?: string
+        }
+      },
       reports: {
         Row: {
           id: string
@@ -234,6 +514,70 @@ export interface Database {
           created_at?: string
           updated_at?: string
           template_id: string | null
+        }
+      },
+      risk_factors: {
+        Row: {
+          id: string
+          category: string
+          description: string
+          default_likelihood: string
+          default_impact: string
+          mitigation_strategy: string
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          category: string
+          description: string
+          default_likelihood: string
+          default_impact: string
+          mitigation_strategy: string
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          category?: string
+          description?: string
+          default_likelihood?: string
+          default_impact?: string
+          mitigation_strategy?: string
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+      },
+      risk_state_overrides: {
+        Row: {
+          id: string
+          risk_factor_id: string
+          state_code: string
+          override_likelihood: string | null
+          override_impact: string | null
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          risk_factor_id: string
+          state_code: string
+          override_likelihood?: string | null
+          override_impact?: string | null
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          risk_factor_id?: string
+          state_code?: string
+          override_likelihood?: string | null
+          override_impact?: string | null
+          notes?: string | null
+          created_at?: string
         }
       },
       state_regulations: {
@@ -382,6 +726,103 @@ export interface Database {
           created_at?: string
         }
       },
+      talent_metrics: {
+        Row: {
+          id: string
+          state_code: string
+          city_name: string | null
+          talent_score: number | null
+          talent_rank: string | null
+          total_professionals: number | null
+          growth_rate: number | null
+          avg_salary_min: number | null
+          avg_salary_max: number | null
+          time_to_hire_weeks: string | null
+          top_channels: string[] | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          state_code: string
+          city_name?: string | null
+          talent_score?: number | null
+          talent_rank?: string | null
+          total_professionals?: number | null
+          growth_rate?: number | null
+          avg_salary_min?: number | null
+          avg_salary_max?: number | null
+          time_to_hire_weeks?: string | null
+          top_channels?: string[] | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          state_code?: string
+          city_name?: string | null
+          talent_score?: number | null
+          talent_rank?: string | null
+          total_professionals?: number | null
+          growth_rate?: number | null
+          avg_salary_min?: number | null
+          avg_salary_max?: number | null
+          time_to_hire_weeks?: string | null
+          top_channels?: string[] | null
+          created_at?: string
+          updated_at?: string
+        }
+      },
+      technology_vendors: {
+        Row: {
+          id: string
+          category: string
+          name: string
+          description: string | null
+          price_range_low: number | null
+          price_range_high: number | null
+          price_display: string | null
+          implementation_time: string | null
+          website_url: string | null
+          is_recommended: boolean
+          sort_order: number
+          applicable_states: string[] | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          category: string
+          name: string
+          description?: string | null
+          price_range_low?: number | null
+          price_range_high?: number | null
+          price_display?: string | null
+          implementation_time?: string | null
+          website_url?: string | null
+          is_recommended?: boolean
+          sort_order?: number
+          applicable_states?: string[] | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          category?: string
+          name?: string
+          description?: string | null
+          price_range_low?: number | null
+          price_range_high?: number | null
+          price_display?: string | null
+          implementation_time?: string | null
+          website_url?: string | null
+          is_recommended?: boolean
+          sort_order?: number
+          applicable_states?: string[] | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       blog_categories: {
         Row: {
           id: string
@@ -1342,6 +1783,43 @@ export interface Database {
           changed_at?: string
           reason?: string | null
           ip_address?: string | null
+        }
+      },
+      {
+        review_schedules: {
+          row: {
+            id: string
+            state_code: string
+            scheduled_date: string
+            assigned_to: string
+            status: 'pending' | 'completed' | 'cancelled'
+            reminder_sent: boolean
+            notes: string
+            created_at: string
+            updated_at: string
+          }
+          Insert: {
+            id?: string
+            state_code: string
+            scheduled_date: string
+            assigned_to?: string | null
+            status?: 'pending' | 'completed' | 'cancelled'
+            reminder_sent?: boolean
+            notes?: string | null
+            created_at?: string
+            updated_at?: string
+          }
+          Update: {
+            id?: string
+            state_code?: string
+            scheduled_date?: string
+            assigned_to?: string | null
+            status?: 'pending' | 'completed' | 'cancelled'
+            reminder_sent?: boolean
+            notes?: string | null
+            created_at?: string
+            updated_at?: string
+          }
         }
       }
       state_audit_tracker: {

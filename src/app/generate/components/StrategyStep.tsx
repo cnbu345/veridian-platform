@@ -94,8 +94,19 @@ export default function StrategyStep({ data, onUpdate, onNext, onBack }: Strateg
   }
 
   const onSubmit = (formData: StrategyFormData) => {
-    onUpdate(formData)
-    onNext()
+    // Update parent with final data
+    onUpdate({
+      primary: formData.primary,
+      secondary: selectedSecondary,
+      timeline: formData.timeline,
+      concerns: formData.concerns,
+      goals: formData.goals
+    })
+    
+    // Call the parent's submit handler (which is handleSubmit in GenerateClient)
+    if (onNext && typeof onNext === 'function') {
+      onNext()
+    }
   }
 
   return (

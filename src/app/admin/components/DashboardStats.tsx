@@ -1,4 +1,4 @@
-// src/app/admin/components/DashboardStats.tsx // DASHBOARD STATS
+// src/app/admin/components/DashboardStats.tsx
 'use client'
 
 import { AdminDashboardStats } from '@/types/admin'
