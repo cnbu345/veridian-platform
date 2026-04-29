@@ -387,6 +387,53 @@ export interface Database {
           updated_at?: string
         }
       },
+      major_cities: {
+        Row: {
+          id: string
+          city: string
+          state_code: string
+          population: number | null
+          region: string | null
+          tier: string
+          is_regulatory_hub: boolean
+          latitude: number | null
+          longitude: number | null
+          sort_order: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          city: string
+          state_code: string
+          population?: number | null
+          region?: string | null
+          tier?: string
+          is_regulatory_hub?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          sort_order?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          city?: string
+          state_code?: string
+          population?: number | null
+          region?: string | null
+          tier?: string
+          is_regulatory_hub?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          sort_order?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      },
       market_metrics: {
         Row: {
           id: string
@@ -431,6 +478,44 @@ export interface Database {
           updated_at?: string
         }
       },
+      metropolitan_areas: {
+        Row: {
+          id: string
+          name: string
+          states: string[]
+          population: number | null
+          primary_city: string | null
+          primary_state: string | null
+          sort_order: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          states: string[]
+          population?: number | null
+          primary_city?: string | null
+          primary_state?: string | null
+          sort_order?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          states?: string[]
+          population?: number | null
+          primary_city?: string | null
+          primary_state?: string | null
+          sort_order?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      },
       next_steps_templates: {
         Row: {
           id: string
@@ -461,6 +546,44 @@ export interface Database {
           condition_value?: string | null
           sort_order?: number
           created_at?: string
+        }
+      },
+      regulatory_hubs: {
+        Row: {
+          id: string
+          city: string
+          state_code: string
+          hub_type: 'primary' | 'secondary'
+          score: number | null
+          specialty: string | null
+          sort_order: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          city: string
+          state_code: string
+          hub_type?: 'primary' | 'secondary'
+          score?: number | null
+          specialty?: string | null
+          sort_order?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          city?: string
+          state_code?: string
+          hub_type?: 'primary' | 'secondary'
+          score?: number | null
+          specialty?: string | null
+          sort_order?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
         }
       },
       reports: {
@@ -651,6 +774,59 @@ export interface Database {
           link?: string | null
           created_at?: string
           expires_at?: string | null
+        }
+      },
+      service_providers: {
+        Row: {
+          id: string
+          name: string
+          provider_type: 'lawFirm' | 'consultant' | 'techProvider' | 'association' | 'regulator'
+          phone: string | null
+          email: string | null
+          website: string | null
+          specialty: string | null
+          is_national: boolean
+          states: string[] | null
+          cities: string[] | null
+          sort_order: number
+          is_active: boolean
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          provider_type: 'lawFirm' | 'consultant' | 'techProvider' | 'association' | 'regulator'
+          phone?: string | null
+          email?: string | null
+          website?: string | null
+          specialty?: string | null
+          is_national?: boolean
+          states?: string[] | null
+          cities?: string[] | null
+          sort_order?: number
+          is_active?: boolean
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          provider_type?: 'lawFirm' | 'consultant' | 'techProvider' | 'association' | 'regulator'
+          phone?: string | null
+          email?: string | null
+          website?: string | null
+          specialty?: string | null
+          is_national?: boolean
+          states?: string[] | null
+          cities?: string[] | null
+          sort_order?: number
+          is_active?: boolean
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
         }
       },
       support_tickets: {

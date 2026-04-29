@@ -50,27 +50,12 @@ export default function BudgetTemplatesPage() {
   const [loading, setLoading] = useState(true)
   const [companySizeFilter, setCompanySizeFilter] = useState('')
   const [stateFilter, setStateFilter] = useState('')
-  const [editingTemplate, setEditingTemplate] = useState<BudgetTemplate | null>(null)
-  const [isAdding, setIsAdding] = useState(false)
-  const [newTemplate, setNewTemplate] = useState<Partial<BudgetTemplate>>({
-    company_size: 'small',
-    industry: null,
-    state_code: null,
-    legal_fees_min: 25000,
-    legal_fees_max: 100000,
-    legal_fees_description: 'Legal counsel retainer, license application support, ongoing advice',
-    licensing_fees_min: 5000,
-    licensing_fees_max: 30000,
-    licensing_fees_description: 'Application fees, surety bonds, state filing costs',
-    technology_min: 30000,
-    technology_max: 150000,
-    technology_description: 'AML/KYC platforms, monitoring tools, compliance software',
-    staffing_min: 80000,
-    staffing_max: 250000,
-    staffing_description: 'Compliance officer salary, training, ongoing resources',
-    total_min: 140000,
-    total_max: 550000
-  })
+  
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [formData, setFormData] = useState<Partial<BudgetTemplate>>({})
+  
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
 
@@ -114,12 +99,73 @@ export default function BudgetTemplatesPage() {
     }
   }
 
-  const handleSave = async (template: BudgetTemplate, isNew: boolean) => {
-    const totals = calculateTotals(template)
-    const templateToSave = { ...template, ...totals }
+  // Helper function to update form fields
+  const updateField = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  // Modal open/close functions
+  const openAddModal = () => {
+    setFormData({
+      company_size: 'small',
+      industry: null,
+      state_code: null,
+      legal_fees_min: 25000,
+      legal_fees_max: 100000,
+      legal_fees_description: 'Legal counsel retainer, license application support, ongoing advice',
+      licensing_fees_min: 5000,
+      licensing_fees_max: 30000,
+      licensing_fees_description: 'Application fees, surety bonds, state filing costs',
+      technology_min: 30000,
+      technology_max: 150000,
+      technology_description: 'AML/KYC platforms, monitoring tools, compliance software',
+      staffing_min: 80000,
+      staffing_max: 250000,
+      staffing_description: 'Compliance officer salary, training, ongoing resources',
+      total_min: 140000,
+      total_max: 550000
+    })
+    setEditingId(null)
+    setIsModalOpen(true)
+  }
+
+  const openEditModal = (item: BudgetTemplate) => {
+    setFormData({
+      company_size: item.company_size,
+      industry: item.industry,
+      state_code: item.state_code,
+      legal_fees_min: item.legal_fees_min,
+      legal_fees_max: item.legal_fees_max,
+      legal_fees_description: item.legal_fees_description,
+      licensing_fees_min: item.licensing_fees_min,
+      licensing_fees_max: item.licensing_fees_max,
+      licensing_fees_description: item.licensing_fees_description,
+      technology_min: item.technology_min,
+      technology_max: item.technology_max,
+      technology_description: item.technology_description,
+      staffing_min: item.staffing_min,
+      staffing_max: item.staffing_max,
+      staffing_description: item.staffing_description,
+      total_min: item.total_min,
+      total_max: item.total_max
+    })
+    setEditingId(item.id)
+    setIsModalOpen(true)
+  }
+
+  const closeModal = () => {
+    setIsModalOpen(false)
+    setEditingId(null)
+    setFormData({})
+  }
+
+  const handleSave = async () => {
+    const isNew = !editingId
+    const totals = calculateTotals(formData)
+    const templateToSave = { ...formData, ...totals }
     
     try {
-      const response = await fetch(`/api/admin/budget-templates${isNew ? '' : `?id=${template.id}`}`, {
+      const response = await fetch(`/api/admin/budget-templates${isNew ? '' : `?id=${editingId}`}`, {
         method: isNew ? 'POST' : 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(templateToSave)
@@ -128,8 +174,7 @@ export default function BudgetTemplatesPage() {
       if (response.ok) {
         setNotification({ type: 'success', message: isNew ? 'Template added successfully' : 'Template updated successfully' })
         fetchTemplates()
-        setEditingTemplate(null)
-        setIsAdding(false)
+        closeModal()
         setTimeout(() => setNotification(null), 3000)
       } else {
         throw new Error('Save failed')
@@ -158,29 +203,20 @@ export default function BudgetTemplatesPage() {
     }
   }
 
-  const EditModal = () => {
-    const template = editingTemplate
-    if (!template && !isAdding) return null
+  // Modal Render Function
+  const renderModal = () => {
+    if (!isModalOpen) return null
     
-    const currentTemplate = editingTemplate || newTemplate
-    
-    const updateField = (field: string, value: any) => {
-      const updated = { ...currentTemplate, [field]: value }
-      if (isAdding) {
-        setNewTemplate(updated)
-      } else if (editingTemplate) {
-        setEditingTemplate(updated as BudgetTemplate)
-      }
-    }
+    const currentTotals = calculateTotals(formData)
     
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
           <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white">
             <h3 className="text-lg font-semibold">
-              {isAdding ? 'Add New Budget Template' : `Edit ${editingTemplate?.company_size} Template`}
+              {editingId ? 'Edit Budget Template' : 'Add New Budget Template'}
             </h3>
-            <button onClick={() => { setEditingTemplate(null); setIsAdding(false); }} className="text-gray-400 hover:text-gray-600">
+            <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -191,7 +227,7 @@ export default function BudgetTemplatesPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Company Size *</label>
                 <select
-                  value={currentTemplate.company_size || ''}
+                  value={formData.company_size || ''}
                   onChange={(e) => updateField('company_size', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-gold-500 focus:border-gold-500"
                   required
@@ -204,7 +240,7 @@ export default function BudgetTemplatesPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Industry (optional)</label>
                 <select
-                  value={currentTemplate.industry || ''}
+                  value={formData.industry || ''}
                   onChange={(e) => updateField('industry', e.target.value || null)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-gold-500 focus:border-gold-500"
                 >
@@ -227,7 +263,7 @@ export default function BudgetTemplatesPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Min ($)</label>
                   <input
                     type="number"
-                    value={currentTemplate.legal_fees_min || ''}
+                    value={formData.legal_fees_min || ''}
                     onChange={(e) => updateField('legal_fees_min', parseInt(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
@@ -236,7 +272,7 @@ export default function BudgetTemplatesPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Max ($)</label>
                   <input
                     type="number"
-                    value={currentTemplate.legal_fees_max || ''}
+                    value={formData.legal_fees_max || ''}
                     onChange={(e) => updateField('legal_fees_max', parseInt(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
@@ -246,7 +282,7 @@ export default function BudgetTemplatesPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <input
                   type="text"
-                  value={currentTemplate.legal_fees_description || ''}
+                  value={formData.legal_fees_description || ''}
                   onChange={(e) => updateField('legal_fees_description', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 />
@@ -264,7 +300,7 @@ export default function BudgetTemplatesPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Min ($)</label>
                   <input
                     type="number"
-                    value={currentTemplate.licensing_fees_min || ''}
+                    value={formData.licensing_fees_min || ''}
                     onChange={(e) => updateField('licensing_fees_min', parseInt(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
@@ -273,7 +309,7 @@ export default function BudgetTemplatesPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Max ($)</label>
                   <input
                     type="number"
-                    value={currentTemplate.licensing_fees_max || ''}
+                    value={formData.licensing_fees_max || ''}
                     onChange={(e) => updateField('licensing_fees_max', parseInt(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
@@ -283,7 +319,7 @@ export default function BudgetTemplatesPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <input
                   type="text"
-                  value={currentTemplate.licensing_fees_description || ''}
+                  value={formData.licensing_fees_description || ''}
                   onChange={(e) => updateField('licensing_fees_description', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 />
@@ -301,7 +337,7 @@ export default function BudgetTemplatesPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Min ($)</label>
                   <input
                     type="number"
-                    value={currentTemplate.technology_min || ''}
+                    value={formData.technology_min || ''}
                     onChange={(e) => updateField('technology_min', parseInt(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
@@ -310,7 +346,7 @@ export default function BudgetTemplatesPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Max ($)</label>
                   <input
                     type="number"
-                    value={currentTemplate.technology_max || ''}
+                    value={formData.technology_max || ''}
                     onChange={(e) => updateField('technology_max', parseInt(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
@@ -320,7 +356,7 @@ export default function BudgetTemplatesPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <input
                   type="text"
-                  value={currentTemplate.technology_description || ''}
+                  value={formData.technology_description || ''}
                   onChange={(e) => updateField('technology_description', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 />
@@ -338,7 +374,7 @@ export default function BudgetTemplatesPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Min ($)</label>
                   <input
                     type="number"
-                    value={currentTemplate.staffing_min || ''}
+                    value={formData.staffing_min || ''}
                     onChange={(e) => updateField('staffing_min', parseInt(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
@@ -347,7 +383,7 @@ export default function BudgetTemplatesPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Max ($)</label>
                   <input
                     type="number"
-                    value={currentTemplate.staffing_max || ''}
+                    value={formData.staffing_max || ''}
                     onChange={(e) => updateField('staffing_max', parseInt(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
@@ -357,7 +393,7 @@ export default function BudgetTemplatesPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <input
                   type="text"
-                  value={currentTemplate.staffing_description || ''}
+                  value={formData.staffing_description || ''}
                   onChange={(e) => updateField('staffing_description', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 />
@@ -368,7 +404,7 @@ export default function BudgetTemplatesPage() {
             <div className="bg-navy-50 rounded-lg p-4">
               <h4 className="font-semibold text-navy-900 mb-2">Total Estimated Investment</h4>
               <p className="text-2xl font-bold text-gold-600">
-                ${(calculateTotals(currentTemplate).total_min || 0).toLocaleString()} - ${(calculateTotals(currentTemplate).total_max || 0).toLocaleString()}
+                ${(currentTotals.total_min || 0).toLocaleString()} - ${(currentTotals.total_max || 0).toLocaleString()}
               </p>
               <p className="text-xs text-navy-500 mt-1">Auto-calculated from above categories</p>
             </div>
@@ -376,13 +412,13 @@ export default function BudgetTemplatesPage() {
           
           <div className="flex justify-end gap-3 p-4 border-t sticky bottom-0 bg-white">
             <button
-              onClick={() => { setEditingTemplate(null); setIsAdding(false); }}
+              onClick={closeModal}
               className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
             >
               Cancel
             </button>
             <button
-              onClick={() => handleSave(currentTemplate as BudgetTemplate, isAdding)}
+              onClick={handleSave}
               className="px-4 py-2 bg-gold-600 text-white rounded-md hover:bg-gold-500"
             >
               <Save className="w-4 h-4 inline mr-1" />
@@ -437,7 +473,7 @@ export default function BudgetTemplatesPage() {
             <h1 className="text-2xl font-bold text-navy-900">Budget Templates</h1>
             <p className="text-navy-600">Manage budget ranges by company size, industry, and state</p>
           </div>
-          <button onClick={() => setIsAdding(true)} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500">
+          <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500">
             <Plus className="w-4 h-4" />
             Add Template
           </button>
@@ -531,7 +567,7 @@ export default function BudgetTemplatesPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => setEditingTemplate(template)} className="text-blue-600 hover:text-blue-800">
+                        <button onClick={() => openEditModal(template)} className="text-blue-600 hover:text-blue-800">
                           <Edit className="w-4 h-4" />
                         </button>
                         <button onClick={() => setShowDeleteConfirm(template.id)} className="text-red-600 hover:text-red-800">
@@ -550,14 +586,15 @@ export default function BudgetTemplatesPage() {
           <div className="text-center py-12">
             <DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">No budget templates found</p>
-            <button onClick={() => setIsAdding(true)} className="mt-3 text-gold-600 hover:underline">
+            <button onClick={openAddModal} className="mt-3 text-gold-600 hover:underline">
               Add your first template
             </button>
           </div>
         )}
       </div>
       
-      <EditModal />
+      {/* Modals */}
+      {renderModal()}
       <DeleteConfirmModal />
     </div>
   )

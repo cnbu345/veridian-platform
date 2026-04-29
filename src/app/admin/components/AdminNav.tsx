@@ -132,6 +132,10 @@ const navItems = [
       { title: 'Risk Factors', href: '/admin/data/risk-factors' },
       { title: 'Compliance Phases', href: '/admin/data/compliance-phases' },
       { title: 'Next Steps & Calendar', href: '/admin/data/next-steps' },
+      { title: 'Regulatory Hubs', href: '/admin/data/regulatory-hubs' },
+      { title: 'Major Cities', href: '/admin/data/major-cities' },
+      { title: 'Metropolitan Areas', href: '/admin/data/metropolitan-areas' },
+      { title: 'Service Providers', href: '/admin/data/service-providers' },
       { title: 'Data Verification', href: '/admin/data/verification' },
       { title: 'Data Audit Log', href: '/admin/data/audit' }
     ]

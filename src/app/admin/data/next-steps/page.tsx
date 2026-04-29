@@ -52,33 +52,23 @@ export default function NextStepsPage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'steps' | 'calendar'>('steps')
   const [expandedCalendar, setExpandedCalendar] = useState<string | null>(null)
-  const [editingStep, setEditingStep] = useState<NextStepTemplate | null>(null)
-  const [editingCalendar, setEditingCalendar] = useState<CalendarTemplate | null>(null)
-  const [editingTask, setEditingTask] = useState<CalendarTask | null>(null)
-  const [isAddingStep, setIsAddingStep] = useState(false)
-  const [isAddingCalendar, setIsAddingCalendar] = useState(false)
-  const [isAddingTask, setIsAddingTask] = useState(false)
-  const [newStep, setNewStep] = useState<Partial<NextStepTemplate>>({
-    template_type: 'immediate',
-    description: '',
-    is_conditional: false,
-    condition_field: null,
-    condition_value: null,
-    sort_order: 0
-  })
-  const [newCalendar, setNewCalendar] = useState<Partial<CalendarTemplate>>({
-    timeframe: '',
-    default_days_offset: null,
-    sort_order: 0,
-    tasks: []
-  })
-  const [newTask, setNewTask] = useState<Partial<CalendarTask>>({
-    description: '',
-    is_conditional: false,
-    condition_field: null,
-    condition_value: null,
-    sort_order: 0
-  })
+  
+  // Step Modal state
+  const [isStepModalOpen, setIsStepModalOpen] = useState(false)
+  const [editingStepId, setEditingStepId] = useState<string | null>(null)
+  const [stepFormData, setStepFormData] = useState<Partial<NextStepTemplate>>({})
+  
+  // Calendar Modal state
+  const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false)
+  const [editingCalendarId, setEditingCalendarId] = useState<string | null>(null)
+  const [calendarFormData, setCalendarFormData] = useState<Partial<CalendarTemplate>>({})
+  
+  // Task Modal state
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
+  const [taskFormData, setTaskFormData] = useState<Partial<CalendarTask>>({})
+  const [currentTaskCalendarId, setCurrentTaskCalendarId] = useState<string | null>(null)
+  
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<{ type: 'step' | 'calendar' | 'task'; id: string; calendarId?: string } | null>(null)
 
@@ -103,27 +93,131 @@ export default function NextStepsPage() {
     fetchData()
   }, [])
 
-  const handleSaveStep = async (step: NextStepTemplate, isNew: boolean) => {
+  // Step form helpers
+  const updateStepField = (field: string, value: any) => {
+    setStepFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  // Step Modal open/close
+  const openAddStepModal = () => {
+    setStepFormData({
+      template_type: 'immediate',
+      description: '',
+      is_conditional: false,
+      condition_field: null,
+      condition_value: null,
+      sort_order: nextSteps.length
+    })
+    setEditingStepId(null)
+    setIsStepModalOpen(true)
+  }
+
+  const openEditStepModal = (item: NextStepTemplate) => {
+    setStepFormData({
+      template_type: item.template_type,
+      description: item.description,
+      is_conditional: item.is_conditional,
+      condition_field: item.condition_field,
+      condition_value: item.condition_value,
+      sort_order: item.sort_order
+    })
+    setEditingStepId(item.id)
+    setIsStepModalOpen(true)
+  }
+
+  const closeStepModal = () => {
+    setIsStepModalOpen(false)
+    setEditingStepId(null)
+    setStepFormData({})
+  }
+
+  // Calendar form helpers
+  const updateCalendarField = (field: string, value: any) => {
+    setCalendarFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  // Calendar Modal open/close
+  const openAddCalendarModal = () => {
+    setCalendarFormData({
+      timeframe: '',
+      default_days_offset: null,
+      sort_order: calendarTemplates.length,
+      tasks: []
+    })
+    setEditingCalendarId(null)
+    setIsCalendarModalOpen(true)
+  }
+
+  const openEditCalendarModal = (item: CalendarTemplate) => {
+    setCalendarFormData({
+      timeframe: item.timeframe,
+      default_days_offset: item.default_days_offset,
+      sort_order: item.sort_order,
+      tasks: item.tasks
+    })
+    setEditingCalendarId(item.id)
+    setIsCalendarModalOpen(true)
+  }
+
+  const closeCalendarModal = () => {
+    setIsCalendarModalOpen(false)
+    setEditingCalendarId(null)
+    setCalendarFormData({})
+  }
+
+  // Task form helpers
+  const updateTaskField = (field: string, value: any) => {
+    setTaskFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  // Task Modal open/close
+  const openAddTaskModal = (calendarId: string) => {
+    setTaskFormData({
+      description: '',
+      is_conditional: false,
+      condition_field: null,
+      condition_value: null,
+      sort_order: 0
+    })
+    setEditingTaskId(null)
+    setCurrentTaskCalendarId(calendarId)
+    setIsTaskModalOpen(true)
+  }
+
+  const openEditTaskModal = (task: CalendarTask, calendarId: string) => {
+    setTaskFormData({
+      description: task.description,
+      is_conditional: task.is_conditional,
+      condition_field: task.condition_field,
+      condition_value: task.condition_value,
+      sort_order: task.sort_order
+    })
+    setEditingTaskId(task.id)
+    setCurrentTaskCalendarId(calendarId)
+    setIsTaskModalOpen(true)
+  }
+
+  const closeTaskModal = () => {
+    setIsTaskModalOpen(false)
+    setEditingTaskId(null)
+    setCurrentTaskCalendarId(null)
+    setTaskFormData({})
+  }
+
+  // Save handlers
+  const handleSaveStep = async () => {
+    const isNew = !editingStepId
     try {
-      const response = await fetch(`/api/admin/next-steps?type=next_step${isNew ? '' : `&id=${step.id}`}`, {
+      const response = await fetch(`/api/admin/next-steps?type=next_step${isNew ? '' : `&id=${editingStepId}`}`, {
         method: isNew ? 'POST' : 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(step)
+        body: JSON.stringify(stepFormData)
       })
       
       if (response.ok) {
         setNotification({ type: 'success', message: isNew ? 'Step added successfully' : 'Step updated successfully' })
         fetchData()
-        setEditingStep(null)
-        setIsAddingStep(false)
-        setNewStep({
-          template_type: 'immediate',
-          description: '',
-          is_conditional: false,
-          condition_field: null,
-          condition_value: null,
-          sort_order: 0
-        })
+        closeStepModal()
         setTimeout(() => setNotification(null), 3000)
       } else {
         throw new Error('Save failed')
@@ -133,25 +227,19 @@ export default function NextStepsPage() {
     }
   }
 
-  const handleSaveCalendar = async (calendar: CalendarTemplate, isNew: boolean) => {
+  const handleSaveCalendar = async () => {
+    const isNew = !editingCalendarId
     try {
-      const response = await fetch(`/api/admin/next-steps?type=calendar_template${isNew ? '' : `&id=${calendar.id}`}`, {
+      const response = await fetch(`/api/admin/next-steps?type=calendar_template${isNew ? '' : `&id=${editingCalendarId}`}`, {
         method: isNew ? 'POST' : 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(calendar)
+        body: JSON.stringify(calendarFormData)
       })
       
       if (response.ok) {
         setNotification({ type: 'success', message: isNew ? 'Calendar template added successfully' : 'Calendar template updated successfully' })
         fetchData()
-        setEditingCalendar(null)
-        setIsAddingCalendar(false)
-        setNewCalendar({
-          timeframe: '',
-          default_days_offset: null,
-          sort_order: 0,
-          tasks: []
-        })
+        closeCalendarModal()
         setTimeout(() => setNotification(null), 3000)
       } else {
         throw new Error('Save failed')
@@ -161,26 +249,21 @@ export default function NextStepsPage() {
     }
   }
 
-  const handleSaveTask = async (task: CalendarTask, calendarId: string, isNew: boolean) => {
+  const handleSaveTask = async () => {
+    if (!currentTaskCalendarId) return
+    
+    const isNew = !editingTaskId
     try {
-      const response = await fetch(`/api/admin/next-steps?type=calendar_task${isNew ? '' : `&id=${task.id}`}`, {
+      const response = await fetch(`/api/admin/next-steps?type=calendar_task${isNew ? '' : `&id=${editingTaskId}`}`, {
         method: isNew ? 'POST' : 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...task, calendar_template_id: calendarId })
+        body: JSON.stringify({ ...taskFormData, calendar_template_id: currentTaskCalendarId })
       })
       
       if (response.ok) {
         setNotification({ type: 'success', message: isNew ? 'Task added successfully' : 'Task updated successfully' })
         fetchData()
-        setEditingTask(null)
-        setIsAddingTask(false)
-        setNewTask({
-          description: '',
-          is_conditional: false,
-          condition_field: null,
-          condition_value: null,
-          sort_order: 0
-        })
+        closeTaskModal()
         setTimeout(() => setNotification(null), 3000)
       } else {
         throw new Error('Save failed')
@@ -190,6 +273,7 @@ export default function NextStepsPage() {
     }
   }
 
+  // Delete handlers
   const handleDeleteStep = async (id: string) => {
     try {
       const response = await fetch(`/api/admin/next-steps?type=next_step&id=${id}`, {
@@ -247,29 +331,18 @@ export default function NextStepsPage() {
     }
   }
 
-  const StepModal = () => {
-    const step = editingStep
-    if (!step && !isAddingStep) return null
-    
-    const currentStep = editingStep || newStep
-    
-    const updateField = (field: string, value: any) => {
-      const updated = { ...currentStep, [field]: value }
-      if (isAddingStep) {
-        setNewStep(updated)
-      } else if (editingStep) {
-        setEditingStep(updated as NextStepTemplate)
-      }
-    }
+  // Step Modal Render Function
+  const renderStepModal = () => {
+    if (!isStepModalOpen) return null
     
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
           <div className="flex justify-between items-center p-4 border-b">
             <h3 className="text-lg font-semibold">
-              {isAddingStep ? 'Add Next Step' : 'Edit Next Step'}
+              {editingStepId ? 'Edit Next Step' : 'Add Next Step'}
             </h3>
-            <button onClick={() => { setEditingStep(null); setIsAddingStep(false); }} className="text-gray-400 hover:text-gray-600">
+            <button onClick={closeStepModal} className="text-gray-400 hover:text-gray-600">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -278,8 +351,8 @@ export default function NextStepsPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
               <select
-                value={currentStep.template_type || ''}
-                onChange={(e) => updateField('template_type', e.target.value)}
+                value={stepFormData.template_type || ''}
+                onChange={(e) => updateStepField('template_type', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
               >
                 {templateTypes.map(type => (
@@ -291,8 +364,8 @@ export default function NextStepsPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
               <textarea
-                value={currentStep.description || ''}
-                onChange={(e) => updateField('description', e.target.value)}
+                value={stepFormData.description || ''}
+                onChange={(e) => updateStepField('description', e.target.value)}
                 rows={2}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 placeholder="Describe the action item..."
@@ -303,21 +376,21 @@ export default function NextStepsPage() {
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  checked={currentStep.is_conditional || false}
-                  onChange={(e) => updateField('is_conditional', e.target.checked)}
+                  checked={stepFormData.is_conditional || false}
+                  onChange={(e) => updateStepField('is_conditional', e.target.checked)}
                   className="h-4 w-4 text-gold-600 focus:ring-gold-500 border-gray-300 rounded"
                 />
                 <span className="text-sm text-gray-700">Conditional (only shown for MTL states)</span>
               </label>
             </div>
             
-            {currentStep.is_conditional && (
+            {stepFormData.is_conditional && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Condition Field</label>
                   <select
-                    value={currentStep.condition_field || ''}
-                    onChange={(e) => updateField('condition_field', e.target.value || null)}
+                    value={stepFormData.condition_field || ''}
+                    onChange={(e) => updateStepField('condition_field', e.target.value || null)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   >
                     <option value="">Select</option>
@@ -329,8 +402,8 @@ export default function NextStepsPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Condition Value</label>
                   <select
-                    value={currentStep.condition_value || ''}
-                    onChange={(e) => updateField('condition_value', e.target.value || null)}
+                    value={stepFormData.condition_value || ''}
+                    onChange={(e) => updateStepField('condition_value', e.target.value || null)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   >
                     <option value="">Select</option>
@@ -346,18 +419,18 @@ export default function NextStepsPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
               <input
                 type="number"
-                value={currentStep.sort_order || 0}
-                onChange={(e) => updateField('sort_order', parseInt(e.target.value))}
+                value={stepFormData.sort_order || 0}
+                onChange={(e) => updateStepField('sort_order', parseInt(e.target.value))}
                 className="w-24 px-3 py-2 border border-gray-300 rounded-md"
               />
             </div>
           </div>
           
           <div className="flex justify-end gap-3 p-4 border-t">
-            <button onClick={() => { setEditingStep(null); setIsAddingStep(false); }} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+            <button onClick={closeStepModal} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
               Cancel
             </button>
-            <button onClick={() => handleSaveStep(currentStep as NextStepTemplate, isAddingStep)} className="px-4 py-2 bg-gold-600 text-white rounded-md hover:bg-gold-500">
+            <button onClick={handleSaveStep} className="px-4 py-2 bg-gold-600 text-white rounded-md hover:bg-gold-500">
               <Save className="w-4 h-4 inline mr-1" />
               Save
             </button>
@@ -367,29 +440,18 @@ export default function NextStepsPage() {
     )
   }
 
-  const CalendarModal = () => {
-    const calendar = editingCalendar
-    if (!calendar && !isAddingCalendar) return null
-    
-    const currentCalendar = editingCalendar || newCalendar
-    
-    const updateField = (field: string, value: any) => {
-      const updated = { ...currentCalendar, [field]: value }
-      if (isAddingCalendar) {
-        setNewCalendar(updated)
-      } else if (editingCalendar) {
-        setEditingCalendar(updated as CalendarTemplate)
-      }
-    }
+  // Calendar Modal Render Function
+  const renderCalendarModal = () => {
+    if (!isCalendarModalOpen) return null
     
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
           <div className="flex justify-between items-center p-4 border-b">
             <h3 className="text-lg font-semibold">
-              {isAddingCalendar ? 'Add Calendar Template' : 'Edit Calendar Template'}
+              {editingCalendarId ? 'Edit Calendar Template' : 'Add Calendar Template'}
             </h3>
-            <button onClick={() => { setEditingCalendar(null); setIsAddingCalendar(false); }} className="text-gray-400 hover:text-gray-600">
+            <button onClick={closeCalendarModal} className="text-gray-400 hover:text-gray-600">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -398,8 +460,8 @@ export default function NextStepsPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Timeframe</label>
               <select
-                value={currentCalendar.timeframe || ''}
-                onChange={(e) => updateField('timeframe', e.target.value)}
+                value={calendarFormData.timeframe || ''}
+                onChange={(e) => updateCalendarField('timeframe', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
               >
                 <option value="">Select</option>
@@ -413,8 +475,8 @@ export default function NextStepsPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Days Offset (optional)</label>
               <input
                 type="number"
-                value={currentCalendar.default_days_offset || ''}
-                onChange={(e) => updateField('default_days_offset', e.target.value ? parseInt(e.target.value) : null)}
+                value={calendarFormData.default_days_offset || ''}
+                onChange={(e) => updateCalendarField('default_days_offset', e.target.value ? parseInt(e.target.value) : null)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 placeholder="e.g., 7, 30, 90"
               />
@@ -425,18 +487,18 @@ export default function NextStepsPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
               <input
                 type="number"
-                value={currentCalendar.sort_order || 0}
-                onChange={(e) => updateField('sort_order', parseInt(e.target.value))}
+                value={calendarFormData.sort_order || 0}
+                onChange={(e) => updateCalendarField('sort_order', parseInt(e.target.value))}
                 className="w-24 px-3 py-2 border border-gray-300 rounded-md"
               />
             </div>
           </div>
           
           <div className="flex justify-end gap-3 p-4 border-t">
-            <button onClick={() => { setEditingCalendar(null); setIsAddingCalendar(false); }} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+            <button onClick={closeCalendarModal} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
               Cancel
             </button>
-            <button onClick={() => handleSaveCalendar(currentCalendar as CalendarTemplate, isAddingCalendar)} className="px-4 py-2 bg-gold-600 text-white rounded-md hover:bg-gold-500">
+            <button onClick={handleSaveCalendar} className="px-4 py-2 bg-gold-600 text-white rounded-md hover:bg-gold-500">
               <Save className="w-4 h-4 inline mr-1" />
               Save
             </button>
@@ -446,30 +508,18 @@ export default function NextStepsPage() {
     )
   }
 
-  const TaskModal = () => {
-    const task = editingTask
-    const calendarId = expandedCalendar
-    if ((!task && !isAddingTask) || !calendarId) return null
-    
-    const currentTask = editingTask || newTask
-    
-    const updateField = (field: string, value: any) => {
-      const updated = { ...currentTask, [field]: value }
-      if (isAddingTask) {
-        setNewTask(updated)
-      } else if (editingTask) {
-        setEditingTask(updated as CalendarTask)
-      }
-    }
+  // Task Modal Render Function
+  const renderTaskModal = () => {
+    if (!isTaskModalOpen) return null
     
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
           <div className="flex justify-between items-center p-4 border-b">
             <h3 className="text-lg font-semibold">
-              {isAddingTask ? 'Add Calendar Task' : 'Edit Calendar Task'}
+              {editingTaskId ? 'Edit Calendar Task' : 'Add Calendar Task'}
             </h3>
-            <button onClick={() => { setEditingTask(null); setIsAddingTask(false); }} className="text-gray-400 hover:text-gray-600">
+            <button onClick={closeTaskModal} className="text-gray-400 hover:text-gray-600">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -478,8 +528,8 @@ export default function NextStepsPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
               <textarea
-                value={currentTask.description || ''}
-                onChange={(e) => updateField('description', e.target.value)}
+                value={taskFormData.description || ''}
+                onChange={(e) => updateTaskField('description', e.target.value)}
                 rows={2}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 placeholder="Describe the task..."
@@ -490,21 +540,21 @@ export default function NextStepsPage() {
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  checked={currentTask.is_conditional || false}
-                  onChange={(e) => updateField('is_conditional', e.target.checked)}
+                  checked={taskFormData.is_conditional || false}
+                  onChange={(e) => updateTaskField('is_conditional', e.target.checked)}
                   className="h-4 w-4 text-gold-600 focus:ring-gold-500 border-gray-300 rounded"
                 />
                 <span className="text-sm text-gray-700">Conditional (only shown for MTL states)</span>
               </label>
             </div>
             
-            {currentTask.is_conditional && (
+            {taskFormData.is_conditional && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Condition Field</label>
                   <select
-                    value={currentTask.condition_field || ''}
-                    onChange={(e) => updateField('condition_field', e.target.value || null)}
+                    value={taskFormData.condition_field || ''}
+                    onChange={(e) => updateTaskField('condition_field', e.target.value || null)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   >
                     <option value="">Select</option>
@@ -516,8 +566,8 @@ export default function NextStepsPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Condition Value</label>
                   <select
-                    value={currentTask.condition_value || ''}
-                    onChange={(e) => updateField('condition_value', e.target.value || null)}
+                    value={taskFormData.condition_value || ''}
+                    onChange={(e) => updateTaskField('condition_value', e.target.value || null)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   >
                     <option value="">Select</option>
@@ -533,21 +583,18 @@ export default function NextStepsPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
               <input
                 type="number"
-                value={currentTask.sort_order || 0}
-                onChange={(e) => updateField('sort_order', parseInt(e.target.value))}
+                value={taskFormData.sort_order || 0}
+                onChange={(e) => updateTaskField('sort_order', parseInt(e.target.value))}
                 className="w-24 px-3 py-2 border border-gray-300 rounded-md"
               />
             </div>
           </div>
           
           <div className="flex justify-end gap-3 p-4 border-t">
-            <button onClick={() => { setEditingTask(null); setIsAddingTask(false); }} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+            <button onClick={closeTaskModal} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
               Cancel
             </button>
-            <button
-              onClick={() => handleSaveTask(currentTask as CalendarTask, calendarId, isAddingTask)}
-              className="px-4 py-2 bg-gold-600 text-white rounded-md hover:bg-gold-500"
-            >
+            <button onClick={handleSaveTask} className="px-4 py-2 bg-gold-600 text-white rounded-md hover:bg-gold-500">
               <Save className="w-4 h-4 inline mr-1" />
               Save
             </button>
@@ -648,7 +695,7 @@ export default function NextStepsPage() {
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="px-6 py-4 border-b flex justify-between items-center">
             <h3 className="font-semibold text-navy-900">Next Steps Templates</h3>
-            <button onClick={() => setIsAddingStep(true)} className="flex items-center gap-2 px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-500">
+            <button onClick={openAddStepModal} className="flex items-center gap-2 px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-500">
               <Plus className="w-4 h-4" />
               Add Step
             </button>
@@ -682,7 +729,7 @@ export default function NextStepsPage() {
                             )}
                           </div>
                           <div className="flex items-center gap-2">
-                            <button onClick={() => setEditingStep(step)} className="text-blue-600 hover:text-blue-800">
+                            <button onClick={() => openEditStepModal(step)} className="text-blue-600 hover:text-blue-800">
                               <Edit className="w-4 h-4" />
                             </button>
                             <button onClick={() => setShowDeleteConfirm({ type: 'step', id: step.id })} className="text-red-600 hover:text-red-800">
@@ -702,7 +749,7 @@ export default function NextStepsPage() {
             <div className="text-center py-12">
               <CalendarCheck className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500">No next steps templates found</p>
-              <button onClick={() => setIsAddingStep(true)} className="mt-3 text-gold-600 hover:underline">
+              <button onClick={openAddStepModal} className="mt-3 text-gold-600 hover:underline">
                 Add your first step
               </button>
             </div>
@@ -712,7 +759,7 @@ export default function NextStepsPage() {
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="px-6 py-4 border-b flex justify-between items-center">
             <h3 className="font-semibold text-navy-900">Compliance Calendar Templates</h3>
-            <button onClick={() => setIsAddingCalendar(true)} className="flex items-center gap-2 px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-500">
+            <button onClick={openAddCalendarModal} className="flex items-center gap-2 px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-500">
               <Plus className="w-4 h-4" />
               Add Calendar Template
             </button>
@@ -746,7 +793,7 @@ export default function NextStepsPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button onClick={() => setEditingCalendar(calendar)} className="text-blue-600 hover:text-blue-800">
+                        <button onClick={() => openEditCalendarModal(calendar)} className="text-blue-600 hover:text-blue-800">
                           <Edit className="w-4 h-4" />
                         </button>
                         <button onClick={() => setShowDeleteConfirm({ type: 'calendar', id: calendar.id })} className="text-red-600 hover:text-red-800">
@@ -764,17 +811,7 @@ export default function NextStepsPage() {
                           Tasks
                         </h4>
                         <button
-                          onClick={() => {
-                            setExpandedCalendar(calendar.id)
-                            setIsAddingTask(true)
-                            setNewTask({
-                              description: '',
-                              is_conditional: false,
-                              condition_field: null,
-                              condition_value: null,
-                              sort_order: (calendar.tasks?.length || 0)
-                            })
-                          }}
+                          onClick={() => openAddTaskModal(calendar.id)}
                           className="text-xs text-gold-600 hover:underline flex items-center gap-1"
                         >
                           <Plus className="w-3 h-3" />
@@ -799,10 +836,7 @@ export default function NextStepsPage() {
                               </div>
                               <div className="flex items-center gap-2">
                                 <button
-                                  onClick={() => {
-                                    setEditingTask(task)
-                                    setExpandedCalendar(calendar.id)
-                                  }}
+                                  onClick={() => openEditTaskModal(task, calendar.id)}
                                   className="text-blue-600 hover:text-blue-800"
                                 >
                                   <Edit className="w-4 h-4" />
@@ -831,7 +865,7 @@ export default function NextStepsPage() {
             <div className="text-center py-12">
               <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500">No calendar templates found</p>
-              <button onClick={() => setIsAddingCalendar(true)} className="mt-3 text-gold-600 hover:underline">
+              <button onClick={openAddCalendarModal} className="mt-3 text-gold-600 hover:underline">
                 Add your first calendar template
               </button>
             </div>
@@ -839,9 +873,10 @@ export default function NextStepsPage() {
         </div>
       )}
       
-      <StepModal />
-      <CalendarModal />
-      <TaskModal />
+      {/* Modals */}
+      {renderStepModal()}
+      {renderCalendarModal()}
+      {renderTaskModal()}
       <DeleteConfirmModal />
     </div>
   )

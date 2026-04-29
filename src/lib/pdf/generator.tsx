@@ -17,7 +17,7 @@ import {
   formatCurrency,
   type ReportData 
 } from '@/lib/reports/reportData'
-import { getProvidersForLocation } from '@/lib/location/serviceProviders'
+import { getProvidersForLocationClient } from '../location/serviceProviders.client'
 import { getLicensesForState, getAllStateLicenses } from '@/lib/location/licensingData'
 
 // Register fonts
@@ -546,7 +546,7 @@ const ReportDocument = ({
   // Get providers
   const providers = (() => {
     try {
-      return getProvidersForLocation(report.city || '', report.state || '', locationData.tier || 'major')
+      return getProvidersForLocationClient(report.city || '', report.state || '', locationData.tier || 'major')
     } catch {
       return reportData.providers || { regulator: { name: licensingData.regulator_name || 'State Banking Department', phone: licensingData.regulator_phone || '', email: licensingData.regulator_email || '', specialty: '' } }
     }

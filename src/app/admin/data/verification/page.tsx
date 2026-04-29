@@ -1,5 +1,5 @@
 // src/app/admin/data/verification/page.tsx
-// FOCUSED ON REPORT DATA ONLY - With working email notifications
+// OPTIMIZED - Only 5 database queries instead of 250+
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -8,7 +8,7 @@ import {
   Shield, CheckCircle, AlertCircle, Clock, RefreshCw,
   MapPin, Calendar, Bell, X, Mail, Search,
   Server, DollarSign, TrendingUp, Users, FileText,
-  Database as DatabaseIcon, ChevronRight
+  ChevronRight
 } from 'lucide-react'
 
 // Types
@@ -38,7 +38,7 @@ interface TableFreshness {
   needs_review: boolean
 }
 
-// 50 states only (no DC)
+// 50 states only
 const usStates = [
   { code: 'AL', name: 'Alabama' }, { code: 'AK', name: 'Alaska' }, { code: 'AZ', name: 'Arizona' },
   { code: 'AR', name: 'Arkansas' }, { code: 'CA', name: 'California' }, { code: 'CO', name: 'Colorado' },
@@ -59,13 +59,13 @@ const usStates = [
   { code: 'WI', name: 'Wisconsin' }, { code: 'WY', name: 'Wyoming' }
 ]
 
-// Report Data tables only (no licensing/legal tables)
+// Report Data tables
 const reportTables = [
-  { key: 'technology_vendors', display: 'Technology Vendors', icon: Server },
-  { key: 'budget_templates', display: 'Budget Templates', icon: DollarSign },
-  { key: 'market_metrics', display: 'Market Metrics', icon: TrendingUp },
-  { key: 'talent_metrics', display: 'Talent Metrics', icon: Users },
-  { key: 'next_steps_templates', display: 'Next Steps', icon: FileText }
+  { key: 'technology_vendors', display: 'Technology Vendors', icon: Server, hasStateFilter: false },
+  { key: 'budget_templates', display: 'Budget Templates', icon: DollarSign, hasStateFilter: false },
+  { key: 'market_metrics', display: 'Market Metrics', icon: TrendingUp, hasStateFilter: true },
+  { key: 'talent_metrics', display: 'Talent Metrics', icon: Users, hasStateFilter: true },
+  { key: 'next_steps_templates', display: 'Next Steps', icon: FileText, hasStateFilter: false }
 ]
 
 export default function VerificationDashboard() {
@@ -86,58 +86,132 @@ export default function VerificationDashboard() {
   const [showUpcomingReviews, setShowUpcomingReviews] = useState(true)
   const [sendingReminder, setSendingReminder] = useState<string | null>(null)
 
+  // OPTIMIZED: Fetch all data in parallel with minimal queries
   const fetchData = async () => {
     setLoading(true)
     try {
-      // Fetch scheduled reviews
-      const { data: reviews } = await supabase
-        .from('review_schedules')
-        .select('*')
-        .order('scheduled_date', { ascending: true })
-      setScheduledReviews(reviews || [])
+      // Parallel fetch for all data sources
+      const [
+        reviewsResult,
+        usersResult,
+        techVendorsResult,
+        budgetTemplatesResult,
+        marketMetricsResult,
+        talentMetricsResult,
+        nextStepsResult
+      ] = await Promise.all([
+        supabase.from('review_schedules').select('*').order('scheduled_date', { ascending: true }),
+        supabase.from('users').select('id, email, full_name').eq('is_admin', true),
+        supabase.from('technology_vendors').select('updated_at').order('updated_at', { ascending: false }).limit(1),
+        supabase.from('budget_templates').select('updated_at').order('updated_at', { ascending: false }).limit(1),
+        supabase.from('market_metrics').select('state_code, updated_at'),
+        supabase.from('talent_metrics').select('state_code, updated_at'),
+        supabase.from('next_steps_templates').select('updated_at').order('updated_at', { ascending: false }).limit(1)
+      ])
 
-      // Fetch admin users for assignment
-      const { data: users } = await supabase
-        .from('users')
-        .select('id, email, full_name')
-        .eq('is_admin', true)
-      setAssignees(users || [])
+      setScheduledReviews(reviewsResult.data || [])
+      setAssignees(usersResult.data || [])
 
-      // Fetch freshness for each table by state
+      // Build freshness map efficiently
       const freshnessMap = new Map<string, TableFreshness[]>()
       
+      // Get latest dates for non-state-specific tables (same for all states)
+      const techVendorsLastUpdated = techVendorsResult.data?.[0]?.updated_at || null
+      const budgetTemplatesLastUpdated = budgetTemplatesResult.data?.[0]?.updated_at || null
+      const nextStepsLastUpdated = nextStepsResult.data?.[0]?.updated_at || null
+      
+      // Build maps for state-specific tables for O(1) lookup
+      const marketMetricsMap = new Map<string, string>()
+      const talentMetricsMap = new Map<string, string>()
+      
+      marketMetricsResult.data?.forEach((record: any) => {
+        if (record.state_code && record.updated_at) {
+          const existing = marketMetricsMap.get(record.state_code)
+          if (!existing || new Date(record.updated_at) > new Date(existing)) {
+            marketMetricsMap.set(record.state_code, record.updated_at)
+          }
+        }
+      })
+      
+      talentMetricsResult.data?.forEach((record: any) => {
+        if (record.state_code && record.updated_at) {
+          const existing = talentMetricsMap.get(record.state_code)
+          if (!existing || new Date(record.updated_at) > new Date(existing)) {
+            talentMetricsMap.set(record.state_code, record.updated_at)
+          }
+        }
+      })
+      
+      // Build freshness for each state (now O(50) iterations, no nested DB calls)
       for (const state of usStates) {
         const stateFreshness: TableFreshness[] = []
         
-        for (const table of reportTables) {
-          let query = supabase
-            .from(table.key as any)
-            .select('updated_at')
-            .order('updated_at', { ascending: false })
-            .limit(1)
-          
-          // Add state filter if the table has state_code column
-          if (table.key === 'market_metrics' || table.key === 'talent_metrics') {
-            query = query.eq('state_code', state.code)
-          }
-          
-          const { data } = await query
-          
-          const lastUpdated = data && data.length > 0 ? data[0].updated_at : null
-          const daysSinceUpdate = lastUpdated 
-            ? Math.floor((new Date().getTime() - new Date(lastUpdated).getTime()) / (1000 * 60 * 60 * 24))
-            : null
-          const needsReview = !lastUpdated || (daysSinceUpdate !== null && daysSinceUpdate > 90)
-          
-          stateFreshness.push({
-            table_name: table.key,
-            display_name: table.display,
-            icon: table.icon,
-            last_updated: lastUpdated,
-            days_since_update: daysSinceUpdate,
-            needs_review: needsReview
-          })
-        }
+        // Technology Vendors (same for all states)
+        const techDays = techVendorsLastUpdated 
+          ? Math.floor((new Date().getTime() - new Date(techVendorsLastUpdated).getTime()) / (1000 * 60 * 60 * 24))
+          : null
+        stateFreshness.push({
+          table_name: 'technology_vendors',
+          display_name: 'Technology Vendors',
+          icon: Server,
+          last_updated: techVendorsLastUpdated,
+          days_since_update: techDays,
+          needs_review: !techVendorsLastUpdated || (techDays !== null && techDays > 90)
+        })
+        
+        // Budget Templates (same for all states)
+        const budgetDays = budgetTemplatesLastUpdated 
+          ? Math.floor((new Date().getTime() - new Date(budgetTemplatesLastUpdated).getTime()) / (1000 * 60 * 60 * 24))
+          : null
+        stateFreshness.push({
+          table_name: 'budget_templates',
+          display_name: 'Budget Templates',
+          icon: DollarSign,
+          last_updated: budgetTemplatesLastUpdated,
+          days_since_update: budgetDays,
+          needs_review: !budgetTemplatesLastUpdated || (budgetDays !== null && budgetDays > 90)
+        })
+        
+        // Market Metrics (state-specific)
+        const marketLastUpdated = marketMetricsMap.get(state.code) || null
+        const marketDays = marketLastUpdated 
+          ? Math.floor((new Date().getTime() - new Date(marketLastUpdated).getTime()) / (1000 * 60 * 60 * 24))
+          : null
+        stateFreshness.push({
+          table_name: 'market_metrics',
+          display_name: 'Market Metrics',
+          icon: TrendingUp,
+          last_updated: marketLastUpdated,
+          days_since_update: marketDays,
+          needs_review: !marketLastUpdated || (marketDays !== null && marketDays > 90)
+        })
+        
+        // Talent Metrics (state-specific)
+        const talentLastUpdated = talentMetricsMap.get(state.code) || null
+        const talentDays = talentLastUpdated 
+          ? Math.floor((new Date().getTime() - new Date(talentLastUpdated).getTime()) / (1000 * 60 * 60 * 24))
+          : null
+        stateFreshness.push({
+          table_name: 'talent_metrics',
+          display_name: 'Talent Metrics',
+          icon: Users,
+          last_updated: talentLastUpdated,
+          days_since_update: talentDays,
+          needs_review: !talentLastUpdated || (talentDays !== null && talentDays > 90)
+        })
+        
+        // Next Steps Templates (same for all states)
+        const nextStepsDays = nextStepsLastUpdated 
+          ? Math.floor((new Date().getTime() - new Date(nextStepsLastUpdated).getTime()) / (1000 * 60 * 60 * 24))
+          : null
+        stateFreshness.push({
+          table_name: 'next_steps_templates',
+          display_name: 'Next Steps',
+          icon: FileText,
+          last_updated: nextStepsLastUpdated,
+          days_since_update: nextStepsDays,
+          needs_review: !nextStepsLastUpdated || (nextStepsDays !== null && nextStepsDays > 90)
+        })
         
         freshnessMap.set(state.code, stateFreshness)
       }
@@ -155,14 +229,14 @@ export default function VerificationDashboard() {
     fetchData()
   }, [])
 
-  // Send email reminder via API route
-  const sendEmailReminder = async (toEmail: string, stateCode: string, dueDate: string, notes: string) => {
+  const sendEmailReminder = async (toEmail: string, stateCode: string, dueDate: string, notes: string, recipientName?: string) => {
     try {
       const response = await fetch('/api/admin/send-review-reminder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: toEmail,
+          name: recipientName,
           stateCode,
           dueDate,
           notes
@@ -198,8 +272,10 @@ export default function VerificationDashboard() {
 
       if (scheduleError) throw scheduleError
 
-      // Create in-app notification
       if (assignedTo) {
+        const assignee = assignees.find(a => a.id === assignedTo)
+        
+        // Create in-app notification
         await supabase.from('notifications').insert({
           user_id: assignedTo,
           type: 'review_assignment',
@@ -209,10 +285,15 @@ export default function VerificationDashboard() {
           link: `/admin/data/verification?state=${stateCode}`
         })
 
-        // Send email notification to assigned person
-        const assignee = assignees.find(a => a.id === assignedTo)
+        // Send email notification
         if (assignee?.email) {
-          await sendEmailReminder(assignee.email, stateCode, new Date(date).toLocaleDateString(), note)
+          await sendEmailReminder(
+            assignee.email,
+            stateCode,
+            new Date(date).toLocaleDateString(),
+            note,
+            assignee.full_name
+          )
         }
       }
 
@@ -233,47 +314,40 @@ export default function VerificationDashboard() {
   const sendReminder = async (reviewId: string, stateCode: string, assignedTo: string, scheduledDate: string) => {
     setSendingReminder(reviewId)
     try {
-        const assignee = assignees.find(a => a.id === assignedTo)
-        if (!assignee) throw new Error('Assignee not found')
+      const assignee = assignees.find(a => a.id === assignedTo)
+      if (!assignee) throw new Error('Assignee not found')
 
-        // Create in-app notification
-        await supabase.from('notifications').insert({
+      await supabase.from('notifications').insert({
         user_id: assignedTo,
         type: 'review_reminder',
         title: `Reminder: ${stateCode} Data Review Due Soon`,
         message: `Your scheduled review for ${stateCode} report data is due on ${new Date(scheduledDate).toLocaleDateString()}.`,
         priority: 'high',
         link: `/admin/data/verification?state=${stateCode}`
-        })
+      })
 
-        // Send email reminder using the service
-        await fetch('/api/admin/send-review-reminder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            to: assignee.email,
-            name: assignee.full_name || assignee.email.split('@')[0],
-            stateCode,
-            dueDate: new Date(scheduledDate).toLocaleDateString(),
-            notes: `This review was scheduled on ${new Date().toLocaleDateString()}.`
-        })
-        })
+      await sendEmailReminder(
+        assignee.email,
+        stateCode,
+        new Date(scheduledDate).toLocaleDateString(),
+        `This is a reminder that your review for ${stateCode} is due soon.`,
+        assignee.full_name
+      )
 
-        // Update reminder_sent flag
-        await supabase
+      await supabase
         .from('review_schedules')
         .update({ reminder_sent: true })
         .eq('id', reviewId)
 
-        setNotification({ type: 'success', message: `Reminder sent to ${assignee.email}` })
-        setTimeout(() => setNotification(null), 3000)
+      setNotification({ type: 'success', message: `Reminder sent to ${assignee.email}` })
+      setTimeout(() => setNotification(null), 3000)
     } catch (error) {
-        console.error('Error sending reminder:', error)
-        setNotification({ type: 'error', message: 'Failed to send reminder' })
+      console.error('Error sending reminder:', error)
+      setNotification({ type: 'error', message: 'Failed to send reminder' })
     } finally {
-        setSendingReminder(null)
+      setSendingReminder(null)
     }
-    }
+  }
 
   const cancelReview = async (reviewId: string, stateCode: string) => {
     if (!confirm(`Cancel the scheduled review for ${stateCode}?`)) return
@@ -295,7 +369,6 @@ export default function VerificationDashboard() {
 
   const markAsReviewed = async (stateCode: string) => {
     try {
-      // Mark any pending scheduled reviews as complete
       const pendingReview = scheduledReviews.find(r => r.state_code === stateCode && r.status === 'pending')
       if (pendingReview) {
         await supabase
@@ -514,7 +587,7 @@ export default function VerificationDashboard() {
         </div>
       </div>
       
-      {/* States Grid - Original layout */}
+      {/* States Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {filteredStates.map((state) => {
           const needsReviewCount = getNeedsReviewCount(state.code)

@@ -1,11 +1,12 @@
 // src/lib/reports/reportData.ts
 // FULLY COMPLETE - Production-ready report data builder using ALL database tables
 // No hardcoded data - everything comes from Supabase tables
+// Uses client-safe service providers to avoid import chain issues
 
 import { createClient } from '@/lib/supabase/client'
 import { getSimplifiedLicensingClient } from '../location/licensing-client'
 import { getTalentScoreForLocation } from '../location/talent'
-import { getProvidersForLocation } from '../location/serviceProviders'
+import { getProvidersForLocationClient } from '../location/serviceProviders.client'
 
 // ============================================
 // Type Definitions
@@ -25,7 +26,7 @@ export interface ReportData {
   stateRegulation: any
   licenses: any[]
   multiStateLicenses: any[]
-  providers: ReturnType<typeof getProvidersForLocation>
+  providers: ReturnType<typeof getProvidersForLocationClient>
   compliancePhases: CompliancePhase[]
   risks: RiskItem[]
   overallRisk: string
@@ -931,8 +932,8 @@ export async function buildReportData(
   const licenses = await fetchLicensesFromDatabase(location.state)
   const multiStateLicenses = await fetchMultiStateLicenses(location.state, 15)
 
-  // Get service providers (existing function)
-  const providers = getProvidersForLocation(location.city, location.state, location.tier)
+  // Get service providers - USING CLIENT-SAFE VERSION
+  const providers = getProvidersForLocationClient(location.city, location.state, location.tier)
 
   // Get months for timeline calculations
   const months = strategy.timeline === '3-months' ? 3 : strategy.timeline === '6-months' ? 6 : 12

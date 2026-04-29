@@ -44,22 +44,20 @@ export default function RiskFactorsPage() {
   const supabase = createClient()
   const [risks, setRisks] = useState<RiskFactor[]>([])
   const [loading, setLoading] = useState(true)
-  const [editingRisk, setEditingRisk] = useState<RiskFactor | null>(null)
-  const [isAdding, setIsAdding] = useState(false)
   const [expandedRisk, setExpandedRisk] = useState<string | null>(null)
-  const [newRisk, setNewRisk] = useState<Partial<RiskFactor>>({
-    category: '',
-    description: '',
-    default_likelihood: 'Medium',
-    default_impact: 'High',
-    mitigation_strategy: '',
-    sort_order: 0,
-    state_overrides: []
-  })
+  
+  // Main Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [formData, setFormData] = useState<Partial<RiskFactor>>({})
+  
+  // Override Modal state
+  const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false)
+  const [addingOverrideRiskId, setAddingOverrideRiskId] = useState<string | null>(null)
+  const [overrideFormData, setOverrideFormData] = useState<Partial<RiskStateOverride>>({})
+  
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
-  const [addingOverride, setAddingOverride] = useState<{ riskId: string; stateCode: string } | null>(null)
-  const [overrideData, setOverrideData] = useState<Partial<RiskStateOverride>>({})
 
   const fetchRisks = async () => {
     setLoading(true)
@@ -79,28 +77,81 @@ export default function RiskFactorsPage() {
     fetchRisks()
   }, [])
 
-  const handleSave = async (risk: RiskFactor, isNew: boolean) => {
+  // Helper function to update form fields
+  const updateField = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const updateOverrideField = (field: string, value: any) => {
+    setOverrideFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  // Main Modal open/close functions
+  const openAddModal = () => {
+    setFormData({
+      category: '',
+      description: '',
+      default_likelihood: 'Medium',
+      default_impact: 'High',
+      mitigation_strategy: '',
+      sort_order: 0,
+      state_overrides: []
+    })
+    setEditingId(null)
+    setIsModalOpen(true)
+  }
+
+  const openEditModal = (item: RiskFactor) => {
+    setFormData({
+      category: item.category,
+      description: item.description,
+      default_likelihood: item.default_likelihood,
+      default_impact: item.default_impact,
+      mitigation_strategy: item.mitigation_strategy,
+      sort_order: item.sort_order,
+      state_overrides: item.state_overrides
+    })
+    setEditingId(item.id)
+    setIsModalOpen(true)
+  }
+
+  const closeModal = () => {
+    setIsModalOpen(false)
+    setEditingId(null)
+    setFormData({})
+  }
+
+  // Override Modal functions
+  const openOverrideModal = (riskId: string) => {
+    setAddingOverrideRiskId(riskId)
+    setOverrideFormData({
+      state_code: '',
+      override_likelihood: null,
+      override_impact: null,
+      notes: null
+    })
+    setIsOverrideModalOpen(true)
+  }
+
+  const closeOverrideModal = () => {
+    setIsOverrideModalOpen(false)
+    setAddingOverrideRiskId(null)
+    setOverrideFormData({})
+  }
+
+  const handleSave = async () => {
+    const isNew = !editingId
     try {
-      const response = await fetch(`/api/admin/risk-factors${isNew ? '' : `?id=${risk.id}`}`, {
+      const response = await fetch(`/api/admin/risk-factors${isNew ? '' : `?id=${editingId}`}`, {
         method: isNew ? 'POST' : 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(risk)
+        body: JSON.stringify(formData)
       })
       
       if (response.ok) {
         setNotification({ type: 'success', message: isNew ? 'Risk factor added successfully' : 'Risk factor updated successfully' })
         fetchRisks()
-        setEditingRisk(null)
-        setIsAdding(false)
-        setNewRisk({
-          category: '',
-          description: '',
-          default_likelihood: 'Medium',
-          default_impact: 'High',
-          mitigation_strategy: '',
-          sort_order: 0,
-          state_overrides: []
-        })
+        closeModal()
         setTimeout(() => setNotification(null), 3000)
       } else {
         throw new Error('Save failed')
@@ -129,49 +180,71 @@ export default function RiskFactorsPage() {
     }
   }
 
-  const handleAddOverride = async (riskId: string, override: RiskStateOverride) => {
-    // This would need a dedicated API endpoint for overrides
-    // For now, we'll update the risk with the new override
-    const risk = risks.find(r => r.id === riskId)
+  const handleAddOverride = async () => {
+    if (!addingOverrideRiskId || !overrideFormData.state_code) return
+    
+    const risk = risks.find(r => r.id === addingOverrideRiskId)
     if (risk) {
-      const updatedOverrides = [...(risk.state_overrides || []), override]
-      await handleSave({ ...risk, state_overrides: updatedOverrides }, false)
+      const newOverride: RiskStateOverride = {
+        id: crypto.randomUUID(),
+        risk_factor_id: addingOverrideRiskId,
+        state_code: overrideFormData.state_code,
+        override_likelihood: overrideFormData.override_likelihood || null,
+        override_impact: overrideFormData.override_impact || null,
+        notes: overrideFormData.notes || null
+      }
+      const updatedOverrides = [...(risk.state_overrides || []), newOverride]
+      
+      // Save the updated risk with the new override
+      const response = await fetch(`/api/admin/risk-factors?id=${risk.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...risk, state_overrides: updatedOverrides })
+      })
+      
+      if (response.ok) {
+        setNotification({ type: 'success', message: `Override added for ${overrideFormData.state_code}` })
+        fetchRisks()
+        closeOverrideModal()
+        setTimeout(() => setNotification(null), 3000)
+      } else {
+        setNotification({ type: 'error', message: 'Failed to add override' })
+      }
     }
-    setAddingOverride(null)
-    setOverrideData({})
   }
 
   const handleRemoveOverride = async (riskId: string, overrideId: string) => {
     const risk = risks.find(r => r.id === riskId)
     if (risk) {
       const updatedOverrides = (risk.state_overrides || []).filter(o => o.id !== overrideId)
-      await handleSave({ ...risk, state_overrides: updatedOverrides }, false)
+      const response = await fetch(`/api/admin/risk-factors?id=${risk.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...risk, state_overrides: updatedOverrides })
+      })
+      
+      if (response.ok) {
+        setNotification({ type: 'success', message: 'Override removed' })
+        fetchRisks()
+        setTimeout(() => setNotification(null), 3000)
+      } else {
+        setNotification({ type: 'error', message: 'Failed to remove override' })
+      }
     }
   }
 
-  const EditModal = () => {
-    const risk = editingRisk
-    if (!risk && !isAdding) return null
-    
-    const currentRisk = editingRisk || newRisk
-    
-    const updateField = (field: string, value: any) => {
-      const updated = { ...currentRisk, [field]: value }
-      if (isAdding) {
-        setNewRisk(updated)
-      } else if (editingRisk) {
-        setEditingRisk(updated as RiskFactor)
-      }
-    }
+  // Main Modal Render Function
+  const renderModal = () => {
+    if (!isModalOpen) return null
     
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white">
             <h3 className="text-lg font-semibold">
-              {isAdding ? 'Add New Risk Factor' : `Edit ${editingRisk?.category}`}
+              {editingId ? 'Edit Risk Factor' : 'Add New Risk Factor'}
             </h3>
-            <button onClick={() => { setEditingRisk(null); setIsAdding(false); }} className="text-gray-400 hover:text-gray-600">
+            <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -181,7 +254,7 @@ export default function RiskFactorsPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
               <input
                 type="text"
-                value={currentRisk.category || ''}
+                value={formData.category || ''}
                 onChange={(e) => updateField('category', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-gold-500 focus:border-gold-500"
                 placeholder="e.g., Regulatory Change, License Processing Delays"
@@ -192,7 +265,7 @@ export default function RiskFactorsPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
               <textarea
-                value={currentRisk.description || ''}
+                value={formData.description || ''}
                 onChange={(e) => updateField('description', e.target.value)}
                 rows={2}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-gold-500 focus:border-gold-500"
@@ -204,7 +277,7 @@ export default function RiskFactorsPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Default Likelihood</label>
                 <select
-                  value={currentRisk.default_likelihood || 'Medium'}
+                  value={formData.default_likelihood || 'Medium'}
                   onChange={(e) => updateField('default_likelihood', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 >
@@ -216,7 +289,7 @@ export default function RiskFactorsPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Default Impact</label>
                 <select
-                  value={currentRisk.default_impact || 'High'}
+                  value={formData.default_impact || 'High'}
                   onChange={(e) => updateField('default_impact', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 >
@@ -230,7 +303,7 @@ export default function RiskFactorsPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Mitigation Strategy</label>
               <textarea
-                value={currentRisk.mitigation_strategy || ''}
+                value={formData.mitigation_strategy || ''}
                 onChange={(e) => updateField('mitigation_strategy', e.target.value)}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-gold-500 focus:border-gold-500"
@@ -242,7 +315,7 @@ export default function RiskFactorsPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
               <input
                 type="number"
-                value={currentRisk.sort_order || 0}
+                value={formData.sort_order || 0}
                 onChange={(e) => updateField('sort_order', parseInt(e.target.value))}
                 className="w-24 px-3 py-2 border border-gray-300 rounded-md"
               />
@@ -250,10 +323,10 @@ export default function RiskFactorsPage() {
           </div>
           
           <div className="flex justify-end gap-3 p-4 border-t sticky bottom-0 bg-white">
-            <button onClick={() => { setEditingRisk(null); setIsAdding(false); }} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+            <button onClick={closeModal} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
               Cancel
             </button>
-            <button onClick={() => handleSave(currentRisk as RiskFactor, isAdding)} className="px-4 py-2 bg-gold-600 text-white rounded-md hover:bg-gold-500">
+            <button onClick={handleSave} className="px-4 py-2 bg-gold-600 text-white rounded-md hover:bg-gold-500">
               <Save className="w-4 h-4 inline mr-1" />
               Save
             </button>
@@ -263,15 +336,16 @@ export default function RiskFactorsPage() {
     )
   }
 
-  const OverrideModal = () => {
-    if (!addingOverride) return null
+  // Override Modal Render Function
+  const renderOverrideModal = () => {
+    if (!isOverrideModalOpen) return null
     
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
           <div className="flex justify-between items-center p-4 border-b">
             <h3 className="text-lg font-semibold">Add State Override</h3>
-            <button onClick={() => setAddingOverride(null)} className="text-gray-400 hover:text-gray-600">
+            <button onClick={closeOverrideModal} className="text-gray-400 hover:text-gray-600">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -280,8 +354,8 @@ export default function RiskFactorsPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
               <select
-                value={overrideData.state_code || ''}
-                onChange={(e) => setOverrideData({ ...overrideData, state_code: e.target.value })}
+                value={overrideFormData.state_code || ''}
+                onChange={(e) => updateOverrideField('state_code', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
               >
                 <option value="">Select State</option>
@@ -294,8 +368,8 @@ export default function RiskFactorsPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Override Likelihood (optional)</label>
               <select
-                value={overrideData.override_likelihood || ''}
-                onChange={(e) => setOverrideData({ ...overrideData, override_likelihood: e.target.value || null })}
+                value={overrideFormData.override_likelihood || ''}
+                onChange={(e) => updateOverrideField('override_likelihood', e.target.value || null)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
               >
                 <option value="">Use Default</option>
@@ -308,8 +382,8 @@ export default function RiskFactorsPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Override Impact (optional)</label>
               <select
-                value={overrideData.override_impact || ''}
-                onChange={(e) => setOverrideData({ ...overrideData, override_impact: e.target.value || null })}
+                value={overrideFormData.override_impact || ''}
+                onChange={(e) => updateOverrideField('override_impact', e.target.value || null)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
               >
                 <option value="">Use Default</option>
@@ -322,8 +396,8 @@ export default function RiskFactorsPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
               <textarea
-                value={overrideData.notes || ''}
-                onChange={(e) => setOverrideData({ ...overrideData, notes: e.target.value })}
+                value={overrideFormData.notes || ''}
+                onChange={(e) => updateOverrideField('notes', e.target.value)}
                 rows={2}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 placeholder="Why does this state need an override?"
@@ -332,19 +406,12 @@ export default function RiskFactorsPage() {
           </div>
           
           <div className="flex justify-end gap-3 p-4 border-t">
-            <button onClick={() => setAddingOverride(null)} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+            <button onClick={closeOverrideModal} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
               Cancel
             </button>
             <button
-              onClick={() => handleAddOverride(addingOverride.riskId, {
-                id: crypto.randomUUID(),
-                risk_factor_id: addingOverride.riskId,
-                state_code: overrideData.state_code || '',
-                override_likelihood: overrideData.override_likelihood || null,
-                override_impact: overrideData.override_impact || null,
-                notes: overrideData.notes || null
-              } as RiskStateOverride)}
-              disabled={!overrideData.state_code}
+              onClick={handleAddOverride}
+              disabled={!overrideFormData.state_code}
               className="px-4 py-2 bg-gold-600 text-white rounded-md hover:bg-gold-500 disabled:opacity-50"
             >
               Add Override
@@ -413,7 +480,7 @@ export default function RiskFactorsPage() {
             <h1 className="text-2xl font-bold text-navy-900">Risk Factors</h1>
             <p className="text-navy-600">Manage risk assessment factors and state-specific overrides</p>
           </div>
-          <button onClick={() => setIsAdding(true)} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500">
+          <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500">
             <Plus className="w-4 h-4" />
             Add Risk Factor
           </button>
@@ -456,7 +523,7 @@ export default function RiskFactorsPage() {
                       <p className="text-sm text-gray-500 mt-1">{risk.description}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => setEditingRisk(risk)} className="text-blue-600 hover:text-blue-800">
+                      <button onClick={() => openEditModal(risk)} className="text-blue-600 hover:text-blue-800">
                         <Edit className="w-4 h-4" />
                       </button>
                       <button onClick={() => setShowDeleteConfirm(risk.id)} className="text-red-600 hover:text-red-800">
@@ -476,7 +543,7 @@ export default function RiskFactorsPage() {
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="text-sm font-semibold text-gray-700">State Overrides</h4>
                       <button
-                        onClick={() => setAddingOverride({ riskId: risk.id, stateCode: '' })}
+                        onClick={() => openOverrideModal(risk.id)}
                         className="text-xs text-gold-600 hover:underline flex items-center gap-1"
                       >
                         <Plus className="w-3 h-3" />
@@ -532,15 +599,16 @@ export default function RiskFactorsPage() {
           <div className="text-center py-12">
             <Shield className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">No risk factors found</p>
-            <button onClick={() => setIsAdding(true)} className="mt-3 text-gold-600 hover:underline">
+            <button onClick={openAddModal} className="mt-3 text-gold-600 hover:underline">
               Add your first risk factor
             </button>
           </div>
         )}
       </div>
       
-      <EditModal />
-      <OverrideModal />
+      {/* Modals */}
+      {renderModal()}
+      {renderOverrideModal()}
       <DeleteConfirmModal />
     </div>
   )

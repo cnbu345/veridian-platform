@@ -50,19 +50,12 @@ export default function MarketMetricsPage() {
   const [loading, setLoading] = useState(true)
   const [stateFilter, setStateFilter] = useState('')
   const [tierFilter, setTierFilter] = useState('')
-  const [editingMetric, setEditingMetric] = useState<MarketMetric | null>(null)
-  const [isAdding, setIsAdding] = useState(false)
-  const [newMetric, setNewMetric] = useState<Partial<MarketMetric>>({
-    state_code: '',
-    city_name: null,
-    tier: 'major',
-    growth_rate: 12,
-    competitor_density: 'Medium',
-    opportunity_score: 75,
-    key_industries: ['Financial Services', 'Technology'],
-    nearest_regulatory_hub: '',
-    distance_to_hub_miles: null
-  })
+  
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [formData, setFormData] = useState<Partial<MarketMetric>>({})
+  
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
 
@@ -90,30 +83,74 @@ export default function MarketMetricsPage() {
     fetchMetrics()
   }, [stateFilter, tierFilter])
 
-  const handleSave = async (metric: MarketMetric, isNew: boolean) => {
+  // Helper function to update form fields
+  const updateField = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const updateIndustries = (industry: string, add: boolean) => {
+    const currentIndustries = formData.key_industries || []
+    let newIndustries: string[]
+    if (add) {
+      newIndustries = [...currentIndustries, industry]
+    } else {
+      newIndustries = currentIndustries.filter(i => i !== industry)
+    }
+    updateField('key_industries', newIndustries)
+  }
+
+  // Modal open/close functions
+  const openAddModal = () => {
+    setFormData({
+      state_code: '',
+      city_name: null,
+      tier: 'major',
+      growth_rate: 12,
+      competitor_density: 'Medium',
+      opportunity_score: 75,
+      key_industries: ['Financial Services', 'Technology'],
+      nearest_regulatory_hub: '',
+      distance_to_hub_miles: null
+    })
+    setEditingId(null)
+    setIsModalOpen(true)
+  }
+
+  const openEditModal = (item: MarketMetric) => {
+    setFormData({
+      state_code: item.state_code,
+      city_name: item.city_name,
+      tier: item.tier,
+      growth_rate: item.growth_rate,
+      competitor_density: item.competitor_density,
+      opportunity_score: item.opportunity_score,
+      key_industries: item.key_industries,
+      nearest_regulatory_hub: item.nearest_regulatory_hub,
+      distance_to_hub_miles: item.distance_to_hub_miles
+    })
+    setEditingId(item.id)
+    setIsModalOpen(true)
+  }
+
+  const closeModal = () => {
+    setIsModalOpen(false)
+    setEditingId(null)
+    setFormData({})
+  }
+
+  const handleSave = async () => {
+    const isNew = !editingId
     try {
-      const response = await fetch(`/api/admin/market-metrics${isNew ? '' : `?id=${metric.id}`}`, {
+      const response = await fetch(`/api/admin/market-metrics${isNew ? '' : `?id=${editingId}`}`, {
         method: isNew ? 'POST' : 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(metric)
+        body: JSON.stringify(formData)
       })
       
       if (response.ok) {
         setNotification({ type: 'success', message: isNew ? 'Market metric added successfully' : 'Market metric updated successfully' })
         fetchMetrics()
-        setEditingMetric(null)
-        setIsAdding(false)
-        setNewMetric({
-          state_code: '',
-          city_name: null,
-          tier: 'major',
-          growth_rate: 12,
-          competitor_density: 'Medium',
-          opportunity_score: 75,
-          key_industries: ['Financial Services', 'Technology'],
-          nearest_regulatory_hub: '',
-          distance_to_hub_miles: null
-        })
+        closeModal()
         setTimeout(() => setNotification(null), 3000)
       } else {
         throw new Error('Save failed')
@@ -142,40 +179,18 @@ export default function MarketMetricsPage() {
     }
   }
 
-  const EditModal = () => {
-    const metric = editingMetric
-    if (!metric && !isAdding) return null
-    
-    const currentMetric = editingMetric || newMetric
-    
-    const updateField = (field: string, value: any) => {
-      const updated = { ...currentMetric, [field]: value }
-      if (isAdding) {
-        setNewMetric(updated)
-      } else if (editingMetric) {
-        setEditingMetric(updated as MarketMetric)
-      }
-    }
-    
-    const updateIndustries = (industry: string, add: boolean) => {
-      const currentIndustries = currentMetric.key_industries || []
-      let newIndustries: string[]
-      if (add) {
-        newIndustries = [...currentIndustries, industry]
-      } else {
-        newIndustries = currentIndustries.filter(i => i !== industry)
-      }
-      updateField('key_industries', newIndustries)
-    }
+  // Modal Render Function
+  const renderModal = () => {
+    if (!isModalOpen) return null
     
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white">
             <h3 className="text-lg font-semibold">
-              {isAdding ? 'Add New Market Metric' : `Edit ${editingMetric?.state_code} Market Data`}
+              {editingId ? 'Edit Market Metric' : 'Add New Market Metric'}
             </h3>
-            <button onClick={() => { setEditingMetric(null); setIsAdding(false); }} className="text-gray-400 hover:text-gray-600">
+            <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -185,7 +200,7 @@ export default function MarketMetricsPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">State Code *</label>
                 <select
-                  value={currentMetric.state_code || ''}
+                  value={formData.state_code || ''}
                   onChange={(e) => updateField('state_code', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-gold-500 focus:border-gold-500"
                   required
@@ -200,7 +215,7 @@ export default function MarketMetricsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">City (optional)</label>
                 <input
                   type="text"
-                  value={currentMetric.city_name || ''}
+                  value={formData.city_name || ''}
                   onChange={(e) => updateField('city_name', e.target.value || null)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   placeholder="Leave blank for state-level data"
@@ -212,7 +227,7 @@ export default function MarketMetricsPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Market Tier *</label>
                 <select
-                  value={currentMetric.tier || ''}
+                  value={formData.tier || ''}
                   onChange={(e) => updateField('tier', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-gold-500 focus:border-gold-500"
                 >
@@ -225,7 +240,7 @@ export default function MarketMetricsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Growth Rate (%)</label>
                 <input
                   type="number"
-                  value={currentMetric.growth_rate || ''}
+                  value={formData.growth_rate || ''}
                   onChange={(e) => updateField('growth_rate', e.target.value ? parseInt(e.target.value) : null)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 />
@@ -236,7 +251,7 @@ export default function MarketMetricsPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Competitor Density</label>
                 <select
-                  value={currentMetric.competitor_density || ''}
+                  value={formData.competitor_density || ''}
                   onChange={(e) => updateField('competitor_density', e.target.value || null)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 >
@@ -250,7 +265,7 @@ export default function MarketMetricsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Opportunity Score (0-100)</label>
                 <input
                   type="number"
-                  value={currentMetric.opportunity_score || ''}
+                  value={formData.opportunity_score || ''}
                   onChange={(e) => updateField('opportunity_score', e.target.value ? parseInt(e.target.value) : null)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   min="0"
@@ -266,7 +281,7 @@ export default function MarketMetricsPage() {
                   <label key={industry} className="flex items-center gap-2 text-sm">
                     <input
                       type="checkbox"
-                      checked={(currentMetric.key_industries || []).includes(industry)}
+                      checked={(formData.key_industries || []).includes(industry)}
                       onChange={(e) => updateIndustries(industry, e.target.checked)}
                       className="h-4 w-4 text-gold-600 focus:ring-gold-500 border-gray-300 rounded"
                     />
@@ -281,7 +296,7 @@ export default function MarketMetricsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nearest Regulatory Hub</label>
                 <input
                   type="text"
-                  value={currentMetric.nearest_regulatory_hub || ''}
+                  value={formData.nearest_regulatory_hub || ''}
                   onChange={(e) => updateField('nearest_regulatory_hub', e.target.value || null)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   placeholder="e.g., New York City, San Francisco"
@@ -291,7 +306,7 @@ export default function MarketMetricsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Distance to Hub (miles)</label>
                 <input
                   type="number"
-                  value={currentMetric.distance_to_hub_miles || ''}
+                  value={formData.distance_to_hub_miles || ''}
                   onChange={(e) => updateField('distance_to_hub_miles', e.target.value ? parseInt(e.target.value) : null)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 />
@@ -300,10 +315,10 @@ export default function MarketMetricsPage() {
           </div>
           
           <div className="flex justify-end gap-3 p-4 border-t sticky bottom-0 bg-white">
-            <button onClick={() => { setEditingMetric(null); setIsAdding(false); }} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+            <button onClick={closeModal} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
               Cancel
             </button>
-            <button onClick={() => handleSave(currentMetric as MarketMetric, isAdding)} className="px-4 py-2 bg-gold-600 text-white rounded-md hover:bg-gold-500">
+            <button onClick={handleSave} className="px-4 py-2 bg-gold-600 text-white rounded-md hover:bg-gold-500">
               <Save className="w-4 h-4 inline mr-1" />
               Save
             </button>
@@ -361,7 +376,7 @@ export default function MarketMetricsPage() {
             <h1 className="text-2xl font-bold text-navy-900">Market Metrics</h1>
             <p className="text-navy-600">Manage market data by state and tier for report generation</p>
           </div>
-          <button onClick={() => setIsAdding(true)} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500">
+          <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500">
             <Plus className="w-4 h-4" />
             Add Metric
           </button>
@@ -471,7 +486,7 @@ export default function MarketMetricsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => setEditingMetric(metric)} className="text-blue-600 hover:text-blue-800">
+                        <button onClick={() => openEditModal(metric)} className="text-blue-600 hover:text-blue-800">
                           <Edit className="w-4 h-4" />
                         </button>
                         <button onClick={() => setShowDeleteConfirm(metric.id)} className="text-red-600 hover:text-red-800">
@@ -490,14 +505,15 @@ export default function MarketMetricsPage() {
           <div className="text-center py-12">
             <TrendingUp className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">No market metrics found</p>
-            <button onClick={() => setIsAdding(true)} className="mt-3 text-gold-600 hover:underline">
+            <button onClick={openAddModal} className="mt-3 text-gold-600 hover:underline">
               Add your first market metric
             </button>
           </div>
         )}
       </div>
       
-      <EditModal />
+      {/* Modals */}
+      {renderModal()}
       <DeleteConfirmModal />
     </div>
   )

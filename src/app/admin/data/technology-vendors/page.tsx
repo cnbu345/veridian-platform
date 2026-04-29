@@ -43,18 +43,12 @@ export default function TechnologyVendorsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [recommendedOnly, setRecommendedOnly] = useState(false)
-  const [editingVendor, setEditingVendor] = useState<TechnologyVendor | null>(null)
-  const [isAdding, setIsAdding] = useState(false)
-  const [newVendor, setNewVendor] = useState<Partial<TechnologyVendor>>({
-    category: '',
-    name: '',
-    description: '',
-    price_display: '',
-    implementation_time: '',
-    is_recommended: false,
-    sort_order: 0,
-    applicable_states: []
-  })
+  
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [formData, setFormData] = useState<Partial<TechnologyVendor>>({})
+  
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
 
@@ -76,29 +70,64 @@ export default function TechnologyVendorsPage() {
     fetchVendors()
   }, [])
 
-  const handleSave = async (vendor: TechnologyVendor, isNew: boolean) => {
+  // Helper function to update form fields
+  const updateField = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  // Modal open/close functions
+  const openAddModal = () => {
+    setFormData({
+      category: '',
+      name: '',
+      description: '',
+      price_display: '',
+      implementation_time: '',
+      is_recommended: false,
+      sort_order: 0,
+      applicable_states: []
+    })
+    setEditingId(null)
+    setIsModalOpen(true)
+  }
+
+  const openEditModal = (item: TechnologyVendor) => {
+    setFormData({
+      category: item.category,
+      name: item.name,
+      description: item.description,
+      price_range_low: item.price_range_low,
+      price_range_high: item.price_range_high,
+      price_display: item.price_display,
+      implementation_time: item.implementation_time,
+      website_url: item.website_url,
+      is_recommended: item.is_recommended,
+      sort_order: item.sort_order,
+      applicable_states: item.applicable_states
+    })
+    setEditingId(item.id)
+    setIsModalOpen(true)
+  }
+
+  const closeModal = () => {
+    setIsModalOpen(false)
+    setEditingId(null)
+    setFormData({})
+  }
+
+  const handleSave = async () => {
+    const isNew = !editingId
     try {
-      const response = await fetch(`/api/admin/technology-vendors${isNew ? '' : `?id=${vendor.id}`}`, {
+      const response = await fetch(`/api/admin/technology-vendors${isNew ? '' : `?id=${editingId}`}`, {
         method: isNew ? 'POST' : 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(vendor)
+        body: JSON.stringify(formData)
       })
       
       if (response.ok) {
         setNotification({ type: 'success', message: isNew ? 'Vendor added successfully' : 'Vendor updated successfully' })
         fetchVendors()
-        setEditingVendor(null)
-        setIsAdding(false)
-        setNewVendor({
-          category: '',
-          name: '',
-          description: '',
-          price_display: '',
-          implementation_time: '',
-          is_recommended: false,
-          sort_order: 0,
-          applicable_states: []
-        })
+        closeModal()
         setTimeout(() => setNotification(null), 3000)
       } else {
         throw new Error('Save failed')
@@ -159,28 +188,18 @@ export default function TechnologyVendorsPage() {
     return matchesSearch && matchesCategory && matchesRecommended
   })
 
-  const EditModal = () => {
-    const vendor = editingVendor
-    if (!vendor && !isAdding) return null
-    
-    const currentVendor = editingVendor || newVendor
-    
-    const updateField = (field: string, value: any) => {
-      if (isAdding) {
-        setNewVendor({ ...newVendor, [field]: value })
-      } else if (editingVendor) {
-        setEditingVendor({ ...editingVendor, [field]: value })
-      }
-    }
+  // Modal Render Function
+  const renderModal = () => {
+    if (!isModalOpen) return null
     
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white">
             <h3 className="text-lg font-semibold">
-              {isAdding ? 'Add New Technology Vendor' : `Edit ${editingVendor?.name}`}
+              {editingId ? 'Edit Vendor' : 'Add New Technology Vendor'}
             </h3>
-            <button onClick={() => { setEditingVendor(null); setIsAdding(false); }} className="text-gray-400 hover:text-gray-600">
+            <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -190,7 +209,7 @@ export default function TechnologyVendorsPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
                 <select
-                  value={currentVendor.category || ''}
+                  value={formData.category || ''}
                   onChange={(e) => updateField('category', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-gold-500 focus:border-gold-500"
                   required
@@ -205,7 +224,7 @@ export default function TechnologyVendorsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                 <input
                   type="text"
-                  value={currentVendor.name || ''}
+                  value={formData.name || ''}
                   onChange={(e) => updateField('name', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-gold-500 focus:border-gold-500"
                   required
@@ -216,7 +235,7 @@ export default function TechnologyVendorsPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
               <textarea
-                value={currentVendor.description || ''}
+                value={formData.description || ''}
                 onChange={(e) => updateField('description', e.target.value)}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-gold-500 focus:border-gold-500"
@@ -229,7 +248,7 @@ export default function TechnologyVendorsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Price Display</label>
                 <input
                   type="text"
-                  value={currentVendor.price_display || ''}
+                  value={formData.price_display || ''}
                   onChange={(e) => updateField('price_display', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-gold-500 focus:border-gold-500"
                   placeholder="e.g., $25,000 - $100,000/year"
@@ -239,7 +258,7 @@ export default function TechnologyVendorsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Implementation Time</label>
                 <input
                   type="text"
-                  value={currentVendor.implementation_time || ''}
+                  value={formData.implementation_time || ''}
                   onChange={(e) => updateField('implementation_time', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-gold-500 focus:border-gold-500"
                   placeholder="e.g., 4-6 weeks"
@@ -252,7 +271,7 @@ export default function TechnologyVendorsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Price Range Low ($)</label>
                 <input
                   type="number"
-                  value={currentVendor.price_range_low || ''}
+                  value={formData.price_range_low || ''}
                   onChange={(e) => updateField('price_range_low', e.target.value ? parseInt(e.target.value) : null)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-gold-500 focus:border-gold-500"
                 />
@@ -261,7 +280,7 @@ export default function TechnologyVendorsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Price Range High ($)</label>
                 <input
                   type="number"
-                  value={currentVendor.price_range_high || ''}
+                  value={formData.price_range_high || ''}
                   onChange={(e) => updateField('price_range_high', e.target.value ? parseInt(e.target.value) : null)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-gold-500 focus:border-gold-500"
                 />
@@ -272,7 +291,7 @@ export default function TechnologyVendorsPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Website URL</label>
               <input
                 type="url"
-                value={currentVendor.website_url || ''}
+                value={formData.website_url || ''}
                 onChange={(e) => updateField('website_url', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-gold-500 focus:border-gold-500"
                 placeholder="https://..."
@@ -283,7 +302,7 @@ export default function TechnologyVendorsPage() {
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  checked={currentVendor.is_recommended || false}
+                  checked={formData.is_recommended || false}
                   onChange={(e) => updateField('is_recommended', e.target.checked)}
                   className="h-4 w-4 text-gold-600 focus:ring-gold-500 border-gray-300 rounded"
                 />
@@ -294,7 +313,7 @@ export default function TechnologyVendorsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
                 <input
                   type="number"
-                  value={currentVendor.sort_order || 0}
+                  value={formData.sort_order || 0}
                   onChange={(e) => updateField('sort_order', parseInt(e.target.value))}
                   className="w-20 px-2 py-1 border border-gray-300 rounded-md"
                 />
@@ -304,13 +323,13 @@ export default function TechnologyVendorsPage() {
           
           <div className="flex justify-end gap-3 p-4 border-t sticky bottom-0 bg-white">
             <button
-              onClick={() => { setEditingVendor(null); setIsAdding(false); }}
+              onClick={closeModal}
               className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
             >
               Cancel
             </button>
             <button
-              onClick={() => handleSave(currentVendor as TechnologyVendor, isAdding)}
+              onClick={handleSave}
               className="px-4 py-2 bg-gold-600 text-white rounded-md hover:bg-gold-500"
             >
               <Save className="w-4 h-4 inline mr-1" />
@@ -369,7 +388,7 @@ export default function TechnologyVendorsPage() {
             <p className="text-navy-600">Manage compliance technology vendor recommendations for reports</p>
           </div>
           <button
-            onClick={() => setIsAdding(true)}
+            onClick={openAddModal}
             className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500"
           >
             <Plus className="w-4 h-4" />
@@ -511,7 +530,7 @@ export default function TechnologyVendorsPage() {
                           </a>
                         )}
                         <button
-                          onClick={() => setEditingVendor(vendor)}
+                          onClick={() => openEditModal(vendor)}
                           className="text-blue-600 hover:text-blue-800"
                         >
                           <Edit className="w-4 h-4" />
@@ -536,7 +555,7 @@ export default function TechnologyVendorsPage() {
             <Server className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">No vendors found</p>
             <button
-              onClick={() => setIsAdding(true)}
+              onClick={openAddModal}
               className="mt-3 text-gold-600 hover:underline"
             >
               Add your first vendor
@@ -546,7 +565,7 @@ export default function TechnologyVendorsPage() {
       </div>
       
       {/* Modals */}
-      <EditModal />
+      {renderModal()}
       <DeleteConfirmModal />
     </div>
   )
