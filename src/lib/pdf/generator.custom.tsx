@@ -14,7 +14,7 @@ import {
   formatCurrency,
   type ReportData 
 } from '@/lib/reports/reportData'
-import { getProvidersForLocation } from '@/lib/location/serviceProviders'
+import { getProvidersForLocationClient } from '@/lib/location/serviceProviders.client'
 import { getLicensesForState, getAllStateLicenses } from '@/lib/location/licensingData'
 
 // Interface for legislation bill data
@@ -843,7 +843,7 @@ const CustomReportDocument = ({
   // Get providers with fallback
   const providers = (() => {
     try {
-      return getProvidersForLocation(report.city || '', report.state || '', reportData.location?.tier || 'major')
+      return getProvidersForLocationClient(report.city || '', report.state || '', reportData.location?.tier || 'major')
     } catch {
       return { 
         regulator: { 
