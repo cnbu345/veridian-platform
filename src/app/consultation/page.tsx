@@ -455,7 +455,7 @@ export default function ConsultationPage() {
     <div className="min-h-screen bg-gradient-to-b from-navy-50 to-white py-8 sm:py-12 px-4 sm:px-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 mt-12">
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900 mb-2">
             Schedule a Consultation
           </h1>

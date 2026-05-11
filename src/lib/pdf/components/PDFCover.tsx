@@ -28,6 +28,7 @@ const styles = StyleSheet.create({
     fontSize: pdfTheme.fontSize.lg,
     color: 'white',
     textAlign: 'center' as const,
+    marginTop: pdfTheme.spacing.md,
     marginBottom: pdfTheme.spacing.md,
     opacity: 0.9,
   },

@@ -14,15 +14,19 @@ const styles = StyleSheet.create({
     paddingTop: pdfTheme.spacing.md,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     fontSize: pdfTheme.fontSize.xs,
     color: pdfTheme.colors.navy[400],
   },
   pageNumber: {
     color: pdfTheme.colors.navy[500],
+    fontSize: pdfTheme.fontSize.xs,
   },
   disclaimer: {
     color: pdfTheme.colors.navy[400],
-    fontStyle: 'italic',
+    fontSize: pdfTheme.fontSize.xs,
+    maxWidth: '70%',
+    lineHeight: 1.4,
   }
 })
 
@@ -30,18 +34,22 @@ interface PDFFooterProps {
   pageNumber?: number
   totalPages?: number
   showDisclaimer?: boolean
+  showConfidential?: boolean
 }
 
 export const PDFFooter: React.FC<PDFFooterProps> = ({ 
   pageNumber, 
   totalPages,
-  showDisclaimer = true 
+  showDisclaimer = true,
+  showConfidential = false
 }) => {
   return (
     <View style={styles.footer} fixed>
       {showDisclaimer && (
         <Text style={styles.disclaimer}>
-          Not legal advice. Review with counsel. See full disclaimer.
+          {showConfidential && 'CONFIDENTIAL • '}
+          For informational and reference purposes only. Not legal advice. Veridian Group is not a law firm. 
+          Consult qualified legal counsel before acting on any recommendations.
         </Text>
       )}
       {pageNumber && totalPages && (
